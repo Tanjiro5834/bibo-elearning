@@ -219,6 +219,10 @@ if (!token) window.location.href = 'admin_login.html';
 const adminName = adminUser?.username || adminUser?.name || 'Admin';
 document.getElementById('sidebar-admin-name').textContent = adminName;
 
+// ── Data Maps (avoid inline JSON in onclick) ─────────────────────────────────
+window._subjectMap = {};
+window._lessonMap  = {};
+
 // ── API ─────────────────────────────────────
 async function apiFetch(method, path, body = null) {
   const headers = { 'Content-Type': 'application/json' };
@@ -236,7 +240,7 @@ function navigate(page) {
   ({ dashboard, subjects, lessons, sections, quizzes, students })[page]?.();
   const s = document.getElementById('sidebar');
   if (s.classList.contains('open')) toggleSidebar();
-  window.scrollTo(0,0);
+  window.scrollTo(0, 0);
 }
 
 function toggleSidebar() {
@@ -251,7 +255,7 @@ function logout() {
 }
 
 // ── Toast ────────────────────────────────────
-function showToast(msg, emoji='✅') {
+function showToast(msg, emoji = '✅') {
   const t = document.getElementById('toast');
   t.textContent = `${emoji} ${msg}`;
   t.classList.add('show');
@@ -276,7 +280,8 @@ function PageHeader(title, sub, btnLabel, btnFn) {
 }
 function openModal(html) {
   const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay'; overlay.id = 'active-modal';
+  overlay.className = 'modal-overlay';
+  overlay.id = 'active-modal';
   overlay.innerHTML = `<div class="modal">${html}</div>`;
   overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
   document.body.appendChild(overlay);
@@ -284,10 +289,13 @@ function openModal(html) {
 function closeModal() { document.getElementById('active-modal')?.remove(); }
 
 const SUBJECT_STYLES = {
-  'Math':{color:'#3B3FC4',pale:'#EEF0FF',icon:'🔢'},'Science':{color:'#0D9488',pale:'#CCFBF1',icon:'🔬'},
-  'English':{color:'#3B3FC4',pale:'#EEF0FF',icon:'📘'},'Filipino':{color:'#EF4444',pale:'#FEE2E2',icon:'🇵🇭'},
-  'Arts':{color:'#EC4899',pale:'#FCE7F3',icon:'🎨'},'Values':{color:'#10B981',pale:'#D1FAE5',icon:'🌟'},
-  'default':{color:'#3B3FC4',pale:'#EEF0FF',icon:'📚'},
+  'Math':    { color: '#3B3FC4', pale: '#EEF0FF',  icon: '🔢' },
+  'Science': { color: '#0D9488', pale: '#CCFBF1',  icon: '🔬' },
+  'English': { color: '#3B3FC4', pale: '#EEF0FF',  icon: '📘' },
+  'Filipino':{ color: '#EF4444', pale: '#FEE2E2',  icon: '🇵🇭' },
+  'Arts':    { color: '#EC4899', pale: '#FCE7F3',  icon: '🎨' },
+  'Values':  { color: '#10B981', pale: '#D1FAE5',  icon: '🌟' },
+  'default': { color: '#3B3FC4', pale: '#EEF0FF',  icon: '📚' },
 };
 const getSubjectStyle = n => SUBJECT_STYLES[n] || SUBJECT_STYLES['default'];
 
@@ -310,7 +318,7 @@ async function dashboard() {
     </div>
 
     <div class="grid-4 mb-32" id="dash-stats">
-      ${[1,2,3,4].map(()=>`<div class="card stat-card"><div class="spinner" style="margin:8px 0;"></div></div>`).join('')}
+      ${[1,2,3,4].map(() => `<div class="card stat-card"><div class="spinner" style="margin:8px 0;"></div></div>`).join('')}
     </div>
 
     <div class="section-header">
@@ -318,10 +326,10 @@ async function dashboard() {
     </div>
     <div class="grid-3 mb-32">
       ${[
-        {icon:'📚',label:'Manage Subjects',sub:'Add and edit curriculum subjects',page:'subjects'},
-        {icon:'📝',label:'Manage Lessons',sub:'Create lessons inside subjects',page:'lessons'},
-        {icon:'✅',label:'Manage Quizzes',sub:'Build quizzes for each lesson',page:'quizzes'},
-      ].map(a=>`
+        { icon: '📚', label: 'Manage Subjects', sub: 'Add and edit curriculum subjects', page: 'subjects' },
+        { icon: '📝', label: 'Manage Lessons',  sub: 'Create lessons inside subjects',   page: 'lessons'  },
+        { icon: '✅', label: 'Manage Quizzes',  sub: 'Build quizzes for each lesson',    page: 'quizzes'  },
+      ].map(a => `
         <div class="card card-interactive" style="padding:24px;" onclick="navigate('${a.page}')">
           <div style="width:52px;height:52px;border-radius:14px;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:14px;">${a.icon}</div>
           <h3 style="font-size:16px;margin-bottom:6px;">${a.label}</h3>
@@ -337,18 +345,19 @@ async function dashboard() {
   </div>`;
 
   try {
-    const subjects = await apiFetch('GET', '/subjects/active');
-    const subCount = subjects?.length || 0;
+    const subjectList = await apiFetch('GET', '/subjects');
+    const subCount = subjectList?.length || 0;
     let lessonCount = 0;
-    for (const s of (subjects||[])) {
-      try { const ls = await apiFetch('GET',`/lessons/subject/${s.id}`); lessonCount += ls?.length||0; } catch(e){}
+    for (const s of (subjectList || [])) {
+      try { const ls = await apiFetch('GET', `/lessons/subject/${s.id}`); lessonCount += ls?.length || 0; } catch (e) {}
     }
+
     document.getElementById('dash-stats').innerHTML = [
-      {label:'Total Subjects',value:subCount,icon:'📚',color:'var(--primary)'},
-      {label:'Total Lessons',value:lessonCount,icon:'📝',color:'var(--accent-green)'},
-      {label:'Active Students',value:'—',icon:'👥',color:'var(--accent-orange)'},
-      {label:'Quizzes',value:'—',icon:'✅',color:'var(--primary-mid)'},
-    ].map(s=>`
+      { label: 'Total Subjects', value: subCount,       icon: '📚', color: 'var(--primary)'      },
+      { label: 'Total Lessons',  value: lessonCount,    icon: '📝', color: 'var(--accent-green)'  },
+      { label: 'Active Students',value: '—',            icon: '👥', color: 'var(--accent-orange)' },
+      { label: 'Quizzes',        value: '—',            icon: '✅', color: 'var(--primary-mid)'   },
+    ].map(s => `
       <div class="card stat-card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
           <span class="stat-label">${s.label}</span><span style="font-size:22px;">${s.icon}</span>
@@ -356,24 +365,31 @@ async function dashboard() {
         <div class="stat-value" style="color:${s.color};">${s.value}</div>
       </div>`).join('');
 
-    if (!subjects?.length) { document.getElementById('dash-subjects').innerHTML = Empty('📭','No subjects yet','Create your first subject to get started.'); return; }
+    if (!subjectList?.length) {
+      document.getElementById('dash-subjects').innerHTML = Empty('📭', 'No subjects yet', 'Create your first subject to get started.');
+      return;
+    }
+
+    // Populate subject map for safe ID-based lookups
+    subjectList.forEach(s => { window._subjectMap[s.id] = s; });
+
     document.getElementById('dash-subjects').innerHTML = `
       <div style="display:flex;flex-direction:column;gap:10px;">
-        ${subjects.slice(0,5).map(s=>{
+        ${subjectList.slice(0, 5).map(s => {
           const st = getSubjectStyle(s.name);
           return `<div class="card" style="padding:16px;display:flex;align-items:center;gap:14px;">
             <div style="width:44px;height:44px;border-radius:12px;background:${st.pale};display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">${st.icon}</div>
             <div style="flex:1;min-width:0;">
               <div style="font-weight:700;font-size:15px;color:var(--text-900);">${s.name}</div>
-              <div style="font-size:13px;color:var(--text-400);" class="truncate">${s.description||'—'}</div>
+              <div style="font-size:13px;color:var(--text-400);" class="truncate">${s.description || '—'}</div>
             </div>
             <span class="badge badge-green">Active</span>
-            <button class="btn btn-ghost btn-sm" onclick="navigate('lessons')">Lessons →</button>
+            <button class="btn btn-ghost btn-sm" onclick="openSubjectLessons(${s.id})">Lessons</button>
           </div>`;
         }).join('')}
       </div>`;
-  } catch(e) {
-    document.getElementById('dash-stats').innerHTML=`<div style="color:var(--accent-red);padding:16px;grid-column:1/-1;">⚠️ Could not load stats: ${e.message}</div>`;
+  } catch (e) {
+    document.getElementById('dash-stats').innerHTML = `<div style="color:var(--accent-red);padding:16px;grid-column:1/-1;">⚠️ Could not load stats: ${e.message}</div>`;
   }
 }
 
@@ -390,9 +406,14 @@ async function subjects() {
   await loadSubjects();
 }
 
+// Safe: navigate to lessons for a subject by ID only
+function openSubjectLessons(subjectId) {
+  const subject = window._subjectMap[subjectId];
+  lessons(subjectId, subject?.name || 'Subject');
+}
+
 async function loadSubjects() {
   try {
-    // use /subjects if you want all, including inactive
     const data = await apiFetch('GET', '/subjects');
 
     if (!data?.length) {
@@ -400,6 +421,10 @@ async function loadSubjects() {
         Empty('📚', 'No subjects yet', 'Click "+ New Subject" to add one.');
       return;
     }
+
+    // Populate map
+    window._subjectMap = {};
+    data.forEach(s => { window._subjectMap[s.id] = s; });
 
     document.getElementById('subjects-list').innerHTML = `
       <div class="card" style="overflow:hidden;">
@@ -414,86 +439,40 @@ async function loadSubjects() {
           </thead>
           <tbody>
             ${data.map(subject => {
-              const style = getSubjectStyle(subject.name);
+              const style   = getSubjectStyle(subject.name);
               const isActive = subject.active !== false;
-
               return `
                 <tr>
                   <td>
                     <div style="display:flex;align-items:center;gap:10px;">
-                      <div style="
-                        width:36px;
-                        height:36px;
-                        border-radius:10px;
-                        background:${style.pale};
-                        display:flex;
-                        align-items:center;
-                        justify-content:center;
-                        font-size:18px;
-                        flex-shrink:0;
-                      ">${style.icon}</div>
-
+                      <div style="width:36px;height:36px;border-radius:10px;background:${style.pale};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">${style.icon}</div>
                       <div>
-                        <div style="font-weight:700;color:var(--text-900);">
-                          ${subject.name}
-                        </div>
-                        <div style="font-size:12px;color:${style.color};font-weight:600;">
-                          ID: ${subject.id}
-                        </div>
+                        <div style="font-weight:700;color:var(--text-900);">${subject.name}</div>
+                        <div style="font-size:12px;color:${style.color};font-weight:600;">ID: ${subject.id}</div>
                       </div>
                     </div>
                   </td>
-
-                  <td style="color:var(--text-400);max-width:260px;" class="truncate">
-                    ${subject.description || '—'}
-                  </td>
-
+                  <td style="color:var(--text-400);max-width:260px;" class="truncate">${subject.description || '—'}</td>
                   <td>
-                    <span class="badge ${isActive ? 'badge-green' : 'badge-gray'}">
-                      ${isActive ? 'Active' : 'Inactive'}
-                    </span>
+                    <span class="badge ${isActive ? 'badge-green' : 'badge-gray'}">${isActive ? 'Active' : 'Inactive'}</span>
                   </td>
-
                   <td style="text-align:right;">
                     <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
-                      <button class="btn btn-ghost btn-sm" onclick="navigate('lessons')">
-                        Lessons
-                      </button>
-
-                      <button class="btn btn-sm"
-                        style="background:var(--bg);color:var(--text-500);"
-                        onclick='openEditSubject(${JSON.stringify(subject)})'>
-                        Edit
-                      </button>
-
-                      ${
-                        isActive
-                          ? `<button class="btn btn-sm"
-                                style="background:#FEF2F2;color:#B91C1C;"
-                                onclick="deactivateSubject(${subject.id})">
-                                Deactivate
-                             </button>`
-                          : `<button class="btn btn-sm"
-                                style="background:#ECFDF5;color:#047857;"
-                                onclick="activateSubject(${subject.id})">
-                                Activate
-                             </button>`
+                      <button class="btn btn-ghost btn-sm" onclick="openSubjectLessons(${subject.id})">Lessons</button>
+                      <button class="btn btn-sm" style="background:var(--bg);color:var(--text-500);" onclick="openEditSubject(${subject.id})">Edit</button>
+                      ${isActive
+                        ? `<button class="btn btn-sm" style="background:#FEF2F2;color:#B91C1C;" onclick="deactivateSubject(${subject.id})">Deactivate</button>`
+                        : `<button class="btn btn-sm" style="background:#ECFDF5;color:#047857;" onclick="activateSubject(${subject.id})">Activate</button>`
                       }
                     </div>
                   </td>
-                </tr>
-              `;
+                </tr>`;
             }).join('')}
           </tbody>
         </table>
-      </div>
-    `;
+      </div>`;
   } catch (e) {
-    document.getElementById('subjects-list').innerHTML = `
-      <div style="color:var(--accent-red);padding:20px;">
-        ⚠️ ${e.message}
-      </div>
-    `;
+    document.getElementById('subjects-list').innerHTML = `<div style="color:var(--accent-red);padding:20px;">⚠️ ${e.message}</div>`;
   }
 }
 
@@ -503,186 +482,204 @@ function openCreateSubject() {
       <div class="modal-title">📚 New Subject</div>
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
-
-    <div id="sub-err"
-      style="display:none;background:#FEE2E2;color:#991B1B;font-size:13px;font-weight:700;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:14px;">
-    </div>
-
+    <div id="sub-err" style="display:none;background:#FEE2E2;color:#991B1B;font-size:13px;font-weight:700;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:14px;"></div>
     <div class="field">
       <label>Subject Name</label>
       <input id="sub-name" class="bibo-input" placeholder="e.g. Mathematics" />
     </div>
-
     <div class="field">
       <label>Description</label>
       <textarea id="sub-desc" class="bibo-input" placeholder="Short description"></textarea>
     </div>
-
     <div style="display:flex;gap:10px;margin-top:8px;">
       <button class="btn btn-ghost" style="flex:1;" onclick="closeModal()">Cancel</button>
       <button class="btn btn-primary" style="flex:1;" id="sub-btn" onclick="submitCreateSubject()">Create Subject</button>
-    </div>
-  `);
+    </div>`);
 }
 
 async function submitCreateSubject() {
-  const name = document.getElementById('sub-name').value.trim();
+  const name        = document.getElementById('sub-name').value.trim();
   const description = document.getElementById('sub-desc').value.trim();
-  const errEl = document.getElementById('sub-err');
-  const btn = document.getElementById('sub-btn');
-
-  if (!name) {
-    errEl.textContent = 'Subject name is required.';
-    errEl.style.display = '';
-    return;
-  }
-
-  btn.disabled = true;
-  btn.textContent = 'Creating...';
-
+  const errEl       = document.getElementById('sub-err');
+  const btn         = document.getElementById('sub-btn');
+  if (!name) { errEl.textContent = 'Subject name is required.'; errEl.style.display = ''; return; }
+  btn.disabled = true; btn.textContent = 'Creating...';
   try {
     await apiFetch('POST', '/subjects', { name, description });
-    closeModal();
-    showToast('Subject created successfully!', '📚');
+    closeModal(); showToast('Subject created successfully!', '📚');
     await loadSubjects();
   } catch (e) {
-    errEl.textContent = e.message;
-    errEl.style.display = '';
-    btn.disabled = false;
-    btn.textContent = 'Create Subject';
+    errEl.textContent = e.message; errEl.style.display = '';
+    btn.disabled = false; btn.textContent = 'Create Subject';
   }
 }
 
-function openEditSubject(subject) {
+// Safe: accepts ID only, reads data from map
+function openEditSubject(subjectId) {
+  const subject = window._subjectMap[subjectId];
+  if (!subject) { showToast('Subject not found.', '⚠️'); return; }
+
+  // Escape for safe use inside HTML attribute values
+  const safeName = (subject.name        || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+  const safeDesc = (subject.description || '').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+
   openModal(`
     <div class="modal-header">
       <div class="modal-title">✏️ Edit Subject</div>
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
-
-    <div id="esub-err"
-      style="display:none;background:#FEE2E2;color:#991B1B;font-size:13px;font-weight:700;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:14px;">
-    </div>
-
+    <div id="esub-err" style="display:none;background:#FEE2E2;color:#991B1B;font-size:13px;font-weight:700;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:14px;"></div>
     <div class="field">
       <label>Subject Name</label>
-      <input id="esub-name" class="bibo-input" value="${subject.name}" />
+      <input id="esub-name" class="bibo-input" value="${safeName}" />
     </div>
-
     <div class="field">
       <label>Description</label>
-      <textarea id="esub-desc" class="bibo-input">${subject.description || ''}</textarea>
+      <textarea id="esub-desc" class="bibo-input">${safeDesc}</textarea>
     </div>
-
     <div style="display:flex;gap:10px;margin-top:8px;">
       <button class="btn btn-ghost" style="flex:1;" onclick="closeModal()">Cancel</button>
       <button class="btn btn-primary" style="flex:1;" id="esub-btn" onclick="submitEditSubject(${subject.id})">Save Changes</button>
-    </div>
-  `);
+    </div>`);
 }
 
 async function submitEditSubject(id) {
-  const name = document.getElementById('esub-name').value.trim();
+  const name        = document.getElementById('esub-name').value.trim();
   const description = document.getElementById('esub-desc').value.trim();
-  const errEl = document.getElementById('esub-err');
-  const btn = document.getElementById('esub-btn');
-
-  if (!name) {
-    errEl.textContent = 'Subject name is required.';
-    errEl.style.display = '';
-    return;
-  }
-
-  btn.disabled = true;
-  btn.textContent = 'Saving...';
-
+  const errEl       = document.getElementById('esub-err');
+  const btn         = document.getElementById('esub-btn');
+  if (!name) { errEl.textContent = 'Subject name is required.'; errEl.style.display = ''; return; }
+  btn.disabled = true; btn.textContent = 'Saving...';
   try {
     await apiFetch('PUT', `/subjects/${id}`, { name, description });
-    closeModal();
-    showToast('Subject updated successfully!', '✏️');
+    closeModal(); showToast('Subject updated successfully!', '✏️');
     await loadSubjects();
   } catch (e) {
-    errEl.textContent = e.message;
-    errEl.style.display = '';
-    btn.disabled = false;
-    btn.textContent = 'Save Changes';
+    errEl.textContent = e.message; errEl.style.display = '';
+    btn.disabled = false; btn.textContent = 'Save Changes';
   }
 }
 
 async function deactivateSubject(id) {
-  const confirmed = confirm('Deactivate this subject?');
-  if (!confirmed) return;
-
+  if (!confirm('Deactivate this subject?')) return;
   try {
     await apiFetch('PATCH', `/subjects/${id}/deactivate`);
     showToast('Subject deactivated.', '🛑');
     await loadSubjects();
-  } catch (e) {
-    showToast(e.message, '⚠️');
-  }
+  } catch (e) { showToast(e.message, '⚠️'); }
 }
 
 async function activateSubject(id) {
-  const confirmed = confirm('Activate this subject?');
-  if (!confirmed) return;
-
+  if (!confirm('Activate this subject?')) return;
   try {
     await apiFetch('PATCH', `/subjects/${id}/activate`);
     showToast('Subject activated.', '✅');
     await loadSubjects();
-  } catch (e) {
-    showToast(e.message, '⚠️');
-  }
+  } catch (e) { showToast(e.message, '⚠️'); }
 }
 
 // ═══════════════════════════════════════════
 // PAGE: LESSONS
 // ═══════════════════════════════════════════
-async function lessons() {
+async function lessons(subjectId = null, subjectName = null) {
   document.getElementById('page-container').innerHTML = `<div class="page">
-    ${PageHeader('Lessons','Create and manage all lessons','+ New Lesson','openCreateLesson()')}
+    ${PageHeader(
+      subjectName ? `Lessons • ${subjectName}` : 'Lessons',
+      subjectName ? `Manage lessons for ${subjectName}` : 'Create and manage all lessons',
+      '+ New Lesson',
+      'openCreateLesson()'
+    )}
     <div id="lessons-list">${Loading()}</div>
   </div>`;
-  await loadLessons();
+  await loadLessons(subjectId, subjectName);
 }
 
-async function loadLessons() {
+async function loadLessons(subjectId = null, subjectName = null) {
   try {
-    const subs = await apiFetch('GET','/subjects/active');
-    if (!subs?.length) { document.getElementById('lessons-list').innerHTML = Empty('📝','No subjects yet','Create a subject first.'); return; }
     let all = [];
-    await Promise.all(subs.map(async s => {
-      try { const ls = await apiFetch('GET',`/lessons/subject/${s.id}`); if (ls?.length) all.push(...ls.map(l=>({...l,subjectName:s.name}))); } catch(e){}
-    }));
-    if (!all.length) { document.getElementById('lessons-list').innerHTML = Empty('📝','No lessons yet','Click "+ New Lesson" to add one.'); return; }
-    const diffClass = {EASY:'badge-green',MEDIUM:'badge-orange',HARD:'badge-red'};
+
+    if (subjectId) {
+      const ls = await apiFetch('GET', `/lessons/subject/${subjectId}`);
+      all = (ls || []).map(l => ({ ...l, subjectName: subjectName || l.subjectName || '—' }));
+    } else {
+      const subs = await apiFetch('GET', '/subjects');
+      if (!subs?.length) {
+        document.getElementById('lessons-list').innerHTML = Empty('📝', 'No subjects yet', 'Create a subject first.');
+        return;
+      }
+      await Promise.all(subs.map(async s => {
+        try {
+          const ls = await apiFetch('GET', `/lessons/subject/${s.id}`);
+          if (ls?.length) all.push(...ls.map(l => ({ ...l, subjectName: s.name })));
+        } catch (e) {}
+      }));
+    }
+
+    if (!all.length) {
+      document.getElementById('lessons-list').innerHTML = Empty('📝', 'No lessons yet', 'Click "+ New Lesson" to add one.');
+      return;
+    }
+
+    // Populate lesson map
+    window._lessonMap = {};
+    all.forEach(l => { window._lessonMap[l.id] = l; });
+
+    const diffClass = { EASY: 'badge-green', MEDIUM: 'badge-orange', HARD: 'badge-red' };
+
     document.getElementById('lessons-list').innerHTML = `
       <div class="card" style="overflow:hidden;">
-        <table class="data-table"><thead><tr>
-          <th>Lesson</th><th>Subject</th><th>Difficulty</th><th>Duration</th><th>Status</th><th style="text-align:right;">Actions</th>
-        </tr></thead><tbody>
-          ${all.map(l=>{
-            const st = getSubjectStyle(l.subjectName);
-            return `<tr>
-              <td><div style="font-weight:700;color:var(--text-900);">${l.title}</div><div style="font-size:12px;color:var(--text-400);margin-top:2px;">${l.description||'—'}</div></td>
-              <td><span style="display:inline-flex;align-items:center;gap:6px;"><span style="font-size:15px;">${st.icon}</span><span style="font-size:13px;font-weight:600;color:${st.color};">${l.subjectName}</span></span></td>
-              <td><span class="badge ${diffClass[l.difficultyLevel]||'badge-gray'}">${l.difficultyLevel||'—'}</span></td>
-              <td style="font-size:13px;color:var(--text-400);">${l.estimatedMinutes?l.estimatedMinutes+' min':'—'}</td>
-              <td><span class="badge ${l.published?'badge-green':'badge-orange'}">${l.published?'Published':'Draft'}</span></td>
-              <td style="text-align:right;"><div style="display:flex;gap:8px;justify-content:flex-end;">
-                <button class="btn btn-ghost btn-sm" onclick="navigate('sections')">Sections</button>
-                <button class="btn btn-sm" style="background:var(--bg);color:var(--text-500);" onclick='openEditLesson(${JSON.stringify(l)})'>Edit</button>
-              </div></td>
-            </tr>`;
-          }).join('')}
-        </tbody></table>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Lesson</th><th>Subject</th><th>Difficulty</th><th>Duration</th><th>Status</th>
+              <th style="text-align:right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${all.map(l => {
+              const st         = getSubjectStyle(l.subjectName);
+              const difficulty = l.learningLevel || l.difficultyLevel || 'Beginner';
+              const diffKey    = difficulty.toUpperCase();
+              return `
+                <tr>
+                  <td>
+                    <div style="font-weight:700;color:var(--text-900);">${l.title}</div>
+                    <div style="font-size:12px;color:var(--text-400);margin-top:2px;">${l.description || '—'}</div>
+                  </td>
+                  <td>
+                    <span style="display:inline-flex;align-items:center;gap:6px;">
+                      <span style="font-size:15px;">${st.icon}</span>
+                      <span style="font-size:13px;font-weight:600;color:${st.color};">${l.subjectName}</span>
+                    </span>
+                  </td>
+                  <td><span class="badge ${diffClass[diffKey] || 'badge-gray'}">${difficulty}</span></td>
+                  <td style="font-size:13px;color:var(--text-400);">${l.estimatedMinutes ? l.estimatedMinutes + ' min' : '—'}</td>
+                  <td>
+                    <span class="badge ${l.published ? 'badge-green' : 'badge-orange'}">${l.published ? 'Published' : 'Draft'}</span>
+                  </td>
+                  <td style="text-align:right;">
+                    <div style="display:flex;gap:8px;justify-content:flex-end;">
+                      <button class="btn btn-ghost btn-sm" onclick="navigate('sections')">Sections</button>
+                      <button class="btn btn-sm" style="background:var(--bg);color:var(--text-500);" onclick="openEditLesson(${l.id})">Edit</button>
+                    </div>
+                  </td>
+                </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
       </div>`;
-  } catch(e) { document.getElementById('lessons-list').innerHTML=`<div style="color:var(--accent-red);padding:20px;">⚠️ ${e.message}</div>`; }
+  } catch (e) {
+    document.getElementById('lessons-list').innerHTML = `<div style="color:var(--accent-red);padding:20px;">⚠️ ${e.message}</div>`;
+  }
 }
 
 async function openCreateLesson() {
   let opts = '<option value="">Select subject...</option>';
-  try { const subs = await apiFetch('GET','/subjects/active'); opts += (subs||[]).map(s=>`<option value="${s.id}">${s.name}</option>`).join(''); } catch(e){}
+  try {
+    const subs = await apiFetch('GET', '/subjects');
+    opts += (subs || []).map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+  } catch (e) {}
+
   openModal(`
     <div class="modal-header"><div class="modal-title">📝 New Lesson</div><button class="modal-close" onclick="closeModal()">✕</button></div>
     <div id="les-err" style="display:none;background:#FEE2E2;color:#991B1B;font-size:13px;font-weight:700;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:14px;"></div>
@@ -703,30 +700,43 @@ async function openCreateLesson() {
 
 async function submitLesson() {
   const subjectId = document.getElementById('les-subject').value;
-  const title = document.getElementById('les-title').value.trim();
-  const desc = document.getElementById('les-desc').value.trim();
-  const minutes = parseInt(document.getElementById('les-minutes').value)||null;
-  const diff = document.getElementById('les-diff').value;
-  const errEl = document.getElementById('les-err');
-  if (!subjectId) { errEl.textContent='Select a subject.'; errEl.style.display=''; return; }
-  if (!title) { errEl.textContent='Lesson title required.'; errEl.style.display=''; return; }
-  const btn = document.getElementById('les-btn'); btn.disabled=true; btn.textContent='Creating...';
+  const title     = document.getElementById('les-title').value.trim();
+  const desc      = document.getElementById('les-desc').value.trim();
+  const minutes   = parseInt(document.getElementById('les-minutes').value) || null;
+  const diff      = document.getElementById('les-diff').value;
+  const errEl     = document.getElementById('les-err');
+  if (!subjectId) { errEl.textContent = 'Select a subject.'; errEl.style.display = ''; return; }
+  if (!title)     { errEl.textContent = 'Lesson title required.'; errEl.style.display = ''; return; }
+  const btn = document.getElementById('les-btn'); btn.disabled = true; btn.textContent = 'Creating...';
   try {
-    await apiFetch('POST','/lessons',{subjectId:parseInt(subjectId),title,description:desc,estimatedMinutes:minutes,difficultyLevel:diff,published:true});
-    closeModal(); showToast('Lesson created!','📝'); await loadLessons();
-  } catch(e) { errEl.textContent=e.message; errEl.style.display=''; btn.disabled=false; btn.textContent='Create Lesson'; }
+    await apiFetch('POST', '/lessons', { subjectId: parseInt(subjectId), title, description: desc, estimatedMinutes: minutes, difficultyLevel: diff, published: true });
+    closeModal(); showToast('Lesson created!', '📝');
+    await loadLessons();
+  } catch (e) {
+    errEl.textContent = e.message; errEl.style.display = '';
+    btn.disabled = false; btn.textContent = 'Create Lesson';
+  }
 }
 
-function openEditLesson(l) {
+// Safe: accepts ID only, reads data from map
+function openEditLesson(lessonId) {
+  const l = window._lessonMap[lessonId];
+  if (!l) { showToast('Lesson not found.', '⚠️'); return; }
+
+  const safeTitle = (l.title       || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+  const safeDesc  = (l.description || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+
   openModal(`
     <div class="modal-header"><div class="modal-title">✏️ Edit Lesson</div><button class="modal-close" onclick="closeModal()">✕</button></div>
     <div id="eles-err" style="display:none;background:#FEE2E2;color:#991B1B;font-size:13px;font-weight:700;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:14px;"></div>
-    <div class="field"><label>Lesson Title</label><input id="eles-title" class="bibo-input" value="${l.title.replace(/"/g,'&quot;')}" /></div>
-    <div class="field"><label>Description</label><textarea id="eles-desc" class="bibo-input">${l.description||''}</textarea></div>
+    <div class="field"><label>Lesson Title</label><input id="eles-title" class="bibo-input" value="${safeTitle}" /></div>
+    <div class="field"><label>Description</label><textarea id="eles-desc" class="bibo-input">${safeDesc}</textarea></div>
     <div class="field-row">
-      <div class="field" style="margin-bottom:0;"><label>Minutes</label><input id="eles-minutes" class="bibo-input" type="number" value="${l.estimatedMinutes||''}" /></div>
+      <div class="field" style="margin-bottom:0;"><label>Minutes</label><input id="eles-minutes" class="bibo-input" type="number" value="${l.estimatedMinutes || ''}" /></div>
       <div class="field" style="margin-bottom:0;"><label>Difficulty</label>
-        <select id="eles-diff" class="bibo-input">${['EASY','MEDIUM','HARD'].map(d=>`<option value="${d}"${l.difficultyLevel===d?' selected':''}>${d}</option>`).join('')}</select>
+        <select id="eles-diff" class="bibo-input">
+          ${['EASY','MEDIUM','HARD'].map(d => `<option value="${d}"${l.difficultyLevel === d ? ' selected' : ''}>${d}</option>`).join('')}
+        </select>
       </div>
     </div>
     <div style="display:flex;gap:10px;margin-top:18px;">
@@ -736,17 +746,21 @@ function openEditLesson(l) {
 }
 
 async function submitEditLesson(id) {
-  const title = document.getElementById('eles-title').value.trim();
-  const desc = document.getElementById('eles-desc').value.trim();
-  const minutes = parseInt(document.getElementById('eles-minutes').value)||null;
-  const diff = document.getElementById('eles-diff').value;
-  const errEl = document.getElementById('eles-err');
-  if (!title) { errEl.textContent='Title required.'; errEl.style.display=''; return; }
-  const btn = document.getElementById('eles-btn'); btn.disabled=true; btn.textContent='Saving...';
+  const title   = document.getElementById('eles-title').value.trim();
+  const desc    = document.getElementById('eles-desc').value.trim();
+  const minutes = parseInt(document.getElementById('eles-minutes').value) || null;
+  const diff    = document.getElementById('eles-diff').value;
+  const errEl   = document.getElementById('eles-err');
+  if (!title) { errEl.textContent = 'Title required.'; errEl.style.display = ''; return; }
+  const btn = document.getElementById('eles-btn'); btn.disabled = true; btn.textContent = 'Saving...';
   try {
-    await apiFetch('PUT',`/lessons/${id}`,{title,description:desc,estimatedMinutes:minutes,difficultyLevel:diff});
-    closeModal(); showToast('Lesson updated!','✏️'); await loadLessons();
-  } catch(e) { errEl.textContent=e.message; errEl.style.display=''; btn.disabled=false; btn.textContent='Save Changes'; }
+    await apiFetch('PUT', `/lessons/${id}`, { title, description: desc, estimatedMinutes: minutes, difficultyLevel: diff });
+    closeModal(); showToast('Lesson updated!', '✏️');
+    await loadLessons();
+  } catch (e) {
+    errEl.textContent = e.message; errEl.style.display = '';
+    btn.disabled = false; btn.textContent = 'Save Changes';
+  }
 }
 
 // ═══════════════════════════════════════════
@@ -754,7 +768,7 @@ async function submitEditLesson(id) {
 // ═══════════════════════════════════════════
 async function sections() {
   document.getElementById('page-container').innerHTML = `<div class="page">
-    ${PageHeader('Lesson Sections','Add content blocks to lessons','+ New Section','openCreateSection()')}
+    ${PageHeader('Lesson Sections', 'Add content blocks to lessons', '+ New Section', 'openCreateSection()')}
     <div class="card" style="padding:20px;background:var(--primary-light);border-color:#dde2ff;margin-bottom:24px;">
       <div style="display:flex;align-items:flex-start;gap:12px;">
         <span style="font-size:22px;">💡</span>
@@ -762,21 +776,26 @@ async function sections() {
         <p style="font-size:13px;color:var(--text-500);">Each section is a content block inside a lesson. Add sections in order — they appear sequentially to students. Supported types: Text, Image, Video, Activity.</p></div>
       </div>
     </div>
-    <div id="sections-content">${Empty('📄','Click "+ New Section"','Select a lesson and add its content blocks.')}</div>
+    <div id="sections-content">${Empty('📄', 'Click "+ New Section"', 'Select a lesson and add its content blocks.')}</div>
   </div>`;
 }
 
 async function openCreateSection() {
   let opts = '<option value="">Select lesson...</option>';
   try {
-    const subs = await apiFetch('GET','/subjects/active');
-    for (const s of (subs||[])) {
+    const subs = await apiFetch('GET', '/subjects');
+    for (const s of (subs || [])) {
       try {
-        const ls = await apiFetch('GET',`/lessons/subject/${s.id}`);
-        if (ls?.length) { opts+=`<optgroup label="${s.name}">`; opts+=ls.map(l=>`<option value="${l.id}">${l.title}</option>`).join(''); opts+=`</optgroup>`; }
-      } catch(e){}
+        const ls = await apiFetch('GET', `/lessons/subject/${s.id}`);
+        if (ls?.length) {
+          opts += `<optgroup label="${s.name}">`;
+          opts += ls.map(l => `<option value="${l.id}">${l.title}</option>`).join('');
+          opts += `</optgroup>`;
+        }
+      } catch (e) {}
     }
-  } catch(e){}
+  } catch (e) {}
+
   openModal(`
     <div class="modal-header"><div class="modal-title">📄 New Section</div><button class="modal-close" onclick="closeModal()">✕</button></div>
     <div id="sec-err" style="display:none;background:#FEE2E2;color:#991B1B;font-size:13px;font-weight:700;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:14px;"></div>
@@ -785,7 +804,10 @@ async function openCreateSection() {
     <div class="field"><label>Content</label><textarea id="sec-content" class="bibo-input" placeholder="Write lesson content here..." style="min-height:120px;"></textarea></div>
     <div class="field-row">
       <div class="field" style="margin-bottom:0;"><label>Content Type</label>
-        <select id="sec-type" class="bibo-input"><option value="TEXT">Text</option><option value="IMAGE">Image</option><option value="VIDEO">Video</option><option value="ACTIVITY">Activity</option></select>
+        <select id="sec-type" class="bibo-input">
+          <option value="TEXT">Text</option><option value="IMAGE">Image</option>
+          <option value="VIDEO">Video</option><option value="ACTIVITY">Activity</option>
+        </select>
       </div>
       <div class="field" style="margin-bottom:0;"><label>Order</label><input id="sec-order" class="bibo-input" type="number" placeholder="1" min="1" /></div>
     </div>
@@ -797,18 +819,21 @@ async function openCreateSection() {
 
 async function submitSection() {
   const lessonId = document.getElementById('sec-lesson').value;
-  const title = document.getElementById('sec-title').value.trim();
-  const content = document.getElementById('sec-content').value.trim();
-  const type = document.getElementById('sec-type').value;
-  const order = parseInt(document.getElementById('sec-order').value)||1;
-  const errEl = document.getElementById('sec-err');
-  if (!lessonId) { errEl.textContent='Select a lesson.'; errEl.style.display=''; return; }
-  if (!title) { errEl.textContent='Section title required.'; errEl.style.display=''; return; }
-  const btn = document.getElementById('sec-btn'); btn.disabled=true; btn.textContent='Adding...';
+  const title    = document.getElementById('sec-title').value.trim();
+  const content  = document.getElementById('sec-content').value.trim();
+  const type     = document.getElementById('sec-type').value;
+  const order    = parseInt(document.getElementById('sec-order').value) || 1;
+  const errEl    = document.getElementById('sec-err');
+  if (!lessonId) { errEl.textContent = 'Select a lesson.';       errEl.style.display = ''; return; }
+  if (!title)    { errEl.textContent = 'Section title required.'; errEl.style.display = ''; return; }
+  const btn = document.getElementById('sec-btn'); btn.disabled = true; btn.textContent = 'Adding...';
   try {
-    await apiFetch('POST','/lesson-sections',{lessonId:parseInt(lessonId),title,content,contentType:type,contentOrder:order});
-    closeModal(); showToast('Section added!','📄');
-  } catch(e) { errEl.textContent=e.message; errEl.style.display=''; btn.disabled=false; btn.textContent='Add Section'; }
+    await apiFetch('POST', '/lesson-sections', { lessonId: parseInt(lessonId), title, content, contentType: type, contentOrder: order });
+    closeModal(); showToast('Section added!', '📄');
+  } catch (e) {
+    errEl.textContent = e.message; errEl.style.display = '';
+    btn.disabled = false; btn.textContent = 'Add Section';
+  }
 }
 
 // ═══════════════════════════════════════════
@@ -816,7 +841,7 @@ async function submitSection() {
 // ═══════════════════════════════════════════
 async function quizzes() {
   document.getElementById('page-container').innerHTML = `<div class="page">
-    ${PageHeader('Quizzes','Create and manage lesson quizzes','+ New Quiz','openCreateQuiz()')}
+    ${PageHeader('Quizzes', 'Create and manage lesson quizzes', '+ New Quiz', 'openCreateQuiz()')}
     <div class="card" style="padding:20px;background:var(--primary-light);border-color:#dde2ff;margin-bottom:24px;">
       <div style="display:flex;align-items:flex-start;gap:12px;">
         <span style="font-size:22px;">💡</span>
@@ -828,36 +853,51 @@ async function quizzes() {
   </div>`;
 
   try {
-    const subs = await apiFetch('GET','/subjects/active');
+    const subs = await apiFetch('GET', '/subjects');
     let all = [];
-    for (const s of (subs||[])) {
+    for (const s of (subs || [])) {
       try {
-        const ls = await apiFetch('GET',`/lessons/subject/${s.id}`);
-        for (const l of (ls||[])) {
-          try { const qs = await apiFetch('GET',`/quiz/lesson/${l.id}`); if (qs?.length) all.push(...qs.map(q=>({...q,lessonTitle:l.title,subjectName:s.name}))); } catch(e){}
+        const ls = await apiFetch('GET', `/lessons/subject/${s.id}`);
+        for (const l of (ls || [])) {
+          try {
+            const qs = await apiFetch('GET', `/quiz/lesson/${l.id}`);
+            if (qs?.length) all.push(...qs.map(q => ({ ...q, lessonTitle: l.title, subjectName: s.name })));
+          } catch (e) {}
         }
-      } catch(e){}
+      } catch (e) {}
     }
-    if (!all.length) { document.getElementById('quizzes-list').innerHTML = Empty('✅','No quizzes yet','Click "+ New Quiz" to create your first quiz.'); return; }
-    const st_map = n => getSubjectStyle(n);
+
+    if (!all.length) {
+      document.getElementById('quizzes-list').innerHTML = Empty('✅', 'No quizzes yet', 'Click "+ New Quiz" to create your first quiz.');
+      return;
+    }
+
     document.getElementById('quizzes-list').innerHTML = `
       <div class="card" style="overflow:hidden;">
-        <table class="data-table"><thead><tr>
-          <th>Quiz Title</th><th>Lesson</th><th>Subject</th><th>Passing Score</th><th>Questions</th>
-        </tr></thead><tbody>
-          ${all.map(q=>{
-            const st = st_map(q.subjectName);
-            return `<tr>
-              <td><div style="font-weight:700;color:var(--text-900);">${q.title}</div><div style="font-size:12px;color:var(--text-400);">${q.description||'—'}</div></td>
-              <td style="font-size:13px;">${q.lessonTitle}</td>
-              <td><span style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:${st.color};">${st.icon} ${q.subjectName}</span></td>
-              <td><span class="badge badge-blue">${q.passingScore}%</span></td>
-              <td style="font-size:13px;color:var(--text-500);">${q.questions?.length||0} questions</td>
-            </tr>`;
-          }).join('')}
-        </tbody></table>
+        <table class="data-table">
+          <thead><tr>
+            <th>Quiz Title</th><th>Lesson</th><th>Subject</th><th>Passing Score</th><th>Questions</th>
+          </tr></thead>
+          <tbody>
+            ${all.map(q => {
+              const st = getSubjectStyle(q.subjectName);
+              return `<tr>
+                <td>
+                  <div style="font-weight:700;color:var(--text-900);">${q.title}</div>
+                  <div style="font-size:12px;color:var(--text-400);">${q.description || '—'}</div>
+                </td>
+                <td style="font-size:13px;">${q.lessonTitle}</td>
+                <td><span style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:${st.color};">${st.icon} ${q.subjectName}</span></td>
+                <td><span class="badge badge-blue">${q.passingScore}%</span></td>
+                <td style="font-size:13px;color:var(--text-500);">${q.questions?.length || 0} questions</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
       </div>`;
-  } catch(e) { document.getElementById('quizzes-list').innerHTML=`<div style="color:var(--accent-red);padding:20px;">⚠️ ${e.message}</div>`; }
+  } catch (e) {
+    document.getElementById('quizzes-list').innerHTML = `<div style="color:var(--accent-red);padding:20px;">⚠️ ${e.message}</div>`;
+  }
 }
 
 let _qCount = 0;
@@ -865,14 +905,19 @@ async function openCreateQuiz() {
   _qCount = 0;
   let opts = '<option value="">Select lesson...</option>';
   try {
-    const subs = await apiFetch('GET','/subjects/active');
-    for (const s of (subs||[])) {
+    const subs = await apiFetch('GET', '/subjects');
+    for (const s of (subs || [])) {
       try {
-        const ls = await apiFetch('GET',`/lessons/subject/${s.id}`);
-        if (ls?.length) { opts+=`<optgroup label="${s.name}">`; opts+=ls.map(l=>`<option value="${l.id}">${l.title}</option>`).join(''); opts+=`</optgroup>`; }
-      } catch(e){}
+        const ls = await apiFetch('GET', `/lessons/subject/${s.id}`);
+        if (ls?.length) {
+          opts += `<optgroup label="${s.name}">`;
+          opts += ls.map(l => `<option value="${l.id}">${l.title}</option>`).join('');
+          opts += `</optgroup>`;
+        }
+      } catch (e) {}
     }
-  } catch(e){}
+  } catch (e) {}
+
   openModal(`
     <div class="modal-header"><div class="modal-title">✅ New Quiz</div><button class="modal-close" onclick="closeModal()">✕</button></div>
     <div id="qz-err" style="display:none;background:#FEE2E2;color:#991B1B;font-size:13px;font-weight:700;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:14px;"></div>
@@ -895,17 +940,17 @@ async function openCreateQuiz() {
 
 function addQuestion() {
   _qCount++;
-  const n = _qCount;
+  const n  = _qCount;
   const el = document.createElement('div');
   el.id = `qb-${n}`;
   el.style.cssText = 'background:var(--bg);border-radius:var(--radius-md);padding:16px;margin-bottom:12px;';
   el.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
       <span style="font-size:13px;font-weight:700;color:var(--text-700);">Question ${n}</span>
-      ${n>1?`<button style="background:none;border:none;cursor:pointer;color:var(--accent-red);font-size:12px;font-weight:700;" onclick="document.getElementById('qb-${n}').remove()">Remove</button>`:''}
+      ${n > 1 ? `<button style="background:none;border:none;cursor:pointer;color:var(--accent-red);font-size:12px;font-weight:700;" onclick="document.getElementById('qb-${n}').remove()">Remove</button>` : ''}
     </div>
     <input class="bibo-input" id="qt-${n}" placeholder="Enter question text..." style="margin-bottom:8px;" />
-    ${['A','B','C','D'].map((k,i)=>`
+    ${['A','B','C','D'].map((k, i) => `
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
         <input type="radio" name="cr-${n}" value="${i}" id="r-${n}-${i}" style="accent-color:var(--primary);width:16px;height:16px;flex-shrink:0;" />
         <label for="r-${n}-${i}" style="font-size:12px;font-weight:700;color:var(--text-400);width:16px;">${k}</label>
@@ -916,36 +961,43 @@ function addQuestion() {
 }
 
 async function submitQuiz() {
-  const lessonId = document.getElementById('qz-lesson').value;
-  const title = document.getElementById('qz-title').value.trim();
-  const desc = document.getElementById('qz-desc').value.trim();
-  const passingScore = parseInt(document.getElementById('qz-passing').value)||75;
-  const errEl = document.getElementById('qz-err');
-  if (!lessonId) { errEl.textContent='Select a lesson.'; errEl.style.display=''; return; }
-  if (!title) { errEl.textContent='Quiz title required.'; errEl.style.display=''; return; }
+  const lessonId     = document.getElementById('qz-lesson').value;
+  const title        = document.getElementById('qz-title').value.trim();
+  const desc         = document.getElementById('qz-desc').value.trim();
+  const passingScore = parseInt(document.getElementById('qz-passing').value) || 75;
+  const errEl        = document.getElementById('qz-err');
+
+  if (!lessonId) { errEl.textContent = 'Select a lesson.';    errEl.style.display = ''; return; }
+  if (!title)    { errEl.textContent = 'Quiz title required.'; errEl.style.display = ''; return; }
+
   const questions = [];
   const blocks = document.querySelectorAll('[id^="qb-"]');
   for (const block of blocks) {
-    const n = block.id.replace('qb-','');
+    const n  = block.id.replace('qb-', '');
     const qt = document.getElementById(`qt-${n}`)?.value.trim();
-    if (!qt) { errEl.textContent=`Question ${n} text required.`; errEl.style.display=''; return; }
+    if (!qt) { errEl.textContent = `Question ${n} text required.`; errEl.style.display = ''; return; }
     const correct = block.querySelector(`input[name="cr-${n}"]:checked`);
-    if (!correct) { errEl.textContent=`Mark correct answer for Question ${n}.`; errEl.style.display=''; return; }
+    if (!correct)  { errEl.textContent = `Mark correct answer for Question ${n}.`; errEl.style.display = ''; return; }
     const correctIdx = parseInt(correct.value);
-    const choices = [0,1,2,3].map(i => {
+    const choices = [0, 1, 2, 3].map(i => {
       const t = document.getElementById(`ch-${n}-${i}`)?.value.trim();
       if (!t) return null;
-      return { choiceText:t, isCorrect:i===correctIdx };
+      return { choiceText: t, isCorrect: i === correctIdx };
     });
-    if (choices.some(c=>!c)) { errEl.textContent=`All 4 choices required for Question ${n}.`; errEl.style.display=''; return; }
-    questions.push({ questionText:qt, choices });
+    if (choices.some(c => !c)) { errEl.textContent = `All 4 choices required for Question ${n}.`; errEl.style.display = ''; return; }
+    questions.push({ questionText: qt, choices });
   }
-  if (!questions.length) { errEl.textContent='Add at least one question.'; errEl.style.display=''; return; }
-  const btn = document.getElementById('qz-btn'); btn.disabled=true; btn.textContent='Creating...';
+  if (!questions.length) { errEl.textContent = 'Add at least one question.'; errEl.style.display = ''; return; }
+
+  const btn = document.getElementById('qz-btn'); btn.disabled = true; btn.textContent = 'Creating...';
   try {
-    await apiFetch('POST','/quiz/create',{lessonId:parseInt(lessonId),title,description:desc,passingScore,questions});
-    closeModal(); showToast('Quiz created!','✅'); await quizzes();
-  } catch(e) { errEl.textContent=e.message; errEl.style.display=''; btn.disabled=false; btn.textContent='Create Quiz'; }
+    await apiFetch('POST', '/quiz/create', { lessonId: parseInt(lessonId), title, description: desc, passingScore, questions });
+    closeModal(); showToast('Quiz created!', '✅');
+    await quizzes();
+  } catch (e) {
+    errEl.textContent = e.message; errEl.style.display = '';
+    btn.disabled = false; btn.textContent = 'Create Quiz';
+  }
 }
 
 // ═══════════════════════════════════════════
@@ -953,7 +1005,7 @@ async function submitQuiz() {
 // ═══════════════════════════════════════════
 async function students() {
   document.getElementById('page-container').innerHTML = `<div class="page">
-    ${PageHeader('Students','View registered student accounts','','')}
+    ${PageHeader('Students', 'View registered student accounts', '', '')}
     <div class="card" style="padding:20px;background:var(--primary-light);border-color:#dde2ff;margin-bottom:24px;">
       <div style="display:flex;align-items:flex-start;gap:12px;">
         <span style="font-size:22px;">ℹ️</span>
@@ -963,26 +1015,38 @@ async function students() {
     </div>
     <div id="students-list">${Loading()}</div>
   </div>`;
+
   try {
-    const data = await apiFetch('GET','/student/all').catch(()=>null);
-    if (!data?.length) { document.getElementById('students-list').innerHTML = Empty('👥','No students yet','Students appear here after registering through the BIBO app.'); return; }
+    const data = await apiFetch('GET', '/student/all').catch(() => null);
+    if (!data?.length) {
+      document.getElementById('students-list').innerHTML = Empty('👥', 'No students yet', 'Students appear here after registering through the BIBO app.');
+      return;
+    }
     document.getElementById('students-list').innerHTML = `
       <div class="card" style="overflow:hidden;">
-        <table class="data-table"><thead><tr>
-          <th>Student</th><th>Username</th><th>Level</th><th>Joined</th>
-        </tr></thead><tbody>
-          ${data.map(s=>`<tr>
-            <td><div style="display:flex;align-items:center;gap:10px;">
-              <div style="width:36px;height:36px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--primary);font-size:14px;">${(s.fullName||s.username||'?')[0].toUpperCase()}</div>
-              <span style="font-weight:600;">${s.fullName||'—'}</span>
-            </div></td>
-            <td style="color:var(--text-400);">@${s.username}</td>
-            <td><span class="badge badge-blue">${s.learningLevel||'BEGINNER'}</span></td>
-            <td style="font-size:13px;color:var(--text-400);">${s.createdAt?new Date(s.createdAt).toLocaleDateString():'—'}</td>
-          </tr>`).join('')}
-        </tbody></table>
+        <table class="data-table">
+          <thead><tr><th>Student</th><th>Username</th><th>Level</th><th>Joined</th></tr></thead>
+          <tbody>
+            ${data.map(s => `
+              <tr>
+                <td>
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <div style="width:36px;height:36px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--primary);font-size:14px;">
+                      ${(s.fullName || s.username || '?')[0].toUpperCase()}
+                    </div>
+                    <span style="font-weight:600;">${s.fullName || '—'}</span>
+                  </div>
+                </td>
+                <td style="color:var(--text-400);">@${s.username}</td>
+                <td><span class="badge badge-blue">${s.learningLevel || 'BEGINNER'}</span></td>
+                <td style="font-size:13px;color:var(--text-400);">${s.createdAt ? new Date(s.createdAt).toLocaleDateString() : '—'}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
       </div>`;
-  } catch(e) { document.getElementById('students-list').innerHTML = Empty('👥','No students yet','Students appear here after registering through the BIBO app.'); }
+  } catch (e) {
+    document.getElementById('students-list').innerHTML = Empty('👥', 'No students yet', 'Students appear here after registering through the BIBO app.');
+  }
 }
 
 // ── Init ─────────────────────────────────
