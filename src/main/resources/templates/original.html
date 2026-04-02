@@ -1,0 +1,1542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BIBO – Learn & Grow</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Baloo+2:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['Baloo 2', 'cursive'],
+            body: ['Nunito', 'sans-serif'],
+          },
+          colors: {
+            bibo: {
+              purple: '#7C3AED',
+              'purple-light': '#A78BFA',
+              'purple-pale': '#EDE9FE',
+              'purple-dark': '#5B21B6',
+              teal: '#0D9488',
+              'teal-light': '#5EEAD4',
+              'teal-pale': '#CCFBF1',
+              yellow: '#F59E0B',
+              'yellow-pale': '#FEF3C7',
+              coral: '#F87171',
+              'coral-pale': '#FEE2E2',
+              green: '#10B981',
+              'green-pale': '#D1FAE5',
+            }
+          },
+          boxShadow: {
+            'soft': '0 4px 24px rgba(124, 58, 237, 0.10)',
+            'card': '0 2px 16px rgba(0,0,0,0.07)',
+            'card-hover': '0 8px 32px rgba(124, 58, 237, 0.18)',
+            'btn': '0 4px 14px rgba(124, 58, 237, 0.35)',
+          },
+          borderRadius: {
+            '2xl': '1rem',
+            '3xl': '1.5rem',
+            '4xl': '2rem',
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { font-family: 'Nunito', sans-serif; background: #F5F3FF; min-height: 100vh; }
+    h1,h2,h3,.font-display { font-family: 'Baloo 2', cursive; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #EDE9FE; border-radius: 99px; }
+    ::-webkit-scrollbar-thumb { background: #A78BFA; border-radius: 99px; }
+
+    /* Page transitions */
+    .page { animation: fadeSlideIn 0.35s cubic-bezier(.4,0,.2,1); }
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Floating blob background */
+    .blob-bg {
+      position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none;
+    }
+    .blob {
+      position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.13;
+    }
+    .blob-1 { width: 500px; height: 500px; background: #7C3AED; top: -120px; left: -100px; }
+    .blob-2 { width: 400px; height: 400px; background: #0D9488; bottom: -80px; right: -80px; }
+    .blob-3 { width: 300px; height: 300px; background: #F59E0B; top: 40%; left: 50%; }
+
+    /* Cards */
+    .card {
+      background: #fff;
+      border-radius: 1.25rem;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+    .card:hover { box-shadow: 0 8px 32px rgba(124,58,237,0.16); transform: translateY(-2px); }
+
+    /* Buttons */
+    .btn-primary {
+      background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%);
+      color: white; font-weight: 700; border-radius: 9999px;
+      box-shadow: 0 4px 14px rgba(124,58,237,0.35);
+      transition: all 0.2s; border: none; cursor: pointer;
+      font-family: 'Nunito', sans-serif;
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(124,58,237,0.45); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    .btn-secondary {
+      background: #EDE9FE; color: #7C3AED; font-weight: 700;
+      border-radius: 9999px; border: none; cursor: pointer;
+      font-family: 'Nunito', sans-serif;
+      transition: all 0.2s;
+    }
+    .btn-secondary:hover { background: #DDD6FE; }
+
+    .btn-teal {
+      background: linear-gradient(135deg, #0D9488 0%, #0F766E 100%);
+      color: white; font-weight: 700; border-radius: 9999px;
+      box-shadow: 0 4px 14px rgba(13,148,136,0.35);
+      transition: all 0.2s; border: none; cursor: pointer;
+      font-family: 'Nunito', sans-serif;
+    }
+    .btn-teal:hover { transform: translateY(-1px); }
+
+    /* Progress bar */
+    .progress-bar { background: #EDE9FE; border-radius: 99px; overflow: hidden; }
+    .progress-fill {
+      background: linear-gradient(90deg, #7C3AED, #A78BFA);
+      border-radius: 99px; transition: width 0.6s cubic-bezier(.4,0,.2,1);
+    }
+
+    /* Chat bubbles */
+    .chat-bubble-ai {
+      background: white; border-radius: 18px 18px 18px 4px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+    }
+    .chat-bubble-user {
+      background: linear-gradient(135deg, #7C3AED, #6D28D9);
+      color: white; border-radius: 18px 18px 4px 18px;
+    }
+
+    /* Bottom nav */
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: white; border-top: 1px solid #EDE9FE;
+      z-index: 50; safe-area-inset-bottom: env(safe-area-inset-bottom);
+    }
+
+    /* Status badges */
+    .badge-done     { background: #D1FAE5; color: #065F46; }
+    .badge-progress { background: #FEF3C7; color: #92400E; }
+    .badge-new      { background: #EDE9FE; color: #5B21B6; }
+
+    /* Loading spinner */
+    .spinner {
+      width: 32px; height: 32px;
+      border: 3px solid #EDE9FE;
+      border-top-color: #7C3AED;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Typing dots */
+    .typing-dot {
+      width: 8px; height: 8px; background: #A78BFA; border-radius: 50%;
+      animation: typingBounce 1.2s ease-in-out infinite;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typingBounce {
+      0%,60%,100% { transform: translateY(0); opacity: 0.4; }
+      30% { transform: translateY(-8px); opacity: 1; }
+    }
+
+    /* Shake animation for login error */
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%,60% { transform: translateX(-6px); }
+      40%,80% { transform: translateX(6px); }
+    }
+    .shake { animation: shake 0.4s; }
+
+    /* Input focus */
+    .bibo-input {
+      width: 100%; padding: 12px 16px; border: 2px solid #EDE9FE; border-radius: 12px;
+      font-family: 'Nunito', sans-serif; font-size: 15px; font-weight: 600;
+      outline: none; transition: border-color 0.2s, box-shadow 0.2s; background: #FAFAFA;
+    }
+    .bibo-input:focus { border-color: #7C3AED; box-shadow: 0 0 0 4px rgba(124,58,237,0.1); background: white; }
+
+    /* Star rating sparkle */
+    @keyframes sparkle { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.7;transform:scale(1.3)} }
+    .sparkle { animation: sparkle 2s ease-in-out infinite; }
+
+    /* Subject color themes */
+    .subject-math     { --s-color: #7C3AED; --s-pale: #EDE9FE; --s-icon: '🔢'; }
+    .subject-science  { --s-color: #0D9488; --s-pale: #CCFBF1; --s-icon: '🔬'; }
+    .subject-reading  { --s-color: #F59E0B; --s-pale: #FEF3C7; --s-icon: '📖'; }
+    .subject-filipino { --s-color: #EF4444; --s-pale: #FEE2E2; --s-icon: '🇵🇭'; }
+    .subject-arts     { --s-color: #EC4899; --s-pale: #FCE7F3; --s-icon: '🎨'; }
+    .subject-values   { --s-color: #10B981; --s-pale: #D1FAE5; --s-icon: '🌟'; }
+
+    /* Lesson section nav */
+    .section-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: #DDD6FE; transition: all 0.2s;
+    }
+    .section-dot.active { background: #7C3AED; transform: scale(1.3); }
+    .section-dot.done { background: #10B981; }
+
+    /* Toast */
+    #toast {
+      position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: #1E1B4B; color: white; padding: 12px 24px; border-radius: 99px;
+      font-weight: 700; z-index: 999; opacity: 0;
+      transition: all 0.3s cubic-bezier(.4,0,.2,1);
+      pointer-events: none; white-space: nowrap;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* Streak badge pulse */
+    @keyframes pulse-streak {
+      0%,100% { box-shadow: 0 0 0 0 rgba(245,158,11,0.4); }
+      50% { box-shadow: 0 0 0 8px rgba(245,158,11,0); }
+    }
+    .streak-pulse { animation: pulse-streak 2s ease-in-out infinite; }
+
+    /* Page wrapper (with bottom nav offset) */
+    .page-content { padding-bottom: 90px; }
+
+    /* Step dots (register) */
+    .step-dot {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: #E5E7EB; border: 2px solid #E5E7EB;
+      transition: all 0.3s; display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 800; color: #9CA3AF;
+    }
+    .step-dot.active {
+      background: #7C3AED; border-color: #7C3AED; color: white;
+      box-shadow: 0 0 0 4px rgba(124,58,237,0.2);
+    }
+    .step-dot.done {
+      background: #10B981; border-color: #10B981; color: white;
+    }
+    .step-dot::after {
+      content: attr(data-n);
+    }
+    .step-dot.done::before { content: '✓'; }
+
+    @media (min-width: 640px) {
+      .bottom-nav { max-width: 480px; left: 50%; transform: translateX(-50%); border-radius: 24px 24px 0 0; }
+      #app { max-width: 480px; margin: 0 auto; }
+    }
+  </style>
+</head>
+<body class="relative">
+
+<!-- Blob backgrounds -->
+<div class="blob-bg">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- App root -->
+<div id="app" class="relative z-10 min-h-screen">
+  <!-- Rendered by router -->
+</div>
+
+<script>
+/* =========================================================
+   BIBO Frontend SPA
+   ========================================================= */
+
+// ── API Layer ──────────────────────────────────────────────
+const API_BASE = '/api';
+
+const api = {
+  async request(method, path, body = null, token = null) {
+    const headers = { 'Content-Type': 'application/json' };
+
+    const validToken =
+      token &&
+      token !== 'null' &&
+      token !== 'undefined' &&
+      token.trim() !== '';
+
+    if (validToken) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const opts = { method, headers };
+    if (body) opts.body = JSON.stringify(body);
+
+    const res = await fetch(API_BASE + path, opts);
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: 'Something went wrong' }));
+      throw new Error(err.message || `HTTP ${res.status}`);
+    }
+
+    return res.json();
+  },
+
+  login:          (data)          => api.request('POST', '/auth/login', data),
+  registerStudent: (data) => api.request('POST', '/auth/register/student', data),
+  registerParent:  (data) => api.request('POST', '/auth/register/parent', data),
+  registerTeacher: (data) => api.request('POST', '/auth/register/teacher', data),
+  getMe:          ()              => api.request('GET', '/student/me', null, state.token),
+  getSubjects:    ()              => api.request('GET', '/subjects/active', null, state.token),
+  getLessons:     (subjectId)     => api.request('GET', `/lessons/subject/${subjectId}`, null, state.token),
+  getLesson:      (lessonId)      => api.request('GET', `/lessons/${lessonId}`, null, state.token),
+  getProgress:    (lessonId)      => api.request('GET', `/progress/${lessonId}`, null, state.token),
+  startProgress:  (lessonId)      => api.request('POST', `/progress/${lessonId}/start`, {}, state.token),
+  updateProgress: (lessonId, data)=> api.request('PUT', `/progress/${lessonId}`, data, state.token),
+  completeLesson: (lessonId)      => api.request('POST', `/progress/${lessonId}/complete`, {}, state.token),
+  aiChat:         (data)          => api.request('POST', '/ai/chat', data, state.token),
+};
+
+// ── State ──────────────────────────────────────────────────
+const state = {
+  token:           localStorage.getItem('bibo_token') || null,
+  user:            JSON.parse(localStorage.getItem('bibo_user') || 'null'),
+  currentPage:     'login',
+  selectedSubject: null,
+  selectedLesson:  null,
+  chatHistory:     [],
+  parentView:      false,
+};
+
+function setState(updates) { Object.assign(state, updates); }
+function saveAuth(token, user) {
+  if (!token || token === 'null' || token === 'undefined' || token.trim() === '') {
+    throw new Error('Invalid token received from server');
+  }
+
+  state.token = token;
+  state.user = user || null;
+
+  localStorage.setItem('bibo_token', token);
+  localStorage.setItem('bibo_user', JSON.stringify(user || null));
+}
+
+function clearAuth() {
+  state.token = null;
+  state.user = null;
+
+  localStorage.removeItem('bibo_token');
+  localStorage.removeItem('bibo_user');
+}
+function clearAuth() {
+  state.token = null; state.user = null;
+  localStorage.removeItem('bibo_token');
+  localStorage.removeItem('bibo_user');
+}
+
+// ── Router ─────────────────────────────────────────────────
+function navigate(page, data = {}) {
+  setState({ currentPage: page, ...data });
+  render();
+  window.scrollTo(0, 0);
+}
+
+function render() {
+  const app = document.getElementById('app');
+  if (!state.token) {
+    if (state.currentPage === 'register') { app.innerHTML = RegisterPage(); bindRegister(); return; }
+    app.innerHTML = LoginPage(); bindLogin(); return;
+  }
+
+  const pages = {
+    dashboard:    () => { app.innerHTML = DashboardPage();   bindDashboard(); },
+    subjects:     () => { app.innerHTML = SubjectsPage();    bindSubjects(); },
+    lessons:      () => { app.innerHTML = LessonsPage();     bindLessons(); },
+    lesson:       () => { app.innerHTML = LessonDetailPage();bindLessonDetail(); },
+    ai:           () => { app.innerHTML = AIChatPage();      bindAIChat(); },
+    parent:       () => { app.innerHTML = ParentViewPage();  bindParent(); },
+  };
+
+  (pages[state.currentPage] || pages.dashboard)();
+}
+
+// ── Toast ──────────────────────────────────────────────────
+function showToast(msg, emoji = '✅') {
+  const t = document.getElementById('toast');
+  t.textContent = `${emoji} ${msg}`;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── Helpers ────────────────────────────────────────────────
+function Loading(msg = 'Loading...') {
+  return `<div class="flex flex-col items-center justify-center py-20 gap-4">
+    <div class="spinner"></div>
+    <p class="text-purple-400 font-bold text-sm">${msg}</p>
+  </div>`;
+}
+
+function EmptyState(emoji, title, sub) {
+  return `<div class="flex flex-col items-center justify-center py-16 gap-3 text-center px-8">
+    <div class="text-5xl">${emoji}</div>
+    <h3 class="font-display font-bold text-gray-700 text-xl">${title}</h3>
+    <p class="text-gray-400 text-sm">${sub}</p>
+  </div>`;
+}
+
+function ErrorState(msg) {
+  return `<div class="flex flex-col items-center justify-center py-16 gap-3 text-center px-8">
+    <div class="text-5xl">😕</div>
+    <h3 class="font-display font-bold text-gray-700 text-xl">Oops!</h3>
+    <p class="text-gray-400 text-sm">${msg}</p>
+  </div>`;
+}
+
+function BottomNav(active) {
+  const items = [
+    { id: 'dashboard', icon: '🏠', label: 'Home',      page: 'dashboard' },
+    { id: 'subjects',  icon: '📚', label: 'Subjects',   page: 'subjects' },
+    { id: 'ai',        icon: '🤖', label: 'AI Tutor',   page: 'ai' },
+    { id: 'parent',    icon: '👨‍👩‍👧', label: 'Parent',    page: 'parent' },
+  ];
+  return `<nav class="bottom-nav">
+    <div class="flex justify-around items-center py-2 px-2">
+      ${items.map(it => `
+        <button onclick="navigate('${it.page}')" class="flex flex-col items-center gap-1 px-3 py-1 rounded-2xl transition-all duration-200 ${active === it.id ? 'bg-bibo-purple-pale' : 'hover:bg-gray-50'}">
+          <span class="text-xl leading-none">${it.icon}</span>
+          <span class="text-xs font-bold ${active === it.id ? 'text-bibo-purple' : 'text-gray-400'}">${it.label}</span>
+        </button>
+      `).join('')}
+    </div>
+    <div style="height: env(safe-area-inset-bottom, 0)"></div>
+  </nav>`;
+}
+
+function TopBar(title, backPage = null, backData = {}) {
+  return `<div class="flex items-center gap-3 px-5 pt-5 pb-3 sticky top-0 bg-white/80 backdrop-blur-sm z-40 border-b border-purple-50">
+    ${backPage ? `<button onclick="navigate('${backPage}', ${JSON.stringify(backData)})" class="w-9 h-9 flex items-center justify-center rounded-full bg-bibo-purple-pale text-bibo-purple font-bold text-lg hover:bg-purple-200 transition-colors">←</button>` : ''}
+    <h2 class="font-display font-bold text-gray-800 text-lg flex-1 truncate">${title}</h2>
+  </div>`;
+}
+
+function statusBadge(status) {
+  if (status === 'COMPLETED') return `<span class="badge-done text-xs font-bold px-3 py-1 rounded-full">✅ Done</span>`;
+  if (status === 'IN_PROGRESS') return `<span class="badge-progress text-xs font-bold px-3 py-1 rounded-full">⏳ In Progress</span>`;
+  return `<span class="badge-new text-xs font-bold px-3 py-1 rounded-full">🆕 New</span>`;
+}
+
+// Subject color/icon map
+const SUBJECT_STYLES = {
+  'Math':         { color: '#7C3AED', pale: '#EDE9FE', icon: '🔢', bg: 'from-violet-400 to-purple-600' },
+  'Science':      { color: '#0D9488', pale: '#CCFBF1', icon: '🔬', bg: 'from-teal-400 to-teal-600' },
+  'Reading':      { color: '#F59E0B', pale: '#FEF3C7', icon: '📖', bg: 'from-amber-400 to-orange-500' },
+  'Filipino':     { color: '#EF4444', pale: '#FEE2E2', icon: '🇵🇭', bg: 'from-red-400 to-rose-600' },
+  'Arts':         { color: '#EC4899', pale: '#FCE7F3', icon: '🎨', bg: 'from-pink-400 to-fuchsia-600' },
+  'Values':       { color: '#10B981', pale: '#D1FAE5', icon: '🌟', bg: 'from-emerald-400 to-green-600' },
+  'default':      { color: '#7C3AED', pale: '#EDE9FE', icon: '📝', bg: 'from-violet-400 to-purple-600' },
+};
+function getSubjectStyle(name) {
+  return SUBJECT_STYLES[name] || SUBJECT_STYLES['default'];
+}
+
+/* =========================================================
+   PAGE: LOGIN
+   ========================================================= */
+function LoginPage() {
+  return `<div class="page min-h-screen flex flex-col items-center justify-center px-6 py-10">
+    <!-- Logo + Mascot -->
+    <div class="flex flex-col items-center mb-8 gap-2">
+      <div class="relative">
+        <div class="w-24 h-24 rounded-3xl bg-gradient-to-br from-violet-500 to-purple-700 flex items-center justify-center shadow-btn mb-2">
+          <span class="text-5xl">🦁</span>
+        </div>
+        <div class="absolute -top-1 -right-1 bg-bibo-yellow text-white text-xs font-black px-2 py-0.5 rounded-full shadow-sm sparkle">NEW</div>
+      </div>
+      <h1 class="font-display font-black text-4xl text-bibo-purple">BIBO</h1>
+      <p class="text-gray-500 font-semibold text-sm text-center">Learn. Grow. Shine. ✨</p>
+    </div>
+
+    <!-- Card -->
+    <div class="card w-full max-w-sm p-6" id="login-card">
+      <h2 class="font-display font-bold text-2xl text-gray-800 mb-1">Welcome back! 👋</h2>
+      <p class="text-gray-400 text-sm mb-6">Sign in to continue learning</p>
+
+      <!-- Error -->
+      <div id="login-error" class="hidden bg-red-50 border border-red-200 text-red-600 text-sm font-bold px-4 py-3 rounded-xl mb-4 flex items-center gap-2">
+        <span>⚠️</span><span id="login-error-msg"></span>
+      </div>
+
+      <!-- Form -->
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-bold text-gray-600 mb-1.5">Username</label>
+          <div class="relative">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-lg">👤</span>
+            <input id="login-username" type="text" placeholder="Enter your username"
+              class="bibo-input pl-10" autocomplete="username" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-bold text-gray-600 mb-1.5">Password</label>
+          <div class="relative">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-lg">🔒</span>
+            <input id="login-password" type="password" placeholder="Enter your password"
+              class="bibo-input pl-10" autocomplete="current-password" />
+          </div>
+        </div>
+        <button id="login-btn" class="btn-primary w-full py-3.5 text-base mt-2">
+          Let's Go! 🚀
+        </button>
+        <p class="text-center text-sm text-gray-400 font-semibold pt-1">
+          Don't have an account?
+          <button onclick="navigate('register')" class="text-bibo-purple font-bold hover:underline">Sign up</button>
+        </p>
+      </div>
+    </div>
+
+    <!-- Fun tagline -->
+    <p class="text-gray-400 text-xs font-semibold mt-6 text-center">
+      🇵🇭 Made with ❤️ for Filipino learners
+    </p>
+  </div>`;
+}
+
+function bindLogin() {
+  const btn = document.getElementById('login-btn');
+  const errDiv = document.getElementById('login-error');
+  const errMsg = document.getElementById('login-error-msg');
+  const card = document.getElementById('login-card');
+
+  async function doLogin() {
+    const username = document.getElementById('login-username').value.trim();
+    const password = document.getElementById('login-password').value.trim();
+
+    if (!username || !password) {
+      showError('Please fill in all fields!');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = `<span class="inline-flex items-center gap-2">
+      <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+      </svg> Signing in...
+    </span>`;
+    errDiv.classList.add('hidden');
+
+    try {
+      const res = await api.login({ username, password });
+      saveAuth(res.accessToken, {
+        username: res.username,
+        role: res.role
+      });
+      navigate('dashboard');
+    } catch (e) {
+      showError(e.message || 'Wrong username or password');
+      btn.disabled = false;
+      btn.innerHTML = "Let's Go! 🚀";
+    }
+  }
+
+  function showError(msg) {
+    errMsg.textContent = msg;
+    errDiv.classList.remove('hidden');
+    card.classList.add('shake');
+    setTimeout(() => card.classList.remove('shake'), 500);
+  }
+
+  btn.addEventListener('click', doLogin);
+  document.getElementById('login-password').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+}
+
+/* =========================================================
+   PAGE: REGISTER
+   ========================================================= */
+function RegisterPage() {
+  return `<div class="page min-h-screen flex flex-col items-center justify-center px-6 py-10">
+    <!-- Logo -->
+    <div class="flex flex-col items-center mb-6 gap-2">
+      <div class="w-20 h-20 rounded-3xl bg-gradient-to-br from-violet-500 to-purple-700 flex items-center justify-center shadow-btn mb-1">
+        <span class="text-4xl">🦁</span>
+      </div>
+      <h1 class="font-display font-black text-4xl text-bibo-purple">BIBO</h1>
+      <p class="text-gray-500 font-semibold text-sm text-center">Join thousands of young learners! 🌟</p>
+    </div>
+
+    <!-- Steps indicator -->
+    <div class="flex items-center gap-2 mb-5" id="reg-steps">
+      <div class="step-dot active" id="step-dot-1" data-n="1"></div>
+      <div class="h-0.5 w-8 bg-gray-200" id="step-line-1"></div>
+      <div class="step-dot" id="step-dot-2" data-n="2"></div>
+      <div class="h-0.5 w-8 bg-gray-200" id="step-line-2"></div>
+      <div class="step-dot" id="step-dot-3" data-n="3"></div>
+    </div>
+
+    <!-- Card -->
+    <div class="card w-full max-w-sm p-6" id="reg-card">
+
+      <!-- Error -->
+      <div id="reg-error" class="hidden bg-red-50 border border-red-200 text-red-600 text-sm font-bold px-4 py-3 rounded-xl mb-4 flex items-center gap-2">
+        <span>⚠️</span><span id="reg-error-msg"></span>
+      </div>
+
+      <!-- Step 1: Account -->
+      <div id="reg-step-1">
+        <h2 class="font-display font-bold text-2xl text-gray-800 mb-1">Create Account 🎉</h2>
+        <p class="text-gray-400 text-sm mb-5">Step 1 of 3 · Account details</p>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-bold text-gray-600 mb-1.5">Username</label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-lg">👤</span>
+              <input id="reg-username" type="text" placeholder="Choose a username" class="bibo-input pl-10" autocomplete="username" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-600 mb-1.5">Email</label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-lg">📧</span>
+              <input id="reg-email" type="email" placeholder="Enter your email" class="bibo-input pl-10" autocomplete="email" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-600 mb-1.5">Password</label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-lg">🔒</span>
+              <input id="reg-password" type="password" placeholder="Create a password" class="bibo-input pl-10" autocomplete="new-password" />
+            </div>
+            <div id="pw-strength" class="mt-2 hidden">
+              <div class="flex gap-1 mb-1">
+                <div class="h-1.5 flex-1 rounded-full bg-gray-200" id="pw-bar-1"></div>
+                <div class="h-1.5 flex-1 rounded-full bg-gray-200" id="pw-bar-2"></div>
+                <div class="h-1.5 flex-1 rounded-full bg-gray-200" id="pw-bar-3"></div>
+                <div class="h-1.5 flex-1 rounded-full bg-gray-200" id="pw-bar-4"></div>
+              </div>
+              <p class="text-xs font-bold" id="pw-label"></p>
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-600 mb-1.5">Confirm Password</label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-lg">🔐</span>
+              <input id="reg-confirm" type="password" placeholder="Repeat your password" class="bibo-input pl-10" autocomplete="new-password" />
+            </div>
+          </div>
+          <button id="reg-next-1" class="btn-primary w-full py-3.5 text-base">Next →</button>
+        </div>
+      </div>
+
+      <!-- Step 2: Personal Info -->
+      <div id="reg-step-2" class="hidden">
+        <h2 class="font-display font-bold text-2xl text-gray-800 mb-1">About You 🙋</h2>
+        <p class="text-gray-400 text-sm mb-5">Step 2 of 3 · Personal info</p>
+        <div class="space-y-4">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-sm font-bold text-gray-600 mb-1.5">First Name</label>
+              <input id="reg-firstname" type="text" placeholder="First name" class="bibo-input" autocomplete="given-name" />
+            </div>
+            <div>
+              <label class="block text-sm font-bold text-gray-600 mb-1.5">Last Name</label>
+              <input id="reg-lastname" type="text" placeholder="Last name" class="bibo-input" autocomplete="family-name" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-600 mb-1.5">Age</label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-lg">🎂</span>
+              <input id="reg-age" type="number" min="7" max="18" placeholder="Your age (7–18)" class="bibo-input pl-10" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-600 mb-1.5">I am a...</label>
+            <div class="grid grid-cols-2 gap-3">
+              ${[
+                { val: 'STUDENT', icon: '🎒', label: 'Student' },
+                { val: 'PARENT',  icon: '👨‍👩‍👧', label: 'Parent'  },
+              ].map(r => `
+                <label class="role-card cursor-pointer" data-role="${r.val}">
+                  <input type="radio" name="reg-role" value="${r.val}" class="sr-only" />
+                  <div class="card p-4 text-center border-2 border-transparent transition-all hover:border-bibo-purple" id="role-card-${r.val}">
+                    <div class="text-3xl mb-1">${r.icon}</div>
+                    <div class="font-bold text-gray-700 text-sm">${r.label}</div>
+                  </div>
+                </label>`).join('')}
+            </div>
+          </div>
+          <div class="flex gap-3">
+            <button id="reg-back-2" class="btn-secondary flex-1 py-3.5 text-base">← Back</button>
+            <button id="reg-next-2" class="btn-primary flex-1 py-3.5 text-base">Next →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Confirm -->
+      <div id="reg-step-3" class="hidden">
+        <h2 class="font-display font-bold text-2xl text-gray-800 mb-1">Almost there! 🚀</h2>
+        <p class="text-gray-400 text-sm mb-5">Step 3 of 3 · Review & submit</p>
+
+        <!-- Summary card -->
+        <div class="bg-bibo-purple-pale rounded-2xl p-4 mb-5 space-y-2.5">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-700 flex items-center justify-center text-2xl flex-shrink-0">🦁</div>
+            <div>
+              <div class="font-display font-bold text-gray-800 text-lg" id="summary-name">—</div>
+              <div class="text-gray-500 text-sm font-semibold" id="summary-username">—</div>
+            </div>
+          </div>
+          <div class="border-t border-purple-200 pt-2.5 space-y-1.5">
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-500 font-semibold">Email</span>
+              <span class="font-bold text-gray-700" id="summary-email">—</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-500 font-semibold">Age</span>
+              <span class="font-bold text-gray-700" id="summary-age">—</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-500 font-semibold">Role</span>
+              <span class="font-bold text-gray-700" id="summary-role">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Terms -->
+        <label class="flex items-start gap-3 cursor-pointer mb-5">
+          <input type="checkbox" id="reg-terms" class="mt-0.5 w-5 h-5 accent-violet-600 flex-shrink-0" />
+          <span class="text-sm text-gray-500 font-semibold leading-relaxed">
+            I agree to the <span class="text-bibo-purple font-bold">Terms of Service</span> and understand this platform is designed for children aged 7–12.
+          </span>
+        </label>
+
+        <div class="flex gap-3">
+          <button id="reg-back-3" class="btn-secondary flex-1 py-3.5 text-base">← Back</button>
+          <button id="reg-submit" class="btn-primary flex-1 py-3.5 text-base">Create Account 🎉</button>
+        </div>
+      </div>
+
+      <!-- Success state -->
+      <div id="reg-success" class="hidden text-center py-4">
+        <div class="text-6xl mb-4" style="animation: sparkle 1s ease-in-out infinite">🎊</div>
+        <h2 class="font-display font-black text-2xl text-gray-800 mb-2">You're in!</h2>
+        <p class="text-gray-400 font-semibold text-sm mb-6">Account created successfully. Let's start learning!</p>
+        <button onclick="navigate('login')" class="btn-primary w-full py-3.5 text-base">Go to Login →</button>
+      </div>
+    </div>
+
+    <!-- Sign in link -->
+    <p class="text-gray-400 text-xs font-semibold mt-6 text-center" id="reg-signin-link">
+      Already have an account?
+      <button onclick="navigate('login')" class="text-bibo-purple font-bold hover:underline">Sign in</button>
+    </p>
+  </div>`;
+}
+
+function bindRegister() {
+  let currentStep = 1;
+  let selectedRole = '';
+
+  // ── Step dot styles ──
+  function updateStepDots(step) {
+    [1, 2, 3].forEach(i => {
+      const dot = document.getElementById(`step-dot-${i}`);
+      if (!dot) return;
+      dot.className = `step-dot ${i < step ? 'done' : i === step ? 'active' : ''}`;
+    });
+    [1, 2].forEach(i => {
+      const line = document.getElementById(`step-line-${i}`);
+      if (line) line.style.background = i < step ? '#7C3AED' : '#E5E7EB';
+    });
+  }
+
+  function showStep(n) {
+    [1, 2, 3].forEach(i => {
+      document.getElementById(`reg-step-${i}`).classList.toggle('hidden', i !== n);
+    });
+    currentStep = n;
+    updateStepDots(n);
+  }
+
+  function showError(msg) {
+    const errMsg = document.getElementById('reg-error-msg');
+    const errDiv = document.getElementById('reg-error');
+    const card   = document.getElementById('reg-card');
+    errMsg.textContent = msg;
+    errDiv.classList.remove('hidden');
+    card.classList.add('shake');
+    setTimeout(() => card.classList.remove('shake'), 500);
+  }
+
+  function hideError() {
+    document.getElementById('reg-error').classList.add('hidden');
+  }
+
+  // ── Password strength ──
+  document.getElementById('reg-password').addEventListener('input', function () {
+    const val = this.value;
+    const strengthDiv = document.getElementById('pw-strength');
+    const label = document.getElementById('pw-label');
+    if (!val) { strengthDiv.classList.add('hidden'); return; }
+    strengthDiv.classList.remove('hidden');
+
+    let score = 0;
+    if (val.length >= 8) score++;
+    if (/[A-Z]/.test(val)) score++;
+    if (/[0-9]/.test(val)) score++;
+    if (/[^A-Za-z0-9]/.test(val)) score++;
+
+    const colors = ['#EF4444', '#F59E0B', '#10B981', '#7C3AED'];
+    const labels = ['Weak 😬', 'Fair 😐', 'Good 👍', 'Strong 💪'];
+    [1, 2, 3, 4].forEach(i => {
+      const bar = document.getElementById(`pw-bar-${i}`);
+      bar.style.background = i <= score ? colors[score - 1] : '#E5E7EB';
+    });
+    label.textContent = labels[score - 1] || '';
+    label.style.color = colors[score - 1] || '#9CA3AF';
+  });
+
+  // ── Role card selection ──
+  document.querySelectorAll('.role-card').forEach(card => {
+    card.addEventListener('click', () => {
+      selectedRole = card.dataset.role;
+      document.querySelectorAll('.role-card .card').forEach(c => {
+        c.classList.remove('border-bibo-purple', 'bg-bibo-purple-pale');
+        c.classList.add('border-transparent');
+      });
+      const selected = document.getElementById(`role-card-${selectedRole}`);
+      selected.classList.add('border-bibo-purple', 'bg-bibo-purple-pale');
+      selected.classList.remove('border-transparent');
+    });
+  });
+
+  // ── Step 1 → 2 ──
+  document.getElementById('reg-next-1').addEventListener('click', () => {
+    hideError();
+    const username = document.getElementById('reg-username').value.trim();
+    const email    = document.getElementById('reg-email').value.trim();
+    const password = document.getElementById('reg-password').value;
+    const confirm  = document.getElementById('reg-confirm').value;
+
+    if (!username || !email || !password || !confirm) { showError('Please fill in all fields!'); return; }
+    if (username.length < 3) { showError('Username must be at least 3 characters.'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showError('Please enter a valid email.'); return; }
+    if (password.length < 6) { showError('Password must be at least 6 characters.'); return; }
+    if (password !== confirm) { showError('Passwords do not match!'); return; }
+
+    showStep(2);
+  });
+
+  // ── Step 2 → 1 ──
+  document.getElementById('reg-back-2').addEventListener('click', () => showStep(1));
+
+  // ── Step 2 → 3 ──
+  document.getElementById('reg-next-2').addEventListener('click', () => {
+    hideError();
+    const firstName = document.getElementById('reg-firstname').value.trim();
+    const lastName  = document.getElementById('reg-lastname').value.trim();
+    const age       = parseInt(document.getElementById('reg-age').value);
+
+    if (!firstName || !lastName) { showError('Please enter your full name!'); return; }
+    if (!age || age < 7 || age > 18) { showError('Age must be between 7 and 18.'); return; }
+    if (!selectedRole) { showError('Please select your role!'); return; }
+
+    // Populate summary
+    document.getElementById('summary-name').textContent     = `${firstName} ${lastName}`;
+    document.getElementById('summary-username').textContent = '@' + document.getElementById('reg-username').value.trim();
+    document.getElementById('summary-email').textContent    = document.getElementById('reg-email').value.trim();
+    document.getElementById('summary-age').textContent      = age + ' years old';
+    document.getElementById('summary-role').textContent     = selectedRole === 'STUDENT' ? '🎒 Student' : '👨‍👩‍👧 Parent';
+
+    showStep(3);
+  });
+
+  // ── Step 3 → 2 ──
+  document.getElementById('reg-back-3').addEventListener('click', () => showStep(2));
+
+  // ── Submit ──
+  document.getElementById('reg-submit').addEventListener('click', async () => {
+    hideError();
+    if (!document.getElementById('reg-terms').checked) {
+      showError('Please agree to the Terms of Service.');
+      return;
+    }
+
+    const btn = document.getElementById('reg-submit');
+    btn.disabled = true;
+    btn.innerHTML = `<span class="inline-flex items-center gap-2">
+      <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+      </svg> Creating account...
+    </span>`;
+
+    const firstName = document.getElementById('reg-firstname').value.trim();
+    const lastName = document.getElementById('reg-lastname').value.trim();
+    const age = parseInt(document.getElementById('reg-age').value, 10);
+
+    const payload = {
+      username: document.getElementById('reg-username').value.trim(),
+      email: document.getElementById('reg-email').value.trim(),
+      password: document.getElementById('reg-password').value,
+      fullName: `${firstName} ${lastName}`.trim(),
+      age: age,
+      learningLevel: 'BEGINNER'
+    };
+    console.log('REGISTER PAYLOAD:', payload);
+    try {
+      //await api.register(payload);
+      let res;
+
+      if (selectedRole === 'STUDENT') {
+        res = await api.registerStudent(payload);
+      } else if (selectedRole === 'PARENT') {
+        res = await api.registerParent({
+          username: payload.username,
+          email: payload.email,
+          password: payload.password
+        });
+      } else if (selectedRole === 'TEACHER') {
+        res = await api.registerTeacher({
+          username: payload.username,
+          email: payload.email,
+          password: payload.password
+        });
+      } else {
+        throw new Error('Invalid role selected');
+      }
+      // Show success state
+      document.getElementById('reg-step-3').classList.add('hidden');
+      document.getElementById('reg-success').classList.remove('hidden');
+      document.getElementById('reg-signin-link').classList.add('hidden');
+      document.getElementById('reg-steps').classList.add('hidden');
+    } catch (e) {
+      showError(e.message || 'Registration failed. Please try again.');
+      btn.disabled = false;
+      btn.innerHTML = 'Create Account 🎉';
+    }
+  });
+}
+
+
+function DashboardPage() {
+  return `<div class="page page-content">
+    <!-- Header -->
+    <div class="px-5 pt-8 pb-2">
+      <div class="flex items-center justify-between mb-1">
+        <div>
+          <p class="text-gray-400 font-semibold text-sm">Good day! 🌞</p>
+          <h1 class="font-display font-black text-3xl text-gray-800" id="dash-name">Hi there 👋</h1>
+        </div>
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-700 flex items-center justify-center shadow-soft cursor-pointer" onclick="clearAuth(); render();">
+          <span class="text-2xl">🦁</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats row -->
+    <div id="dash-stats" class="px-5 mt-4">
+      ${Loading('Getting your progress...')}
+    </div>
+
+    <!-- Continue Learning -->
+    <div class="px-5 mt-6">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-display font-bold text-xl text-gray-800">Continue Learning 📖</h2>
+        <button onclick="navigate('subjects')" class="text-bibo-purple font-bold text-sm hover:underline">See all</button>
+      </div>
+      <div id="dash-continue">${Loading()}</div>
+    </div>
+
+    <!-- AI Tutor CTA -->
+    <div class="px-5 mt-6">
+      <div class="rounded-3xl bg-gradient-to-r from-violet-600 to-purple-800 p-5 flex items-center gap-4 cursor-pointer shadow-btn hover:shadow-xl transition-all" onclick="navigate('ai')">
+        <div class="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-3xl flex-shrink-0">🤖</div>
+        <div class="flex-1">
+          <h3 class="font-display font-bold text-white text-lg leading-tight">Ask AI Tutor</h3>
+          <p class="text-purple-200 text-sm font-semibold">Got questions? I'm here to help!</p>
+        </div>
+        <span class="text-white text-xl">→</span>
+      </div>
+    </div>
+
+    <!-- Recommended subjects -->
+    <div class="px-5 mt-6">
+      <h2 class="font-display font-bold text-xl text-gray-800 mb-3">Explore Subjects 🎯</h2>
+      <div id="dash-subjects" class="grid grid-cols-2 gap-3">${Loading()}</div>
+    </div>
+
+    ${BottomNav('dashboard')}
+  </div>`;
+}
+
+async function bindDashboard() {
+  // Load user info
+  try {
+    const user = await api.getMe();
+    setState({ user });
+    saveAuth(state.token, user);
+  } catch (e) { /* use cached */ }
+
+  const name = state.user?.name || state.user?.firstName || state.user?.username || 'Learner';
+  const firstName = name.split(' ')[0];
+  document.getElementById('dash-name').textContent = `Hi ${firstName} 👋`;
+
+  // Load subjects for stats + cards
+  let subjects = [];
+  try {
+    subjects = await api.getSubjects();
+  } catch (e) {
+    document.getElementById('dash-stats').innerHTML = ErrorState('Could not load progress');
+    document.getElementById('dash-continue').innerHTML = ErrorState('Could not load lessons');
+    document.getElementById('dash-subjects').innerHTML = ErrorState('Could not load subjects');
+    return;
+  }
+
+  // Render stats (mock counts from subjects length for illustration)
+  document.getElementById('dash-stats').innerHTML = `
+    <div class="grid grid-cols-3 gap-3">
+      <div class="card p-4 text-center">
+        <div class="text-2xl font-display font-black text-bibo-purple">${subjects.length}</div>
+        <div class="text-xs font-bold text-gray-400 mt-0.5">Subjects</div>
+      </div>
+      <div class="card p-4 text-center streak-pulse">
+        <div class="text-2xl font-display font-black text-bibo-yellow">${state.user?.streak || 0}🔥</div>
+        <div class="text-xs font-bold text-gray-400 mt-0.5">Day Streak</div>
+      </div>
+      <div class="card p-4 text-center">
+        <div class="text-2xl font-display font-black text-bibo-teal">${state.user?.xp || 0}⭐</div>
+        <div class="text-xs font-bold text-gray-400 mt-0.5">XP Points</div>
+      </div>
+    </div>`;
+
+  // Continue learning (first subject)
+  if (subjects.length > 0) {
+    const s = subjects[0];
+    const style = getSubjectStyle(s.name);
+    document.getElementById('dash-continue').innerHTML = `
+      <div class="card p-4 flex items-center gap-4 cursor-pointer hover:shadow-card-hover" 
+           onclick="navigate('lessons', { selectedSubject: ${JSON.stringify(s)} })">
+        <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0"
+             style="background:${style.pale}">${style.icon}</div>
+        <div class="flex-1 min-w-0">
+          <div class="font-display font-bold text-gray-800 text-base">${s.name}</div>
+          <div class="text-gray-400 text-xs mt-0.5 font-semibold truncate">${s.description || 'Continue where you left off'}</div>
+          <div class="progress-bar h-1.5 mt-2">
+            <div class="progress-fill h-1.5" style="width:${s.progress || 0}%"></div>
+          </div>
+        </div>
+        <span class="text-gray-400 text-lg">→</span>
+      </div>`;
+  } else {
+    document.getElementById('dash-continue').innerHTML = EmptyState('📭', 'No lessons yet', 'Check back soon!');
+  }
+
+  // Subject mini-cards
+  document.getElementById('dash-subjects').innerHTML = subjects.slice(0,4).map(s => {
+    const style = getSubjectStyle(s.name);
+    return `<div class="card p-4 cursor-pointer text-center"
+                 onclick="navigate('lessons', { selectedSubject: ${JSON.stringify(s)} })">
+      <div class="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center text-2xl mb-2"
+           style="background:${style.pale}">${style.icon}</div>
+      <div class="font-display font-bold text-gray-700 text-sm">${s.name}</div>
+      <div class="text-xs text-gray-400 mt-0.5">${s.lessonCount || '?'} lessons</div>
+    </div>`;
+  }).join('');
+}
+
+/* =========================================================
+   PAGE: SUBJECTS
+   ========================================================= */
+function SubjectsPage() {
+  return `<div class="page page-content">
+    ${TopBar('Subjects 📚')}
+    <div class="px-5 pt-4">
+      <p class="text-gray-400 font-semibold text-sm mb-4">Choose a subject to start learning!</p>
+      <div id="subjects-list">${Loading('Fetching subjects...')}</div>
+    </div>
+    ${BottomNav('subjects')}
+  </div>`;
+}
+
+async function bindSubjects() {
+  const list = document.getElementById('subjects-list');
+  try {
+    const subjects = await api.getSubjects();
+    if (!subjects.length) { list.innerHTML = EmptyState('📭', 'No subjects yet', 'Ask your teacher to add some!'); return; }
+    list.innerHTML = `<div class="grid grid-cols-1 gap-4">
+      ${subjects.map(s => {
+        const style = getSubjectStyle(s.name);
+        return `<div class="card p-5 cursor-pointer flex items-center gap-4 hover:shadow-card-hover"
+                     onclick="navigate('lessons', { selectedSubject: ${JSON.stringify(s)} })">
+          <div class="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0"
+               style="background:${style.pale}">${style.icon}</div>
+          <div class="flex-1 min-w-0">
+            <div class="font-display font-bold text-gray-800 text-lg">${s.name}</div>
+            <div class="text-gray-400 text-sm truncate mt-0.5">${s.description || ''}</div>
+            <div class="flex items-center gap-3 mt-2">
+              <div class="progress-bar flex-1 h-2">
+                <div class="progress-fill h-2" style="width:${s.progress || 0}%;background:${style.color}"></div>
+              </div>
+              <span class="text-xs font-bold" style="color:${style.color}">${s.progress || 0}%</span>
+            </div>
+          </div>
+          <span class="text-gray-300 text-xl">→</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+  } catch (e) {
+    list.innerHTML = ErrorState(e.message);
+  }
+}
+
+/* =========================================================
+   PAGE: LESSON LIST
+   ========================================================= */
+function LessonsPage() {
+  const s = state.selectedSubject;
+  const style = s ? getSubjectStyle(s.name) : SUBJECT_STYLES.default;
+  return `<div class="page page-content">
+    ${TopBar(s ? s.name : 'Lessons', 'subjects')}
+
+    <!-- Hero banner -->
+    ${s ? `<div class="mx-5 mt-4 rounded-3xl p-5 flex items-center gap-4 bg-gradient-to-r ${style.bg} text-white shadow-btn">
+      <span class="text-4xl">${style.icon}</span>
+      <div>
+        <div class="font-display font-bold text-xl">${s.name}</div>
+        <div class="text-white/80 text-sm font-semibold">${s.description || 'Explore all lessons'}</div>
+      </div>
+    </div>` : ''}
+
+    <div class="px-5 pt-5">
+      <div id="lessons-list">${Loading('Loading lessons...')}</div>
+    </div>
+    ${BottomNav('subjects')}
+  </div>`;
+}
+
+async function bindLessons() {
+  const list = document.getElementById('lessons-list');
+  const s = state.selectedSubject;
+  if (!s) { list.innerHTML = ErrorState('No subject selected'); return; }
+
+  try {
+    const lessons = await api.getLessons(s.id);
+    if (!lessons.length) { list.innerHTML = EmptyState('📭', 'No lessons yet', 'Check back soon!'); return; }
+
+    list.innerHTML = `<div class="space-y-3">
+      ${lessons.map((l, i) => {
+        const status = l.status || 'NOT_STARTED';
+        return `<div class="card p-4 cursor-pointer flex items-start gap-3"
+                     onclick="navigate('lesson', { selectedLesson: ${JSON.stringify(l)} })">
+          <div class="w-10 h-10 rounded-2xl flex items-center justify-center font-display font-black text-lg flex-shrink-0" 
+               style="background:${getSubjectStyle(s.name).pale};color:${getSubjectStyle(s.name).color}">${i+1}</div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-start justify-between gap-2">
+              <div class="font-display font-bold text-gray-800 text-base leading-tight">${l.title}</div>
+              ${statusBadge(status)}
+            </div>
+            <div class="text-gray-400 text-sm mt-1 line-clamp-2">${l.description || ''}</div>
+            <div class="flex items-center gap-3 mt-2">
+              ${l.estimatedTime ? `<span class="text-xs text-gray-400 font-semibold">⏱ ${l.estimatedTime} min</span>` : ''}
+              ${l.sectionCount ? `<span class="text-xs text-gray-400 font-semibold">📄 ${l.sectionCount} sections</span>` : ''}
+            </div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  } catch (e) {
+    list.innerHTML = ErrorState(e.message);
+  }
+}
+
+/* =========================================================
+   PAGE: LESSON DETAIL
+   ========================================================= */
+let lessonState = { sections: [], current: 0, progress: null, lesson: null, loading: false };
+
+function LessonDetailPage() {
+  return `<div class="page page-content">
+    <div id="lesson-topbar">${TopBar('Loading...', 'lessons')}</div>
+    <!-- Progress bar -->
+    <div class="px-5 pt-2 pb-3 bg-white/80 backdrop-blur-sm sticky top-[57px] z-30 border-b border-purple-50">
+      <div class="flex items-center gap-3">
+        <div class="progress-bar flex-1 h-2.5">
+          <div class="progress-fill h-2.5" id="lesson-progress-fill" style="width:0%"></div>
+        </div>
+        <span class="text-sm font-bold text-bibo-purple" id="lesson-progress-txt">0%</span>
+      </div>
+      <!-- Section dots -->
+      <div class="flex gap-2 mt-2 justify-center" id="section-dots"></div>
+    </div>
+
+    <!-- Content area -->
+    <div class="px-5 pt-4" id="lesson-body">
+      ${Loading('Loading lesson...')}
+    </div>
+
+    <!-- Navigation -->
+    <div id="lesson-nav" class="fixed bottom-0 left-0 right-0 bg-white border-t border-purple-50 px-5 py-3 z-50" style="max-width:480px;margin:0 auto;left:50%;transform:translateX(-50%);">
+      <div class="flex gap-3">
+        <button id="btn-prev" class="btn-secondary flex-1 py-3 text-sm hidden" onclick="lessonPrev()">← Back</button>
+        <button id="btn-next" class="btn-primary flex-1 py-3 text-sm" onclick="lessonNext()">Next →</button>
+        <button id="btn-complete" class="btn-teal flex-1 py-3 text-sm hidden" onclick="lessonComplete()">✅ Mark Complete</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function bindLessonDetail() {
+  const l = state.selectedLesson;
+  if (!l) { navigate('subjects'); return; }
+
+  try {
+    const [lesson, progress] = await Promise.all([
+      api.getLesson(l.id),
+      api.getProgress(l.id).catch(() => null),
+    ]);
+
+    lessonState.lesson = lesson;
+    lessonState.sections = lesson.sections || [];
+    lessonState.progress = progress;
+
+    // Resume from saved position
+    const savedOrder = progress?.currentSectionOrder ?? 0;
+    lessonState.current = lessonState.sections.findIndex(s => s.order === savedOrder);
+    if (lessonState.current < 0) lessonState.current = 0;
+
+    // Start progress if not started
+    if (!progress || progress.status === 'NOT_STARTED') {
+      api.startProgress(l.id).catch(() => {});
+    }
+
+    // Update top bar
+    document.getElementById('lesson-topbar').innerHTML = TopBar(lesson.title, 'lessons');
+
+    renderLessonSection();
+  } catch (e) {
+    document.getElementById('lesson-body').innerHTML = ErrorState(e.message);
+  }
+}
+
+function renderLessonSection() {
+  const { sections, current } = lessonState;
+  if (!sections.length) {
+    document.getElementById('lesson-body').innerHTML = EmptyState('📭', 'No content', 'This lesson has no sections yet.');
+    return;
+  }
+
+  const total = sections.length;
+  const pct = Math.round(((current + 1) / total) * 100);
+  const isLast = current === total - 1;
+  const isFirst = current === 0;
+
+  // Progress bar
+  document.getElementById('lesson-progress-fill').style.width = pct + '%';
+  document.getElementById('lesson-progress-txt').textContent = pct + '%';
+
+  // Section dots
+  document.getElementById('section-dots').innerHTML = sections.map((_, i) =>
+    `<div class="section-dot ${i < current ? 'done' : i === current ? 'active' : ''}"></div>`
+  ).join('');
+
+  // Content
+  const sec = sections[current];
+  const contentHtml = sec.content ? `<div class="prose-like mt-4 text-gray-700 leading-relaxed font-semibold text-base space-y-3">${sec.content}</div>` : '';
+  const imageHtml = sec.imageUrl ? `<img src="${sec.imageUrl}" alt="${sec.title || ''}" class="w-full rounded-2xl mt-4 object-cover max-h-60" />` : '';
+
+  document.getElementById('lesson-body').innerHTML = `
+    <div class="page">
+      <div class="flex items-center gap-2 mb-1">
+        <span class="text-xs font-bold bg-bibo-purple-pale text-bibo-purple px-2.5 py-1 rounded-full">Section ${current + 1} of ${total}</span>
+      </div>
+      <h2 class="font-display font-black text-2xl text-gray-800 mt-2 leading-tight">${sec.title || 'Section ' + (current+1)}</h2>
+      ${imageHtml}
+      ${contentHtml}
+    </div>`;
+
+  // Nav buttons
+  document.getElementById('btn-prev').classList.toggle('hidden', isFirst);
+  document.getElementById('btn-next').classList.toggle('hidden', isLast);
+  document.getElementById('btn-complete').classList.toggle('hidden', !isLast);
+
+  // Save progress
+  const l = lessonState.lesson;
+  api.updateProgress(l.id, { currentSectionOrder: sec.order ?? current }).catch(() => {});
+}
+
+function lessonPrev() {
+  if (lessonState.current > 0) { lessonState.current--; renderLessonSection(); window.scrollTo(0,0); }
+}
+function lessonNext() {
+  if (lessonState.current < lessonState.sections.length - 1) { lessonState.current++; renderLessonSection(); window.scrollTo(0,0); }
+}
+async function lessonComplete() {
+  const btn = document.getElementById('btn-complete');
+  btn.disabled = true; btn.textContent = '⏳ Saving...';
+  try {
+    await api.completeLesson(lessonState.lesson.id);
+    showToast('Lesson completed! Great job! 🎉', '🏆');
+    setTimeout(() => navigate('lessons'), 1500);
+  } catch (e) {
+    showToast('Could not save. Try again.', '⚠️');
+    btn.disabled = false; btn.textContent = '✅ Mark Complete';
+  }
+}
+
+/* =========================================================
+   PAGE: AI TUTOR CHAT
+   ========================================================= */
+function AIChatPage() {
+  return `<div class="page" style="display:flex;flex-direction:column;height:100vh;height:100dvh;">
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-violet-600 to-purple-800 px-5 pt-8 pb-5 text-white flex-shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-2xl">🤖</div>
+        <div>
+          <h2 class="font-display font-bold text-xl">AI Tutor</h2>
+          <div class="flex items-center gap-1.5">
+            <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+            <span class="text-purple-200 text-xs font-semibold">Online & ready to help!</span>
+          </div>
+        </div>
+        <button onclick="navigate('dashboard')" class="ml-auto w-9 h-9 rounded-full bg-white/20 flex items-center justify-center font-bold text-lg hover:bg-white/30 transition-colors">✕</button>
+      </div>
+    </div>
+
+    <!-- Messages -->
+    <div id="chat-messages" class="flex-1 overflow-y-auto px-4 py-4 space-y-4" style="background:#F5F3FF;">
+      <!-- Intro bubble -->
+      <div class="flex items-end gap-2">
+        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-700 flex items-center justify-center text-lg flex-shrink-0">🤖</div>
+        <div class="chat-bubble-ai p-4 max-w-[80%]">
+          <p class="text-gray-700 font-semibold text-sm leading-relaxed">
+            Hi there! 👋 I'm BIBO AI, your learning buddy!<br/><br/>
+            You can ask me anything about your lessons — Math, Science, Reading, and more. I'm here to help! 😊
+          </p>
+        </div>
+      </div>
+      <!-- Suggestion chips -->
+      <div class="flex flex-wrap gap-2 pl-10">
+        ${['Help me with Math', 'Explain photosynthesis', 'What is a sentence?', 'Fun science facts!'].map(q =>
+          `<button class="text-xs font-bold bg-white text-bibo-purple px-3 py-1.5 rounded-full shadow-sm border border-purple-100 hover:bg-bibo-purple-pale transition-colors" onclick="sendSuggestion(this,'${q}')">${q}</button>`
+        ).join('')}
+      </div>
+    </div>
+
+    <!-- Input -->
+    <div class="flex-shrink-0 bg-white border-t border-purple-100 px-4 py-3 flex items-end gap-2" style="padding-bottom:max(12px,env(safe-area-inset-bottom))">
+      <textarea id="chat-input" placeholder="Ask me anything... 💬" rows="1"
+        class="bibo-input flex-1 resize-none overflow-hidden min-h-[44px] max-h-32 py-2.5"
+        oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,128)+'px'"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}"></textarea>
+      <button id="chat-send" onclick="sendChat()" class="btn-primary w-11 h-11 flex items-center justify-center text-xl flex-shrink-0 p-0">
+        ➤
+      </button>
+    </div>
+  </div>`;
+}
+
+function bindAIChat() {
+  // Nothing extra needed; all wired via inline handlers
+}
+
+function sendSuggestion(btn, text) {
+  btn.closest('.flex').remove();
+  document.getElementById('chat-input').value = text;
+  sendChat();
+}
+
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+
+  input.value = ''; input.style.height = 'auto';
+
+  const msgs = document.getElementById('chat-messages');
+
+  // User bubble
+  msgs.innerHTML += `<div class="flex justify-end">
+    <div class="chat-bubble-user p-3 px-4 max-w-[80%]">
+      <p class="font-semibold text-sm leading-relaxed">${escapeHtml(msg)}</p>
+    </div>
+  </div>`;
+
+  // Typing indicator
+  const typingId = 'typing-' + Date.now();
+  msgs.innerHTML += `<div class="flex items-end gap-2" id="${typingId}">
+    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-700 flex items-center justify-center text-lg flex-shrink-0">🤖</div>
+    <div class="chat-bubble-ai p-4">
+      <div class="flex gap-1.5 items-center">
+        <div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
+      </div>
+    </div>
+  </div>`;
+
+  msgs.scrollTop = msgs.scrollHeight;
+  document.getElementById('chat-send').disabled = true;
+
+  state.chatHistory.push({ role: 'user', content: msg });
+
+  try {
+    const res = await api.aiChat({ message: msg, history: state.chatHistory });
+    const reply = res.reply || res.message || res.response || 'I got your message!';
+    state.chatHistory.push({ role: 'assistant', content: reply });
+
+    document.getElementById(typingId).outerHTML = `<div class="flex items-end gap-2">
+      <div class="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-700 flex items-center justify-center text-lg flex-shrink-0">🤖</div>
+      <div class="chat-bubble-ai p-4 max-w-[80%]">
+        <p class="text-gray-700 font-semibold text-sm leading-relaxed">${escapeHtml(reply)}</p>
+      </div>
+    </div>`;
+  } catch (e) {
+    document.getElementById(typingId).outerHTML = `<div class="flex items-end gap-2">
+      <div class="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-700 flex items-center justify-center text-lg flex-shrink-0">🤖</div>
+      <div class="chat-bubble-ai p-4 max-w-[80%]">
+        <p class="text-red-400 font-semibold text-sm">Sorry, I couldn't connect. Please try again! 😅</p>
+      </div>
+    </div>`;
+  }
+
+  document.getElementById('chat-send').disabled = false;
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br/>');
+}
+
+/* =========================================================
+   PAGE: PARENT VIEW
+   ========================================================= */
+function ParentViewPage() {
+  return `<div class="page page-content">
+    ${TopBar('Parent Dashboard 👨‍👩‍👧')}
+    <div class="px-5 pt-4">
+      <!-- Child Info -->
+      <div class="card p-5 mb-5 flex items-center gap-4">
+        <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-700 flex items-center justify-center text-3xl">🦁</div>
+        <div>
+          <div class="font-display font-bold text-xl text-gray-800" id="parent-child-name">Loading...</div>
+          <div class="text-gray-400 text-sm font-semibold" id="parent-child-grade">Student</div>
+        </div>
+      </div>
+
+      <!-- Progress Overview -->
+      <h3 class="font-display font-bold text-lg text-gray-700 mb-3">Progress Overview</h3>
+      <div id="parent-stats" class="grid grid-cols-2 gap-3 mb-5">${Loading()}</div>
+
+      <!-- Subject Breakdown -->
+      <h3 class="font-display font-bold text-lg text-gray-700 mb-3">Subject Progress</h3>
+      <div id="parent-subjects">${Loading()}</div>
+
+      <!-- Weak Areas -->
+      <h3 class="font-display font-bold text-lg text-gray-700 mb-3 mt-5">Areas to Improve 💪</h3>
+      <div id="parent-weak" class="card p-4 space-y-3">${Loading()}</div>
+    </div>
+    ${BottomNav('parent')}
+  </div>`;
+}
+
+async function bindParent() {
+  try {
+    const user = state.user;
+    const name = user?.name || user?.firstName || 'Your Child';
+    document.getElementById('parent-child-name').textContent = name;
+    document.getElementById('parent-child-grade').textContent = `Grade ${user?.grade || '?'} · ${user?.school || 'BIBO Learner'}`;
+
+    const subjects = await api.getSubjects();
+
+    // Stats
+    const total = subjects.reduce((a, s) => a + (s.lessonCount || 0), 0);
+    const completed = subjects.reduce((a, s) => a + (s.completedCount || 0), 0);
+    const pct = total ? Math.round((completed / total) * 100) : 0;
+
+    document.getElementById('parent-stats').innerHTML = `
+      <div class="card p-4 text-center">
+        <div class="text-3xl font-display font-black text-bibo-green">${completed}</div>
+        <div class="text-xs font-bold text-gray-400 mt-1">Lessons Done</div>
+      </div>
+      <div class="card p-4 text-center">
+        <div class="text-3xl font-display font-black text-bibo-purple">${total - completed}</div>
+        <div class="text-xs font-bold text-gray-400 mt-1">Remaining</div>
+      </div>
+      <div class="card p-4 text-center col-span-2">
+        <div class="flex items-center gap-3">
+          <div class="progress-bar flex-1 h-3">
+            <div class="progress-fill h-3" style="width:${pct}%"></div>
+          </div>
+          <span class="font-display font-black text-bibo-purple text-lg">${pct}%</span>
+        </div>
+        <div class="text-xs font-bold text-gray-400 mt-1.5">Overall Progress</div>
+      </div>`;
+
+    // Subject progress cards
+    document.getElementById('parent-subjects').innerHTML = `<div class="space-y-3">
+      ${subjects.map(s => {
+        const style = getSubjectStyle(s.name);
+        const p = s.progress || 0;
+        return `<div class="card p-4">
+          <div class="flex items-center gap-3 mb-2">
+            <span class="text-2xl">${style.icon}</span>
+            <div class="flex-1">
+              <div class="flex justify-between items-center">
+                <span class="font-bold text-gray-700">${s.name}</span>
+                <span class="text-xs font-black" style="color:${style.color}">${p}%</span>
+              </div>
+              <div class="progress-bar h-2 mt-1">
+                <div class="progress-fill h-2" style="width:${p}%;background:${style.color}"></div>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+    // Weak areas (subjects with < 50% progress)
+    const weak = subjects.filter(s => (s.progress || 0) < 50);
+    document.getElementById('parent-weak').innerHTML = weak.length
+      ? weak.map(s => {
+          const style = getSubjectStyle(s.name);
+          return `<div class="flex items-center gap-3">
+            <span class="text-xl">${style.icon}</span>
+            <div>
+              <div class="font-bold text-gray-700 text-sm">${s.name}</div>
+              <div class="text-xs text-gray-400">Only ${s.progress || 0}% complete — needs more practice</div>
+            </div>
+          </div>`;
+        }).join('<div class="border-t border-gray-100"></div>')
+      : `<div class="text-center py-4">
+          <div class="text-3xl mb-2">🌟</div>
+          <div class="font-bold text-gray-700">No weak areas!</div>
+          <div class="text-sm text-gray-400">Great progress across all subjects!</div>
+        </div>`;
+  } catch (e) {
+    document.getElementById('parent-stats').innerHTML = ErrorState(e.message);
+  }
+}
+
+/* =========================================================
+   INIT
+   ========================================================= */
+render();
+</script>
+</body>
+</html>

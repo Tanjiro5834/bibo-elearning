@@ -1,0 +1,2350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BIBO – Bacoor Learn</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    /* ─── CSS Reset & Variables ─────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #EAECF0;
+      --sidebar-bg: #FFFFFF;
+      --card-bg: #FFFFFF;
+      --primary: #3B3FC4;
+      --primary-dark: #2E31A8;
+      --primary-light: #EEF0FF;
+      --primary-mid: #6366F1;
+      --accent-orange: #F59E0B;
+      --accent-green: #10B981;
+      --accent-red: #EF4444;
+      --accent-pink: #EC4899;
+      --text-900: #0F1117;
+      --text-700: #374151;
+      --text-500: #6B7280;
+      --text-400: #9CA3AF;
+      --border: #E5E7EB;
+      --shadow-sm: 0 1px 4px rgba(0,0,0,0.06);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+      --shadow-primary: 0 4px 20px rgba(59,63,196,0.28);
+      --radius-sm: 10px;
+      --radius-md: 14px;
+      --radius-lg: 18px;
+      --radius-xl: 24px;
+      --sidebar-w: 260px;
+      --font-display: 'Plus Jakarta Sans', sans-serif;
+      --font-body: 'DM Sans', sans-serif;
+    }
+
+    html, body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--text-700);
+      min-height: 100vh;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    /* ─── Scrollbar ─────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 99px; }
+
+    /* ─── Layout ────────────────────────────────────────────── */
+    #app-layout {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* ─── Sidebar ───────────────────────────────────────────── */
+    #sidebar {
+      width: var(--sidebar-w);
+      min-height: 100vh;
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 24px 16px;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      z-index: 100;
+      transition: transform 0.3s cubic-bezier(.4,0,.2,1);
+    }
+
+    #sidebar-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 99;
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 8px 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+    .sidebar-logo-icon {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      background: var(--primary);
+      color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-display);
+      font-weight: 900;
+      font-size: 18px;
+    }
+    .sidebar-logo-text { line-height: 1.1; }
+    .sidebar-logo-title {
+      font-family: var(--font-display);
+      font-weight: 900;
+      font-size: 17px;
+      color: var(--text-900);
+      letter-spacing: -0.3px;
+    }
+    .sidebar-logo-sub {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-400);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .sidebar-nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+
+    .nav-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-500);
+      cursor: pointer;
+      transition: all 0.18s;
+      border: none;
+      background: transparent;
+      width: 100%;
+      text-align: left;
+      text-decoration: none;
+    }
+    .nav-item:hover { background: var(--bg); color: var(--text-900); }
+    .nav-item.active {
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 700;
+    }
+    .nav-item svg { flex-shrink: 0; width: 18px; height: 18px; }
+
+    .sidebar-streak {
+      background: linear-gradient(135deg, #1E2A78 0%, #3B3FC4 100%);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      color: white;
+      margin-top: 12px;
+    }
+    .streak-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      opacity: 0.7;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .streak-number {
+      font-family: var(--font-display);
+      font-size: 36px;
+      font-weight: 900;
+      line-height: 1;
+    }
+    .streak-days { font-size: 16px; font-weight: 600; opacity: 0.85; }
+    .streak-bar {
+      height: 5px;
+      background: rgba(255,255,255,0.25);
+      border-radius: 99px;
+      margin-top: 12px;
+      overflow: hidden;
+    }
+    .streak-bar-fill {
+      height: 100%;
+      background: var(--accent-orange);
+      border-radius: 99px;
+      width: 60%;
+    }
+
+    .sidebar-logout {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-400);
+      cursor: pointer;
+      transition: all 0.18s;
+      border: none;
+      background: transparent;
+      width: 100%;
+      text-align: left;
+      margin-top: 8px;
+    }
+    .sidebar-logout:hover { color: var(--accent-red); background: #FEE2E2; }
+
+    /* ─── Main Content ───────────────────────────────────────── */
+    #main-content {
+      margin-left: var(--sidebar-w);
+      flex: 1;
+      min-height: 100vh;
+      padding: 36px 40px;
+      overflow-x: hidden;
+    }
+
+    /* ─── Page animations ───────────────────────────────────── */
+    .page {
+      animation: pageFadeIn 0.28s ease;
+    }
+    @keyframes pageFadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── Cards ─────────────────────────────────────────────── */
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border);
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+    .card:hover { box-shadow: var(--shadow-md); }
+    .card-interactive { cursor: pointer; }
+    .card-interactive:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+
+    /* ─── Hero Banner ───────────────────────────────────────── */
+    .hero-banner {
+      background: linear-gradient(135deg, #1E2A78 0%, #3B3FC4 60%, #5B60E0 100%);
+      border-radius: var(--radius-xl);
+      padding: 36px 40px;
+      color: white;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-banner::after {
+      content: '';
+      position: absolute;
+      right: -20px; top: -20px;
+      width: 260px; height: 260px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 50%;
+    }
+    .hero-banner-icon {
+      position: absolute;
+      right: 40px; top: 50%;
+      transform: translateY(-50%);
+      opacity: 0.15;
+    }
+
+    /* ─── Buttons ───────────────────────────────────────────── */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 8px; border: none; cursor: pointer;
+      font-family: var(--font-body);
+      font-weight: 700;
+      border-radius: 99px;
+      transition: all 0.18s;
+      text-decoration: none;
+    }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none !important; }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      padding: 12px 28px;
+      font-size: 14px;
+      box-shadow: var(--shadow-primary);
+    }
+    .btn-primary:hover:not(:disabled) { background: var(--primary-dark); transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-white {
+      background: white;
+      color: var(--primary);
+      padding: 12px 28px;
+      font-size: 14px;
+    }
+    .btn-white:hover { background: #f5f5ff; transform: translateY(-1px); }
+
+    .btn-orange {
+      background: var(--accent-orange);
+      color: white;
+      padding: 12px 28px;
+      font-size: 14px;
+      box-shadow: 0 4px 16px rgba(245,158,11,0.35);
+    }
+    .btn-orange:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-1px); }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--primary);
+      padding: 10px 20px;
+      font-size: 14px;
+      border: 1.5px solid var(--primary-light);
+    }
+    .btn-ghost:hover { background: var(--primary-light); }
+
+    .btn-sm {
+      padding: 8px 18px;
+      font-size: 13px;
+    }
+
+    .btn-icon {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      padding: 0;
+      flex-shrink: 0;
+    }
+
+    /* ─── Stat chips ─────────────────────────────────────────── */
+    .stat-chip {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-700);
+    }
+    .stat-chip svg { width: 16px; height: 16px; }
+
+    /* ─── Section heading ───────────────────────────────────── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--text-900);
+    }
+    .section-link {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--primary);
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .section-link:hover { text-decoration: underline; }
+
+    /* ─── Progress bar ──────────────────────────────────────── */
+    .progress-track {
+      background: var(--bg);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      background: linear-gradient(90deg, var(--primary), var(--primary-mid));
+      border-radius: 99px;
+      transition: width 0.6s cubic-bezier(.4,0,.2,1);
+      height: 100%;
+    }
+
+    /* ─── Badge/pill ────────────────────────────────────────── */
+    .badge {
+      display: inline-flex; align-items: center;
+      border-radius: 99px;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+    }
+    .badge-easy   { background: #D1FAE5; color: #065F46; }
+    .badge-medium { background: #FEF3C7; color: #92400E; }
+    .badge-hard   { background: #FEE2E2; color: #991B1B; }
+    .badge-new    { background: var(--primary-light); color: var(--primary); }
+    .badge-done   { background: #D1FAE5; color: #065F46; }
+    .badge-progress { background: #FEF3C7; color: #92400E; }
+
+    /* ─── Inputs ─────────────────────────────────────────────── */
+    .bibo-input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-md);
+      font-family: var(--font-body);
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-900);
+      background: #FAFAFA;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .bibo-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(59,63,196,0.1);
+      background: white;
+    }
+    .bibo-input::placeholder { color: var(--text-400); }
+
+    .input-group { position: relative; }
+    .input-icon {
+      position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+      color: var(--text-400);
+      pointer-events: none;
+    }
+    .input-group .bibo-input { padding-left: 42px; }
+
+    /* ─── Chat ───────────────────────────────────────────────── */
+    .chat-bubble-ai {
+      background: white;
+      border-radius: 18px 18px 18px 4px;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border);
+    }
+    .chat-bubble-user {
+      background: var(--primary);
+      color: white;
+      border-radius: 18px 18px 4px 18px;
+    }
+
+    /* ─── Toast ─────────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 32px; left: 50%;
+      transform: translateX(-50%) translateY(16px);
+      background: var(--text-900);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 99px;
+      font-size: 13px;
+      font-weight: 700;
+      z-index: 9999;
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(.4,0,.2,1);
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ─── Spinner ───────────────────────────────────────────── */
+    .spinner {
+      width: 28px; height: 28px;
+      border: 3px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── Typing dots ───────────────────────────────────────── */
+    .typing-dot {
+      width: 7px; height: 7px;
+      background: var(--primary-mid);
+      border-radius: 50%;
+      animation: typingBounce 1.2s ease-in-out infinite;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typingBounce {
+      0%,60%,100% { transform: translateY(0); opacity: 0.4; }
+      30% { transform: translateY(-7px); opacity: 1; }
+    }
+
+    /* ─── Shake ─────────────────────────────────────────────── */
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%,60% { transform: translateX(-6px); }
+      40%,80% { transform: translateX(6px); }
+    }
+    .shake { animation: shake 0.4s; }
+
+    /* ─── Auth pages ─────────────────────────────────────────── */
+    #app-auth {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: var(--bg);
+    }
+    .auth-card {
+      width: 100%;
+      max-width: 440px;
+      background: white;
+      border-radius: var(--radius-xl);
+      padding: 40px;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border);
+    }
+
+    /* ─── Subject color themes ──────────────────────────────── */
+    .sub-math     { --sc: #3B3FC4; --sp: #EEF0FF; }
+    .sub-science  { --sc: #0D9488; --sp: #CCFBF1; }
+    .sub-reading  { --sc: #F59E0B; --sp: #FEF3C7; }
+    .sub-filipino { --sc: #EF4444; --sp: #FEE2E2; }
+    .sub-arts     { --sc: #EC4899; --sp: #FCE7F3; }
+    .sub-values   { --sc: #10B981; --sp: #D1FAE5; }
+
+    /* ─── Section dots (lesson) ─────────────────────────────── */
+    .section-dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: var(--border);
+      transition: all 0.2s;
+    }
+    .section-dot.active { background: var(--primary); transform: scale(1.3); }
+    .section-dot.done   { background: var(--accent-green); }
+
+    /* ─── Step dots (register) ──────────────────────────────── */
+    .step-dot {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      background: var(--border);
+      border: 2px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 800;
+      color: var(--text-400);
+      transition: all 0.3s;
+    }
+    .step-dot.active {
+      background: var(--primary); border-color: var(--primary); color: white;
+      box-shadow: 0 0 0 4px rgba(59,63,196,0.18);
+    }
+    .step-dot.done { background: var(--accent-green); border-color: var(--accent-green); color: white; }
+
+    /* ─── Quiz option cards ─────────────────────────────────── */
+    .quiz-option {
+      display: flex; align-items: center; gap: 16px;
+      padding: 18px 24px;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      transition: all 0.18s;
+      background: white;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-700);
+    }
+    .quiz-option:hover { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
+    .quiz-option.selected { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
+    .quiz-option.correct  { border-color: var(--accent-green); background: #D1FAE5; color: #065F46; }
+    .quiz-option.wrong    { border-color: var(--accent-red);   background: #FEE2E2; color: #991B1B; }
+    .quiz-option-key {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 800;
+      flex-shrink: 0;
+      transition: all 0.18s;
+    }
+
+    /* ─── Leaderboard ───────────────────────────────────────── */
+    .leaderboard-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .leaderboard-row:last-child { border-bottom: none; }
+    .leaderboard-row.me {
+      background: var(--primary-light);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      margin: 0 -16px;
+      border-bottom: none;
+    }
+
+    /* ─── Mobile hamburger ──────────────────────────────────── */
+    #mobile-menu-btn {
+      display: none;
+      position: fixed;
+      top: 16px; left: 16px;
+      z-index: 101;
+      width: 40px; height: 40px;
+      border-radius: var(--radius-sm);
+      background: white;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+      cursor: pointer;
+      align-items: center; justify-content: center;
+      flex-direction: column; gap: 5px;
+    }
+    #mobile-menu-btn span {
+      display: block;
+      width: 18px; height: 2px;
+      background: var(--text-700);
+      border-radius: 99px;
+      transition: all 0.2s;
+    }
+
+    /* ─── Responsive ────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      #sidebar { transform: translateX(-100%); }
+      #sidebar.open { transform: translateX(0); }
+      #sidebar-overlay { display: block; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+      #sidebar-overlay.open { opacity: 1; pointer-events: all; }
+      #main-content { margin-left: 0; padding: 24px 20px; padding-top: 72px; }
+      #mobile-menu-btn { display: flex; }
+    }
+
+    @media (max-width: 640px) {
+      #main-content { padding: 16px; padding-top: 68px; }
+      .hero-banner { padding: 24px 24px; }
+      .hero-banner-icon { display: none; }
+      .auth-card { padding: 28px 24px; }
+    }
+
+    /* ─── Utility ───────────────────────────────────────────── */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    @media (max-width: 1200px) { .grid-4 { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 768px) { .grid-3, .grid-2 { grid-template-columns: 1fr; } }
+
+    .flex-between { display: flex; align-items: center; justify-content: space-between; }
+    .flex-center { display: flex; align-items: center; }
+    .gap-8 { gap: 8px; }
+    .gap-12 { gap: 12px; }
+    .gap-16 { gap: 16px; }
+    .mb-8 { margin-bottom: 8px; }
+    .mb-12 { margin-bottom: 12px; }
+    .mb-16 { margin-bottom: 16px; }
+    .mb-24 { margin-bottom: 24px; }
+    .mb-32 { margin-bottom: 32px; }
+    .text-sm { font-size: 13px; }
+    .text-xs { font-size: 11px; }
+    .font-bold { font-weight: 700; }
+    .font-black { font-weight: 900; }
+    .text-primary { color: var(--primary); }
+    .text-muted { color: var(--text-500); }
+    .text-orange { color: var(--accent-orange); }
+    .text-green { color: var(--accent-green); }
+    .text-red { color: var(--accent-red); }
+    .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    h1 { font-family: var(--font-display); font-size: 28px; font-weight: 900; color: var(--text-900); line-height: 1.2; }
+    h2 { font-family: var(--font-display); font-size: 22px; font-weight: 800; color: var(--text-900); }
+    h3 { font-family: var(--font-display); font-size: 18px; font-weight: 800; color: var(--text-900); }
+
+    /* ─── Password strength ─────────────────────────────────── */
+    .pw-bar {
+      height: 4px; flex: 1;
+      border-radius: 99px;
+      background: var(--border);
+      transition: background 0.3s;
+    }
+
+    /* ─── Pulse animation for streak ────────────────────────── */
+    @keyframes pulse-glow {
+      0%,100% { box-shadow: 0 0 0 0 rgba(245,158,11,0.4); }
+      50% { box-shadow: 0 0 0 8px rgba(245,158,11,0); }
+    }
+    .pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+  </style>
+</head>
+<body>
+
+<!-- Mobile hamburger -->
+<button id="mobile-menu-btn" onclick="toggleSidebar()" aria-label="Menu">
+  <span></span><span></span><span></span>
+</button>
+
+<!-- Sidebar overlay -->
+<div id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- App root (auth pages render here directly) -->
+<div id="app"></div>
+
+<script>
+/* ============================================================
+   BIBO SPA — Redesigned UI (backend contract unchanged)
+   ============================================================ */
+
+// ── API Layer (unchanged) ──────────────────────────────────
+const API_BASE = '/api';
+
+const api = {
+  async request(method, path, body = null, token = null) {
+    const headers = { 'Content-Type': 'application/json' };
+    const validToken = token && token !== 'null' && token !== 'undefined' && token.trim() !== '';
+    if (validToken) headers['Authorization'] = `Bearer ${token}`;
+    const opts = { method, headers };
+    if (body) opts.body = JSON.stringify(body);
+    const res = await fetch(API_BASE + path, opts);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: 'Something went wrong' }));
+      throw new Error(err.message || `HTTP ${res.status}`);
+    }
+    return res.json();
+  },
+
+  login:           (data) => api.request('POST', '/auth/login', data),
+  registerStudent: (data) => api.request('POST', '/auth/register/student', data),
+  registerParent:  (data) => api.request('POST', '/auth/register/parent', data),
+  registerTeacher: (data) => api.request('POST', '/auth/register/teacher', data),
+  getMe:           ()     => api.request('GET', '/student/me', null, state.token),
+  getSubjects:     ()     => api.request('GET', '/subjects/active', null, state.token),
+  getLessons:      (sid)  => api.request('GET', `/lessons/subject/${sid}`, null, state.token),
+  getLesson:       (lid)  => api.request('GET', `/lessons/${lid}`, null, state.token),
+  getProgress:     (lid)  => api.request('GET', `/progress/${lid}`, null, state.token),
+  startProgress:   (lid)  => api.request('POST', `/progress/${lid}/start`, {}, state.token),
+  updateProgress:  (lid, d) => api.request('PUT', `/progress/${lid}`, d, state.token),
+  completeLesson:  (lid)  => api.request('POST', `/progress/${lid}/complete`, {}, state.token),
+  aiChat:          (data) => api.request('POST', '/ai/chat', data, state.token),
+};
+
+// ── State (unchanged) ──────────────────────────────────────
+const state = {
+  token:           localStorage.getItem('bibo_token') || null,
+  user:            JSON.parse(localStorage.getItem('bibo_user') || 'null'),
+  currentPage:     'login',
+  selectedSubject: null,
+  selectedLesson:  null,
+  chatHistory:     [],
+  parentView:      false,
+};
+
+function setState(updates) { Object.assign(state, updates); }
+
+function saveAuth(token, user) {
+  if (!token || token === 'null' || token === 'undefined' || token.trim() === '') {
+    throw new Error('Invalid token received from server');
+  }
+  state.token = token;
+  state.user = user || null;
+  localStorage.setItem('bibo_token', token);
+  localStorage.setItem('bibo_user', JSON.stringify(user || null));
+}
+
+function clearAuth() {
+  state.token = null; state.user = null;
+  localStorage.removeItem('bibo_token');
+  localStorage.removeItem('bibo_user');
+}
+
+// ── Router ─────────────────────────────────────────────────
+function navigate(page, data = {}) {
+  setState({ currentPage: page, ...data });
+  render();
+  window.scrollTo(0, 0);
+  // Close mobile sidebar
+  const sidebar = document.getElementById('sidebar');
+  if (sidebar) { sidebar.classList.remove('open'); document.getElementById('sidebar-overlay').classList.remove('open'); }
+}
+
+function render() {
+  const app = document.getElementById('app');
+
+  if (!state.token) {
+    // Auth pages: no sidebar layout
+    app.innerHTML = '';
+    if (state.currentPage === 'register') {
+      app.innerHTML = `<div id="app-auth">${RegisterPage()}</div>`;
+      bindRegister();
+    } else {
+      app.innerHTML = `<div id="app-auth">${LoginPage()}</div>`;
+      bindLogin();
+    }
+    return;
+  }
+
+  // Authenticated: sidebar + main layout
+  app.innerHTML = `
+    <div id="app-layout">
+      ${SidebarHtml()}
+      <div id="main-content">
+        <div id="page-container"></div>
+      </div>
+    </div>`;
+
+  updateSidebarActive();
+
+  const pages = {
+    dashboard: () => { document.getElementById('page-container').innerHTML = DashboardPage(); bindDashboard(); },
+    subjects:  () => { document.getElementById('page-container').innerHTML = SubjectsPage();  bindSubjects(); },
+    lessons:   () => { document.getElementById('page-container').innerHTML = LessonsPage();   bindLessons(); },
+    lesson:    () => { document.getElementById('page-container').innerHTML = LessonDetailPage(); bindLessonDetail(); },
+    ai:        () => { document.getElementById('page-container').innerHTML = AIChatPage();    bindAIChat(); },
+    parent:    () => { document.getElementById('page-container').innerHTML = ParentViewPage(); bindParent(); },
+  };
+  (pages[state.currentPage] || pages.dashboard)();
+}
+
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  if (!sidebar) return;
+  sidebar.classList.toggle('open');
+  overlay.classList.toggle('open');
+}
+
+function updateSidebarActive() {
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.page === state.currentPage);
+  });
+}
+
+// ── Toast ──────────────────────────────────────────────────
+function showToast(msg, emoji = '✅') {
+  const t = document.getElementById('toast');
+  t.textContent = `${emoji} ${msg}`;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── Helpers ────────────────────────────────────────────────
+function Loading(msg = 'Loading...') {
+  return `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:16px;">
+    <div class="spinner"></div>
+    <p style="color:var(--text-400);font-size:13px;font-weight:600;">${msg}</p>
+  </div>`;
+}
+
+function EmptyState(emoji, title, sub) {
+  return `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:12px;text-align:center;">
+    <div style="font-size:44px;">${emoji}</div>
+    <h3 style="font-size:18px;">${title}</h3>
+    <p style="color:var(--text-400);font-size:13px;">${sub}</p>
+  </div>`;
+}
+
+function ErrorState(msg) {
+  return `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:12px;text-align:center;">
+    <div style="font-size:40px;">😕</div>
+    <h3 style="font-size:18px;">Oops!</h3>
+    <p style="color:var(--text-400);font-size:13px;">${msg}</p>
+  </div>`;
+}
+
+function statusBadge(status) {
+  if (status === 'COMPLETED')  return `<span class="badge badge-done">✓ Done</span>`;
+  if (status === 'IN_PROGRESS') return `<span class="badge badge-progress">In Progress</span>`;
+  return `<span class="badge badge-new">New</span>`;
+}
+
+const SUBJECT_STYLES = {
+  'Math':     { color: '#3B3FC4', pale: '#EEF0FF', icon: '🔢', gradient: 'linear-gradient(135deg,#3B3FC4,#6366F1)' },
+  'Science':  { color: '#0D9488', pale: '#CCFBF1', icon: '🔬', gradient: 'linear-gradient(135deg,#0D9488,#0F766E)' },
+  'Reading':  { color: '#F59E0B', pale: '#FEF3C7', icon: '📖', gradient: 'linear-gradient(135deg,#F59E0B,#D97706)' },
+  'Filipino': { color: '#EF4444', pale: '#FEE2E2', icon: '🇵🇭', gradient: 'linear-gradient(135deg,#EF4444,#DC2626)' },
+  'Arts':     { color: '#EC4899', pale: '#FCE7F3', icon: '🎨', gradient: 'linear-gradient(135deg,#EC4899,#DB2777)' },
+  'Values':   { color: '#10B981', pale: '#D1FAE5', icon: '🌟', gradient: 'linear-gradient(135deg,#10B981,#059669)' },
+  'English':  { color: '#3B3FC4', pale: '#EEF0FF', icon: '📘', gradient: 'linear-gradient(135deg,#3B3FC4,#6366F1)' },
+  'default':  { color: '#3B3FC4', pale: '#EEF0FF', icon: '📝', gradient: 'linear-gradient(135deg,#3B3FC4,#6366F1)' },
+};
+function getSubjectStyle(name) { return SUBJECT_STYLES[name] || SUBJECT_STYLES['default']; }
+
+function escapeHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br/>');
+}
+
+// SVG icons
+const icons = {
+  dashboard: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>`,
+  lessons:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>`,
+  games:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="4"/><path d="M6 12h4m-2-2v4"/><circle cx="16" cy="11" r="1" fill="currentColor"/><circle cx="18" cy="13" r="1" fill="currentColor"/></svg>`,
+  quiz:      `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`,
+  ai:        `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
+  research:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>`,
+  achievements: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/></svg>`,
+  settings:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
+  logout:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>`,
+  star:      `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`,
+  zap:       `<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
+  flame:     `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 23C8.136 23 5 19.864 5 16c0-3.175 2.104-5.768 5-7.486V12c0 1.657 1.343 3 3 3s3-1.343 3-3V4.51c2.396 1.26 4 3.855 4 7.49 0 3.864-3.136 7-7 7z"/></svg>`,
+  arrowRight:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><polyline points="9 18 15 12 9 6"/></svg>`,
+  clock:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+  book:      `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>`,
+  play:      `<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><polygon points="5 3 19 12 5 21 5 3"/></svg>`,
+  check:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>`,
+  trend:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>`,
+  location:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`,
+  globe:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`,
+  beaker:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M9 3h6l3 12H6L9 3z"/><path d="M5 21h14"/><path d="M9 3v4l-3 8"/></svg>`,
+  history:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+  mic:       `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>`,
+  send:      `<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/></svg>`,
+};
+
+/* ============================================================
+   SIDEBAR
+   ============================================================ */
+function SidebarHtml() {
+  const navItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
+    { id: 'subjects',  label: 'Lessons',   icon: 'lessons' },
+    { id: 'games',     label: 'Games',      icon: 'games' },
+    { id: 'quiz',      label: 'Quiz',       icon: 'quiz' },
+    { id: 'ai',        label: 'AI Tutor',   icon: 'ai' },
+    { id: 'research',  label: 'Research',   icon: 'research' },
+    { id: 'achievements', label: 'Achievements', icon: 'achievements' },
+    { id: 'settings',  label: 'Settings',   icon: 'settings' },
+  ];
+
+  const streak = state.user?.streak || 5;
+  const xp = state.user?.xp || 1250;
+
+  return `<nav id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon">B</div>
+      <div class="sidebar-logo-text">
+        <div class="sidebar-logo-title">BIBO</div>
+        <div class="sidebar-logo-sub">Bacoor Learn</div>
+      </div>
+    </div>
+
+    <div class="sidebar-nav">
+      ${navItems.map(item => `
+        <button class="nav-item" data-page="${item.id}" onclick="navigate('${item.id}')">
+          ${icons[item.icon]}
+          <span>${item.label}</span>
+        </button>
+      `).join('')}
+    </div>
+
+    <div class="sidebar-streak pulse-glow">
+      <div class="streak-label">
+        <span>Current Streak</span>
+        <span style="font-size:14px;">✦</span>
+      </div>
+      <div style="display:flex;align-items:baseline;gap:6px;margin:4px 0;">
+        <span class="streak-number">${streak}</span>
+        <span class="streak-days">Days</span>
+      </div>
+      <div class="streak-bar"><div class="streak-bar-fill"></div></div>
+    </div>
+
+    <button class="sidebar-logout" onclick="clearAuth(); render();">
+      ${icons.logout}
+      <span>Log Out</span>
+    </button>
+  </nav>`;
+}
+
+/* ============================================================
+   PAGE: LOGIN
+   ============================================================ */
+function LoginPage() {
+  return `<div class="auth-card page" id="login-card">
+    <!-- Logo -->
+    <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:32px;gap:10px;">
+      <div style="width:56px;height:56px;border-radius:14px;background:var(--primary);display:flex;align-items:center;justify-content:center;">
+        <span style="color:white;font-family:var(--font-display);font-weight:900;font-size:22px;">B</span>
+      </div>
+      <div style="text-align:center;">
+        <h1 style="font-size:24px;margin-bottom:4px;">Welcome back! 👋</h1>
+        <p style="color:var(--text-400);font-size:14px;">Sign in to continue learning</p>
+      </div>
+    </div>
+
+    <!-- Error -->
+    <div id="login-error" style="display:none;background:#FEE2E2;border:1px solid #FECACA;color:#991B1B;font-size:13px;font-weight:700;padding:12px 16px;border-radius:var(--radius-sm);margin-bottom:16px;">
+      ⚠️ <span id="login-error-msg"></span>
+    </div>
+
+    <!-- Form -->
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <div>
+        <label style="display:block;font-size:13px;font-weight:700;color:var(--text-700);margin-bottom:6px;">Username</label>
+        <div class="input-group">
+          <span class="input-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </span>
+          <input id="login-username" type="text" placeholder="Enter your username" class="bibo-input" autocomplete="username" />
+        </div>
+      </div>
+      <div>
+        <label style="display:block;font-size:13px;font-weight:700;color:var(--text-700);margin-bottom:6px;">Password</label>
+        <div class="input-group">
+          <span class="input-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </span>
+          <input id="login-password" type="password" placeholder="Enter your password" class="bibo-input" autocomplete="current-password" />
+        </div>
+      </div>
+      <button id="login-btn" class="btn btn-primary" style="width:100%;padding:14px;font-size:15px;margin-top:4px;">
+        Sign In
+      </button>
+      <p style="text-align:center;font-size:13px;color:var(--text-400);">
+        Don't have an account?
+        <button onclick="navigate('register')" style="color:var(--primary);font-weight:700;background:none;border:none;cursor:pointer;">Sign up</button>
+      </p>
+    </div>
+
+    <p style="text-align:center;font-size:11px;color:var(--text-400);margin-top:28px;">🇵🇭 Made with ❤️ for Filipino learners</p>
+  </div>`;
+}
+
+function bindLogin() {
+  const btn = document.getElementById('login-btn');
+  const errDiv = document.getElementById('login-error');
+  const errMsg = document.getElementById('login-error-msg');
+  const card = document.getElementById('login-card');
+
+  async function doLogin() {
+    const username = document.getElementById('login-username').value.trim();
+    const password = document.getElementById('login-password').value.trim();
+    if (!username || !password) { showError('Please fill in all fields!'); return; }
+
+    btn.disabled = true;
+    btn.innerHTML = `<span style="display:inline-flex;align-items:center;gap:8px;"><svg class="animate-spin" style="animation:spin 0.7s linear infinite;" width="16" height="16" viewBox="0 0 24 24" fill="none"><circle opacity=".25" cx="12" cy="12" r="10" stroke="white" stroke-width="4"/><path opacity=".75" fill="white" d="M4 12a8 8 0 018-8v8z"/></svg> Signing in...</span>`;
+    errDiv.style.display = 'none';
+
+    try {
+      const res = await api.login({ username, password });
+      saveAuth(res.accessToken, { username: res.username, role: res.role });
+      navigate('dashboard');
+    } catch (e) {
+      showError(e.message || 'Wrong username or password');
+      btn.disabled = false;
+      btn.innerHTML = 'Sign In';
+    }
+  }
+
+  function showError(msg) {
+    errMsg.textContent = msg;
+    errDiv.style.display = 'block';
+    card.classList.add('shake');
+    setTimeout(() => card.classList.remove('shake'), 500);
+  }
+
+  btn.addEventListener('click', doLogin);
+  document.getElementById('login-password').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+}
+
+/* ============================================================
+   PAGE: REGISTER
+   ============================================================ */
+function RegisterPage() {
+  return `<div class="auth-card page" id="reg-card">
+    <!-- Logo -->
+    <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:28px;gap:8px;">
+      <div style="width:48px;height:48px;border-radius:12px;background:var(--primary);display:flex;align-items:center;justify-content:center;">
+        <span style="color:white;font-family:var(--font-display);font-weight:900;font-size:20px;">B</span>
+      </div>
+      <h1 style="font-size:22px;margin-bottom:2px;">Join BIBO! 🌟</h1>
+      <p style="color:var(--text-400);font-size:13px;">Join thousands of young learners</p>
+    </div>
+
+    <!-- Step indicator -->
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:24px;" id="reg-steps">
+      <div class="step-dot active" id="step-dot-1" data-n="1">1</div>
+      <div style="height:2px;width:32px;background:var(--border);border-radius:99px;transition:background 0.3s;" id="step-line-1"></div>
+      <div class="step-dot" id="step-dot-2" data-n="2">2</div>
+      <div style="height:2px;width:32px;background:var(--border);border-radius:99px;transition:background 0.3s;" id="step-line-2"></div>
+      <div class="step-dot" id="step-dot-3" data-n="3">3</div>
+    </div>
+
+    <!-- Error -->
+    <div id="reg-error" style="display:none;background:#FEE2E2;border:1px solid #FECACA;color:#991B1B;font-size:13px;font-weight:700;padding:12px 16px;border-radius:var(--radius-sm);margin-bottom:16px;">
+      ⚠️ <span id="reg-error-msg"></span>
+    </div>
+
+    <!-- Step 1 -->
+    <div id="reg-step-1">
+      <h2 style="font-size:20px;margin-bottom:4px;">Account Details</h2>
+      <p style="color:var(--text-400);font-size:13px;margin-bottom:20px;">Step 1 of 3</p>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div>
+          <label style="display:block;font-size:13px;font-weight:700;color:var(--text-700);margin-bottom:6px;">Username</label>
+          <input id="reg-username" type="text" placeholder="Choose a username" class="bibo-input" autocomplete="username" />
+        </div>
+        <div>
+          <label style="display:block;font-size:13px;font-weight:700;color:var(--text-700);margin-bottom:6px;">Email</label>
+          <input id="reg-email" type="email" placeholder="Enter your email" class="bibo-input" autocomplete="email" />
+        </div>
+        <div>
+          <label style="display:block;font-size:13px;font-weight:700;color:var(--text-700);margin-bottom:6px;">Password</label>
+          <input id="reg-password" type="password" placeholder="Create a password" class="bibo-input" autocomplete="new-password" />
+          <div id="pw-strength" style="display:none;margin-top:8px;">
+            <div style="display:flex;gap:4px;margin-bottom:4px;">
+              <div class="pw-bar" id="pw-bar-1"></div>
+              <div class="pw-bar" id="pw-bar-2"></div>
+              <div class="pw-bar" id="pw-bar-3"></div>
+              <div class="pw-bar" id="pw-bar-4"></div>
+            </div>
+            <p style="font-size:11px;font-weight:700;" id="pw-label"></p>
+          </div>
+        </div>
+        <div>
+          <label style="display:block;font-size:13px;font-weight:700;color:var(--text-700);margin-bottom:6px;">Confirm Password</label>
+          <input id="reg-confirm" type="password" placeholder="Repeat your password" class="bibo-input" autocomplete="new-password" />
+        </div>
+        <button id="reg-next-1" class="btn btn-primary" style="width:100%;padding:14px;">Next →</button>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div id="reg-step-2" style="display:none;">
+      <h2 style="font-size:20px;margin-bottom:4px;">About You</h2>
+      <p style="color:var(--text-400);font-size:13px;margin-bottom:20px;">Step 2 of 3</p>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <label style="display:block;font-size:13px;font-weight:700;color:var(--text-700);margin-bottom:6px;">First Name</label>
+            <input id="reg-firstname" type="text" placeholder="First name" class="bibo-input" autocomplete="given-name" />
+          </div>
+          <div>
+            <label style="display:block;font-size:13px;font-weight:700;color:var(--text-700);margin-bottom:6px;">Last Name</label>
+            <input id="reg-lastname" type="text" placeholder="Last name" class="bibo-input" autocomplete="family-name" />
+          </div>
+        </div>
+        <div>
+          <label style="display:block;font-size:13px;font-weight:700;color:var(--text-700);margin-bottom:6px;">Age</label>
+          <input id="reg-age" type="number" min="7" max="18" placeholder="Your age (7–18)" class="bibo-input" />
+        </div>
+        <div>
+          <label style="display:block;font-size:13px;font-weight:700;color:var(--text-700);margin-bottom:10px;">I am a...</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            ${[{val:'STUDENT',icon:'🎒',label:'Student'},{val:'PARENT',icon:'👨‍👩‍👧',label:'Parent'}].map(r => `
+              <label class="role-card" data-role="${r.val}" style="cursor:pointer;">
+                <input type="radio" name="reg-role" value="${r.val}" style="display:none;" />
+                <div id="role-card-${r.val}" style="padding:16px;text-align:center;border-radius:var(--radius-md);border:2px solid var(--border);background:white;transition:all 0.18s;cursor:pointer;">
+                  <div style="font-size:28px;margin-bottom:6px;">${r.icon}</div>
+                  <div style="font-size:13px;font-weight:700;color:var(--text-700);">${r.label}</div>
+                </div>
+              </label>`).join('')}
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button id="reg-back-2" class="btn btn-ghost" style="flex:1;padding:13px;">← Back</button>
+          <button id="reg-next-2" class="btn btn-primary" style="flex:1;padding:13px;">Next →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div id="reg-step-3" style="display:none;">
+      <h2 style="font-size:20px;margin-bottom:4px;">Almost There! 🚀</h2>
+      <p style="color:var(--text-400);font-size:13px;margin-bottom:20px;">Step 3 of 3 — Review & submit</p>
+      <div style="background:var(--primary-light);border-radius:var(--radius-md);padding:16px;margin-bottom:20px;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+          <div style="width:44px;height:44px;border-radius:12px;background:var(--primary);display:flex;align-items:center;justify-content:center;color:white;font-size:20px;flex-shrink:0;">🦁</div>
+          <div>
+            <div style="font-weight:800;font-size:15px;color:var(--text-900);" id="summary-name">—</div>
+            <div style="font-size:12px;color:var(--text-400);" id="summary-username">—</div>
+          </div>
+        </div>
+        <div style="border-top:1px solid rgba(59,63,196,0.15);padding-top:12px;display:flex;flex-direction:column;gap:8px;">
+          ${[['Email','summary-email'],['Age','summary-age'],['Role','summary-role']].map(([l,id]) => `
+            <div style="display:flex;justify-content:space-between;font-size:13px;">
+              <span style="color:var(--text-400);">${l}</span>
+              <span style="font-weight:700;color:var(--text-900);" id="${id}">—</span>
+            </div>`).join('')}
+        </div>
+      </div>
+      <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;margin-bottom:20px;">
+        <input type="checkbox" id="reg-terms" style="margin-top:2px;width:16px;height:16px;accent-color:var(--primary);flex-shrink:0;" />
+        <span style="font-size:12px;color:var(--text-400);line-height:1.5;">
+          I agree to the <span style="color:var(--primary);font-weight:700;">Terms of Service</span> and understand this platform is designed for children aged 7–12.
+        </span>
+      </label>
+      <div style="display:flex;gap:10px;">
+        <button id="reg-back-3" class="btn btn-ghost" style="flex:1;padding:13px;">← Back</button>
+        <button id="reg-submit" class="btn btn-primary" style="flex:1;padding:13px;">Create Account 🎉</button>
+      </div>
+    </div>
+
+    <!-- Success -->
+    <div id="reg-success" style="display:none;text-align:center;padding:20px 0;">
+      <div style="font-size:56px;margin-bottom:16px;">🎊</div>
+      <h2 style="font-size:22px;margin-bottom:8px;">You're in!</h2>
+      <p style="color:var(--text-400);font-size:13px;margin-bottom:24px;">Account created successfully. Let's start learning!</p>
+      <button onclick="navigate('login')" class="btn btn-primary" style="width:100%;padding:14px;">Go to Login →</button>
+    </div>
+
+    <p style="text-align:center;font-size:13px;color:var(--text-400);margin-top:24px;" id="reg-signin-link">
+      Already have an account?
+      <button onclick="navigate('login')" style="color:var(--primary);font-weight:700;background:none;border:none;cursor:pointer;">Sign in</button>
+    </p>
+  </div>`;
+}
+
+function bindRegister() {
+  let currentStep = 1;
+  let selectedRole = '';
+
+  function updateStepDots(step) {
+    [1,2,3].forEach(i => {
+      const dot = document.getElementById(`step-dot-${i}`);
+      if (!dot) return;
+      dot.className = `step-dot ${i < step ? 'done' : i === step ? 'active' : ''}`;
+      dot.textContent = i < step ? '✓' : String(i);
+    });
+    [1,2].forEach(i => {
+      const line = document.getElementById(`step-line-${i}`);
+      if (line) line.style.background = i < step ? 'var(--primary)' : 'var(--border)';
+    });
+  }
+
+  function showStep(n) {
+    [1,2,3].forEach(i => {
+      const el = document.getElementById(`reg-step-${i}`);
+      if (el) el.style.display = i === n ? '' : 'none';
+    });
+    currentStep = n;
+    updateStepDots(n);
+  }
+
+  function showError(msg) {
+    const errMsg = document.getElementById('reg-error-msg');
+    const errDiv = document.getElementById('reg-error');
+    const card   = document.getElementById('reg-card');
+    errMsg.textContent = msg;
+    errDiv.style.display = 'block';
+    card.classList.add('shake');
+    setTimeout(() => card.classList.remove('shake'), 500);
+  }
+
+  function hideError() { document.getElementById('reg-error').style.display = 'none'; }
+
+  // Password strength
+  document.getElementById('reg-password').addEventListener('input', function() {
+    const val = this.value;
+    const strengthDiv = document.getElementById('pw-strength');
+    const label = document.getElementById('pw-label');
+    if (!val) { strengthDiv.style.display = 'none'; return; }
+    strengthDiv.style.display = '';
+    let score = 0;
+    if (val.length >= 8) score++;
+    if (/[A-Z]/.test(val)) score++;
+    if (/[0-9]/.test(val)) score++;
+    if (/[^A-Za-z0-9]/.test(val)) score++;
+    const colors = ['#EF4444','#F59E0B','#10B981','#3B3FC4'];
+    const labels = ['Weak 😬','Fair 😐','Good 👍','Strong 💪'];
+    [1,2,3,4].forEach(i => {
+      const bar = document.getElementById(`pw-bar-${i}`);
+      bar.style.background = i <= score ? colors[score-1] : 'var(--border)';
+    });
+    label.textContent = labels[score-1] || '';
+    label.style.color = colors[score-1] || 'var(--text-400)';
+  });
+
+  // Role card selection
+  document.querySelectorAll('.role-card').forEach(card => {
+    card.addEventListener('click', () => {
+      selectedRole = card.dataset.role;
+      document.querySelectorAll('.role-card > div').forEach(c => {
+        c.style.borderColor = 'var(--border)';
+        c.style.background = 'white';
+      });
+      const sel = document.getElementById(`role-card-${selectedRole}`);
+      sel.style.borderColor = 'var(--primary)';
+      sel.style.background = 'var(--primary-light)';
+    });
+  });
+
+  document.getElementById('reg-next-1').addEventListener('click', () => {
+    hideError();
+    const username = document.getElementById('reg-username').value.trim();
+    const email    = document.getElementById('reg-email').value.trim();
+    const password = document.getElementById('reg-password').value;
+    const confirm  = document.getElementById('reg-confirm').value;
+    if (!username || !email || !password || !confirm) { showError('Please fill in all fields!'); return; }
+    if (username.length < 3) { showError('Username must be at least 3 characters.'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showError('Please enter a valid email.'); return; }
+    if (password.length < 6) { showError('Password must be at least 6 characters.'); return; }
+    if (password !== confirm) { showError('Passwords do not match!'); return; }
+    showStep(2);
+  });
+
+  document.getElementById('reg-back-2').addEventListener('click', () => showStep(1));
+
+  document.getElementById('reg-next-2').addEventListener('click', () => {
+    hideError();
+    const firstName = document.getElementById('reg-firstname').value.trim();
+    const lastName  = document.getElementById('reg-lastname').value.trim();
+    const age       = parseInt(document.getElementById('reg-age').value);
+    if (!firstName || !lastName) { showError('Please enter your full name!'); return; }
+    if (!age || age < 7 || age > 18) { showError('Age must be between 7 and 18.'); return; }
+    if (!selectedRole) { showError('Please select your role!'); return; }
+    document.getElementById('summary-name').textContent     = `${firstName} ${lastName}`;
+    document.getElementById('summary-username').textContent = '@' + document.getElementById('reg-username').value.trim();
+    document.getElementById('summary-email').textContent    = document.getElementById('reg-email').value.trim();
+    document.getElementById('summary-age').textContent      = age + ' years old';
+    document.getElementById('summary-role').textContent     = selectedRole === 'STUDENT' ? '🎒 Student' : '👨‍👩‍👧 Parent';
+    showStep(3);
+  });
+
+  document.getElementById('reg-back-3').addEventListener('click', () => showStep(2));
+
+  document.getElementById('reg-submit').addEventListener('click', async () => {
+    hideError();
+    if (!document.getElementById('reg-terms').checked) {
+      showError('Please agree to the Terms of Service.');
+      return;
+    }
+    const btn = document.getElementById('reg-submit');
+    btn.disabled = true;
+    btn.innerHTML = `<span style="display:inline-flex;align-items:center;gap:8px;"><svg style="animation:spin 0.7s linear infinite;" width="16" height="16" viewBox="0 0 24 24" fill="none"><circle opacity=".25" cx="12" cy="12" r="10" stroke="white" stroke-width="4"/><path opacity=".75" fill="white" d="M4 12a8 8 0 018-8v8z"/></svg> Creating...</span>`;
+
+    const firstName = document.getElementById('reg-firstname').value.trim();
+    const lastName  = document.getElementById('reg-lastname').value.trim();
+    const age       = parseInt(document.getElementById('reg-age').value, 10);
+    const payload = {
+      username: document.getElementById('reg-username').value.trim(),
+      email:    document.getElementById('reg-email').value.trim(),
+      password: document.getElementById('reg-password').value,
+      fullName: `${firstName} ${lastName}`.trim(),
+      age: age,
+      learningLevel: 'BEGINNER'
+    };
+    console.log('REGISTER PAYLOAD:', payload);
+
+    try {
+      let res;
+      if (selectedRole === 'STUDENT') {
+        res = await api.registerStudent(payload);
+      } else if (selectedRole === 'PARENT') {
+        res = await api.registerParent({ username: payload.username, email: payload.email, password: payload.password });
+      } else if (selectedRole === 'TEACHER') {
+        res = await api.registerTeacher({ username: payload.username, email: payload.email, password: payload.password });
+      } else {
+        throw new Error('Invalid role selected');
+      }
+      document.getElementById('reg-step-3').style.display = 'none';
+      document.getElementById('reg-success').style.display = '';
+      document.getElementById('reg-signin-link').style.display = 'none';
+      document.getElementById('reg-steps').style.display = 'none';
+    } catch (e) {
+      showError(e.message || 'Registration failed. Please try again.');
+      btn.disabled = false;
+      btn.innerHTML = 'Create Account 🎉';
+    }
+  });
+}
+
+/* ============================================================
+   PAGE: DASHBOARD
+   ============================================================ */
+function DashboardPage() {
+  return `<div class="page">
+    <!-- Header row -->
+    <div class="flex-between mb-32">
+      <div>
+        <h1 style="font-size:26px;margin-bottom:4px;" id="dash-greeting">Kumusta! 👋</h1>
+        <p style="color:var(--text-400);font-size:14px;">Ready to learn something new today?</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="stat-chip">
+          <span style="color:var(--accent-orange);">${icons.star}</span>
+          <span id="dash-xp">1,250 XP</span>
+        </div>
+        <div class="stat-chip">
+          <span style="color:var(--primary);">${icons.zap}</span>
+          <span id="dash-streak">5 Day Streak</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hero banner -->
+    <div class="hero-banner mb-32">
+      <div style="max-width:600px;position:relative;z-index:1;">
+        <h2 style="color:white;font-size:28px;font-weight:900;margin-bottom:12px;line-height:1.25;">You're crushing your weekly goals! 🎉</h2>
+        <p style="color:rgba(255,255,255,0.75);font-size:14px;margin-bottom:24px;line-height:1.6;">
+          You've completed 65% of your path. Finish 2 more lessons to unlock the <span style="color:var(--accent-orange);font-weight:700;">Explorer Badge</span>.
+        </p>
+        <button class="btn btn-orange" onclick="navigate('subjects')">Continue Learning</button>
+      </div>
+      <div class="hero-banner-icon">
+        <svg viewBox="0 0 120 120" fill="none" width="200" height="200"><path d="M20 20h80v80H20z" stroke="white" stroke-width="3" stroke-dasharray="8 4" rx="12"/><circle cx="60" cy="60" r="30" stroke="white" stroke-width="3"/><path d="M45 60l10 10 20-20" stroke="white" stroke-width="4" stroke-linecap="round"/></svg>
+      </div>
+    </div>
+
+    <!-- 2-col grid: recent lessons + daily progress -->
+    <div style="display:grid;grid-template-columns:1fr 340px;gap:24px;align-items:start;" id="dash-grid">
+      <!-- Recent lessons -->
+      <div>
+        <div class="section-header">
+          <span class="section-title">Recent Lessons</span>
+          <span class="section-link" onclick="navigate('subjects')">View All</span>
+        </div>
+        <div id="dash-recent">${Loading('Fetching lessons...')}</div>
+      </div>
+
+      <!-- Right column -->
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <!-- Daily progress -->
+        <div class="card" style="padding:20px;">
+          <div class="section-title" style="margin-bottom:16px;">Daily Progress</div>
+          <div class="flex-between mb-8">
+            <span style="font-size:12px;font-weight:700;color:var(--text-400);text-transform:uppercase;letter-spacing:0.5px;">Today's XP</span>
+            <span style="font-size:14px;font-weight:800;color:var(--primary);">240/400</span>
+          </div>
+          <div class="progress-track" style="height:10px;margin-bottom:8px;"><div class="progress-fill" style="height:10px;width:60%;"></div></div>
+          <p style="font-size:12px;color:var(--text-400);">Earn 160 more XP to hit your daily goal!</p>
+        </div>
+
+        <!-- Milestone -->
+        <div class="card" style="padding:20px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+            <span style="color:var(--accent-green);width:20px;height:20px;">${icons.check}</span>
+            <span class="section-title" style="font-size:16px;">Next Milestone</span>
+          </div>
+          <p style="font-size:13px;color:var(--text-500);line-height:1.5;">Complete <strong>"Filipino: Pagbasa"</strong> to earn your first certification!</p>
+        </div>
+      </div>
+    </div>
+
+    <style>
+      @media(max-width:900px){#dash-grid{grid-template-columns:1fr;}}
+    </style>
+  </div>`;
+}
+
+async function bindDashboard() {
+  try {
+    const user = await api.getMe();
+    setState({ user });
+    saveAuth(state.token, user);
+  } catch(e) {}
+
+  const name = state.user?.name || state.user?.firstName || state.user?.username || 'Learner';
+  const firstName = name.split(' ')[0];
+  const xp = state.user?.xp || 1250;
+  const streak = state.user?.streak || 5;
+
+  document.getElementById('dash-greeting').textContent = `Kumusta, ${firstName}! 👋`;
+  document.getElementById('dash-xp').textContent = `${xp.toLocaleString()} XP`;
+  document.getElementById('dash-streak').textContent = `${streak} Day Streak`;
+
+  let subjects = [];
+  try {
+    subjects = await api.getSubjects();
+  } catch(e) {
+    document.getElementById('dash-recent').innerHTML = ErrorState('Could not load lessons');
+    return;
+  }
+
+  if (subjects.length === 0) {
+    document.getElementById('dash-recent').innerHTML = EmptyState('📭', 'No lessons yet', 'Check back soon!');
+    return;
+  }
+
+  document.getElementById('dash-recent').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      ${subjects.slice(0,4).map(s => {
+        const st = getSubjectStyle(s.name);
+        const p = s.progress || 0;
+        return `<div class="card card-interactive" style="padding:16px;display:flex;align-items:center;gap:14px;"
+                     onclick="navigate('lessons', {selectedSubject:${JSON.stringify(s).replace(/'/g,"&#39;")}})">
+          <div style="width:40px;height:40px;border-radius:10px;background:${st.pale};display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">${st.icon}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:10px;font-weight:800;color:${st.color};text-transform:uppercase;letter-spacing:0.5px;">${s.name.toUpperCase()}</div>
+            <div style="font-family:var(--font-display);font-weight:700;font-size:14px;color:var(--text-900);margin-top:1px;" class="truncate">${s.description || s.name + ' Fundamentals'}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+            <div style="width:80px;">
+              <div class="progress-track" style="height:6px;"><div class="progress-fill" style="height:6px;width:${p}%;background:${st.color};"></div></div>
+            </div>
+            <span style="font-size:12px;font-weight:800;color:${st.color};width:34px;text-align:right;">${p}%</span>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+/* ============================================================
+   PAGE: SUBJECTS (Curriculum)
+   ============================================================ */
+function SubjectsPage() {
+  return `<div class="page">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:28px;">
+      <div style="width:52px;height:52px;border-radius:14px;background:var(--primary-light);display:flex;align-items:center;justify-content:center;color:var(--primary);">${icons.lessons}</div>
+      <div>
+        <h1 style="font-size:28px;margin-bottom:2px;">My Curriculum</h1>
+        <p style="color:var(--text-400);font-size:14px;">DepEd-aligned learning path for Bacoor's future leaders</p>
+      </div>
+    </div>
+
+    <!-- Overall progress -->
+    <div class="card mb-24" style="padding:24px;">
+      <div class="flex-between mb-16">
+        <div>
+          <p style="font-size:11px;font-weight:700;color:var(--text-400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Overall Progress</p>
+          <div style="font-family:var(--font-display);font-size:32px;font-weight:900;color:var(--text-900);" id="overall-pct">—%</div>
+        </div>
+        <div style="display:flex;gap:24px;text-align:center;">
+          <div>
+            <div style="font-family:var(--font-display);font-size:26px;font-weight:900;color:var(--primary);" id="overall-done">—</div>
+            <div style="font-size:11px;color:var(--text-400);font-weight:600;">Lessons Done</div>
+          </div>
+          <div>
+            <div style="font-family:var(--font-display);font-size:26px;font-weight:900;color:var(--accent-green);" id="overall-unlocked">—</div>
+            <div style="font-size:11px;color:var(--text-400);font-weight:600;">Unlocked</div>
+          </div>
+        </div>
+      </div>
+      <div class="progress-track" style="height:10px;">
+        <div class="progress-fill" id="overall-bar" style="height:10px;width:0%;background:linear-gradient(90deg,var(--primary),var(--primary-mid),#8B5CF6);"></div>
+      </div>
+    </div>
+
+    <!-- Filter tabs -->
+    <div style="display:flex;gap:8px;margin-bottom:24px;" id="subject-tabs">
+      <button class="btn btn-primary btn-sm" id="tab-all" onclick="filterSubjects('all',this)">All Subjects</button>
+      <button class="btn btn-ghost btn-sm" id="tab-progress" onclick="filterSubjects('progress',this)">In Progress</button>
+      <button class="btn btn-ghost btn-sm" id="tab-done" onclick="filterSubjects('done',this)">Completed</button>
+    </div>
+
+    <div id="subjects-grid">${Loading('Loading curriculum...')}</div>
+  </div>`;
+}
+
+let _allSubjects = [];
+function filterSubjects(type, btn) {
+  document.querySelectorAll('#subject-tabs .btn').forEach(b => {
+    b.className = b === btn ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm';
+  });
+  let subs = _allSubjects;
+  if (type === 'progress') subs = _allSubjects.filter(s => (s.progress||0) > 0 && (s.progress||0) < 100);
+  if (type === 'done') subs = _allSubjects.filter(s => (s.progress||0) >= 100);
+  renderSubjectCards(subs);
+}
+
+function renderSubjectCards(subjects) {
+  if (!subjects.length) { document.getElementById('subjects-grid').innerHTML = EmptyState('📭','No subjects','Nothing to show here.'); return; }
+  document.getElementById('subjects-grid').innerHTML = `
+    <div class="grid-2">
+      ${subjects.map(s => {
+        const st = getSubjectStyle(s.name);
+        const p = s.progress || 0;
+        const completed = s.completedCount || 0;
+        const total = s.lessonCount || 0;
+        const timeLeft = s.estimatedTime ? `${s.estimatedTime}m left` : '—';
+        return `<div class="card card-interactive" style="padding:24px;"
+                     onclick="navigate('lessons',{selectedSubject:${JSON.stringify(s).replace(/'/g,"&#39;")}})">
+          <div class="flex-between mb-16">
+            <div style="width:56px;height:56px;border-radius:14px;background:${st.pale};display:flex;align-items:center;justify-content:center;font-size:28px;">${st.icon}</div>
+            <div style="text-align:right;">
+              <p style="font-size:11px;font-weight:700;color:var(--text-400);text-transform:uppercase;letter-spacing:0.5px;">Progress</p>
+              <p style="font-family:var(--font-display);font-size:24px;font-weight:900;color:${st.color};">${p}%</p>
+            </div>
+          </div>
+          <h3 style="font-size:20px;margin-bottom:4px;">${s.name}</h3>
+          <p style="font-size:13px;color:var(--text-400);margin-bottom:14px;">${s.description || ''}</p>
+          <div style="display:flex;gap:14px;margin-bottom:14px;">
+            <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-500);">${icons.book} ${completed}/${total}</span>
+            <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-500);">${icons.clock} ${timeLeft}</span>
+          </div>
+          <div class="progress-track" style="height:6px;">
+            <div class="progress-fill" style="height:6px;width:${p}%;background:${st.color};"></div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+async function bindSubjects() {
+  try {
+    _allSubjects = await api.getSubjects();
+    const total = _allSubjects.reduce((a,s) => a + (s.lessonCount||0), 0);
+    const done  = _allSubjects.reduce((a,s) => a + (s.completedCount||0), 0);
+    const pct   = total ? Math.round(done/total*100) : 0;
+    document.getElementById('overall-pct').textContent = pct + '%';
+    document.getElementById('overall-done').textContent = done;
+    document.getElementById('overall-unlocked').textContent = _allSubjects.filter(s=>(s.progress||0)>0).length;
+    document.getElementById('overall-bar').style.width = pct + '%';
+    renderSubjectCards(_allSubjects);
+  } catch(e) {
+    document.getElementById('subjects-grid').innerHTML = ErrorState(e.message);
+  }
+}
+
+/* ============================================================
+   PAGE: LESSONS
+   ============================================================ */
+function LessonsPage() {
+  const s = state.selectedSubject;
+  const st = s ? getSubjectStyle(s.name) : SUBJECT_STYLES.default;
+  return `<div class="page">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;">
+      <button class="btn btn-ghost btn-sm" style="padding:8px 14px;" onclick="navigate('subjects')">← Back</button>
+      <h1 style="font-size:24px;">${s ? s.name : 'Lessons'}</h1>
+    </div>
+
+    ${s ? `<div style="background:${st.gradient};border-radius:var(--radius-xl);padding:28px;color:white;margin-bottom:28px;display:flex;align-items:center;gap:16px;">
+      <div style="font-size:44px;">${st.icon}</div>
+      <div>
+        <h2 style="color:white;font-size:22px;margin-bottom:4px;">${s.name}</h2>
+        <p style="opacity:0.8;font-size:13px;">${s.description || 'Explore all lessons'}</p>
+      </div>
+    </div>` : ''}
+
+    <div id="lessons-list">${Loading('Loading lessons...')}</div>
+  </div>`;
+}
+
+async function bindLessons() {
+  const list = document.getElementById('lessons-list');
+  const s = state.selectedSubject;
+  if (!s) { list.innerHTML = ErrorState('No subject selected'); return; }
+  try {
+    const lessons = await api.getLessons(s.id);
+    if (!lessons.length) { list.innerHTML = EmptyState('📭','No lessons yet','Check back soon!'); return; }
+    const st = getSubjectStyle(s.name);
+    list.innerHTML = `<div style="display:flex;flex-direction:column;gap:10px;">
+      ${lessons.map((l,i) => {
+        const status = l.status || 'NOT_STARTED';
+        return `<div class="card card-interactive" style="padding:18px;display:flex;align-items:flex-start;gap:14px;"
+                     onclick="navigate('lesson',{selectedLesson:${JSON.stringify(l).replace(/'/g,"&#39;")}})">
+          <div style="width:40px;height:40px;border-radius:10px;background:${st.pale};color:${st.color};display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:900;font-size:16px;flex-shrink:0;">${i+1}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:4px;">
+              <div style="font-family:var(--font-display);font-weight:700;font-size:15px;color:var(--text-900);">${l.title}</div>
+              ${statusBadge(status)}
+            </div>
+            <p style="font-size:13px;color:var(--text-400);margin-bottom:8px;">${l.description || ''}</p>
+            <div style="display:flex;gap:12px;">
+              ${l.estimatedTime ? `<span style="font-size:12px;color:var(--text-400);display:flex;align-items:center;gap:4px;">${icons.clock} ${l.estimatedTime} min</span>` : ''}
+              ${l.sectionCount ? `<span style="font-size:12px;color:var(--text-400);">${l.sectionCount} sections</span>` : ''}
+            </div>
+          </div>
+          <span style="color:var(--text-400);flex-shrink:0;">${icons.arrowRight}</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+  } catch(e) {
+    list.innerHTML = ErrorState(e.message);
+  }
+}
+
+/* ============================================================
+   PAGE: LESSON DETAIL
+   ============================================================ */
+let lessonState = { sections: [], current: 0, progress: null, lesson: null };
+
+function LessonDetailPage() {
+  return `<div class="page">
+    <div id="lesson-topbar" style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+      <button class="btn btn-ghost btn-sm" onclick="navigate('lessons')">← Back</button>
+      <h2 id="lesson-title" style="font-size:18px;">Loading...</h2>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;">
+      <div class="progress-track" style="height:8px;flex:1;"><div class="progress-fill" id="lesson-progress-fill" style="height:8px;width:0%;"></div></div>
+      <span style="font-size:13px;font-weight:700;color:var(--primary);width:38px;text-align:right;" id="lesson-progress-txt">0%</span>
+    </div>
+    <div style="display:flex;gap:6px;justify-content:center;margin-bottom:24px;" id="section-dots"></div>
+    <div id="lesson-body">${Loading('Loading lesson...')}</div>
+    <div style="display:flex;gap:12px;margin-top:28px;">
+      <button id="btn-prev" class="btn btn-ghost" style="flex:1;padding:13px;display:none;" onclick="lessonPrev()">← Back</button>
+      <button id="btn-next" class="btn btn-primary" style="flex:1;padding:13px;" onclick="lessonNext()">Next →</button>
+      <button id="btn-complete" class="btn" style="flex:1;padding:13px;background:var(--accent-green);color:white;display:none;" onclick="lessonComplete()">✅ Mark Complete</button>
+    </div>
+  </div>`;
+}
+
+async function bindLessonDetail() {
+  const l = state.selectedLesson;
+  if (!l) { navigate('subjects'); return; }
+  try {
+    const [lesson, progress] = await Promise.all([
+      api.getLesson(l.id),
+      api.getProgress(l.id).catch(() => null),
+    ]);
+    lessonState.lesson = lesson;
+    lessonState.sections = lesson.sections || [];
+    lessonState.progress = progress;
+    const savedOrder = progress?.currentSectionOrder ?? 0;
+    lessonState.current = lessonState.sections.findIndex(s => s.order === savedOrder);
+    if (lessonState.current < 0) lessonState.current = 0;
+    if (!progress || progress.status === 'NOT_STARTED') api.startProgress(l.id).catch(() => {});
+    document.getElementById('lesson-title').textContent = lesson.title;
+    renderLessonSection();
+  } catch(e) {
+    document.getElementById('lesson-body').innerHTML = ErrorState(e.message);
+  }
+}
+
+function renderLessonSection() {
+  const { sections, current } = lessonState;
+  if (!sections.length) { document.getElementById('lesson-body').innerHTML = EmptyState('📭','No content','This lesson has no sections yet.'); return; }
+  const total = sections.length;
+  const pct = Math.round(((current+1)/total)*100);
+  const isLast = current === total-1;
+  const isFirst = current === 0;
+  document.getElementById('lesson-progress-fill').style.width = pct + '%';
+  document.getElementById('lesson-progress-txt').textContent = pct + '%';
+  document.getElementById('section-dots').innerHTML = sections.map((_,i) =>
+    `<div class="section-dot ${i < current ? 'done' : i === current ? 'active' : ''}"></div>`
+  ).join('');
+  const sec = sections[current];
+  const contentHtml = sec.content ? `<div style="color:var(--text-700);line-height:1.8;font-size:15px;margin-top:16px;">${sec.content}</div>` : '';
+  const imageHtml = sec.imageUrl ? `<img src="${sec.imageUrl}" alt="${sec.title||''}" style="width:100%;border-radius:var(--radius-lg);margin-top:16px;max-height:280px;object-fit:cover;" />` : '';
+  document.getElementById('lesson-body').innerHTML = `
+    <div class="card" style="padding:28px;">
+      <span class="badge badge-new" style="margin-bottom:12px;display:inline-flex;">Section ${current+1} of ${total}</span>
+      <h2 style="font-size:20px;margin-bottom:0;">${sec.title || 'Section '+(current+1)}</h2>
+      ${imageHtml}${contentHtml}
+    </div>`;
+  document.getElementById('btn-prev').style.display = isFirst ? 'none' : '';
+  document.getElementById('btn-next').style.display = isLast ? 'none' : '';
+  document.getElementById('btn-complete').style.display = isLast ? '' : 'none';
+  api.updateProgress(lessonState.lesson.id, { currentSectionOrder: sec.order ?? current }).catch(() => {});
+}
+
+function lessonPrev() {
+  if (lessonState.current > 0) { lessonState.current--; renderLessonSection(); window.scrollTo(0,0); }
+}
+function lessonNext() {
+  if (lessonState.current < lessonState.sections.length-1) { lessonState.current++; renderLessonSection(); window.scrollTo(0,0); }
+}
+async function lessonComplete() {
+  const btn = document.getElementById('btn-complete');
+  btn.disabled = true; btn.textContent = '⏳ Saving...';
+  try {
+    await api.completeLesson(lessonState.lesson.id);
+    showToast('Lesson completed! Great job!', '🏆');
+    setTimeout(() => navigate('lessons'), 1500);
+  } catch(e) {
+    showToast('Could not save. Try again.', '⚠️');
+    btn.disabled = false; btn.textContent = '✅ Mark Complete';
+  }
+}
+
+/* ============================================================
+   PAGE: GAMES (Brain Arcade — UI showcase, navigates to lessons)
+   ============================================================ */
+function GamesPage() {
+  const games = [
+    { id:'word', subj:'English', title:'Word Scramble', desc:'Unscramble letters to find hidden vocabulary words!', icon:'🧠', diff:'Easy', xp:50 },
+    { id:'math', subj:'Mathematics', title:'Math Ninja', desc:'Slice through correct numbers and solve equations fast.', icon:'⚡', diff:'Medium', xp:100 },
+    { id:'logic', subj:'Logic', title:'Logic Puzzles', desc:'Connect the dots and solve the mystery of Zapote Bridge.', icon:'🧩', diff:'Hard', xp:150 },
+    { id:'eco', subj:'Science', title:'Eco-Sorter', desc:'Help clean up Bacoor by sorting items into the right bins!', icon:'🌟', diff:'Medium', xp:80 },
+  ];
+  const diffClass = { Easy:'badge-easy', Medium:'badge-medium', Hard:'badge-hard' };
+  return `<div class="page">
+    <div class="flex-between mb-24">
+      <div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <h1 style="font-size:28px;">Brain Arcade</h1>
+          <span style="font-size:24px;">🎮</span>
+        </div>
+        <p style="color:var(--text-400);font-size:14px;">Have fun and earn XP with these mini-challenges!</p>
+      </div>
+      <div class="stat-chip" style="background:#FEF3C7;border-color:#FDE68A;">
+        <span style="color:var(--accent-orange);">${icons.star}</span>
+        <span style="color:#92400E;font-weight:700;">Top Score: 2,500</span>
+      </div>
+    </div>
+
+    <!-- Featured hero -->
+    <div style="background:linear-gradient(135deg,#3730A3 0%,#4F46E5 50%,#6366F1 100%);border-radius:var(--radius-xl);padding:36px;margin-bottom:28px;position:relative;overflow:hidden;cursor:pointer;" onclick="navigate('subjects')">
+      <div style="position:absolute;right:-10px;top:50%;transform:translateY(-50%);opacity:0.15;">
+        <svg viewBox="0 0 200 200" width="220" height="220" fill="none" stroke="white" stroke-width="6">
+          <rect x="20" y="60" width="160" height="100" rx="30"/>
+          <path d="M60 110h20m-10-10v20M130 105h5M145 105h5M130 115h5M145 115h5"/>
+          <circle cx="100" cy="35" r="20"/>
+          <path d="M80 55 Q100 45 120 55"/>
+        </svg>
+      </div>
+      <span style="display:inline-block;background:rgba(255,255,255,0.18);color:white;font-size:11px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;padding:4px 12px;border-radius:99px;margin-bottom:16px;">Game of the Week</span>
+      <h2 style="color:white;font-size:26px;font-weight:900;margin-bottom:10px;line-height:1.25;">Memory Match:<br>Philippine Flags</h2>
+      <p style="color:rgba(255,255,255,0.75);font-size:14px;margin-bottom:24px;">Test your focus and learn about national symbols in this timed card challenge.</p>
+      <button class="btn btn-white" style="display:inline-flex;align-items:center;gap:8px;">
+        ${icons.play} Play Now
+      </button>
+    </div>
+
+    <!-- Game cards -->
+    <div class="grid-4">
+      ${games.map(g => `
+        <div class="card card-interactive" style="padding:20px;display:flex;flex-direction:column;" onclick="navigate('subjects')">
+          <div style="width:48px;height:48px;border-radius:12px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:14px;">${g.icon}</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <span style="font-size:10px;font-weight:700;color:var(--text-400);text-transform:uppercase;letter-spacing:0.5px;">${g.subj}</span>
+            <span class="badge ${diffClass[g.diff]}">${g.diff}</span>
+          </div>
+          <h3 style="font-size:16px;margin-bottom:6px;">${g.title}</h3>
+          <p style="font-size:13px;color:var(--text-400);flex:1;margin-bottom:16px;line-height:1.5;">${g.desc}</p>
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <span style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--primary);">${icons.zap} +${g.xp} XP</span>
+            <button style="width:30px;height:30px;border-radius:50%;background:var(--primary-light);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--primary);">${icons.play}</button>
+          </div>
+        </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   PAGE: QUIZ
+   ============================================================ */
+function QuizPage() {
+  const questions = [
+    { q: 'Imagine you have a delicious pizza cut into 4 equal slices. If you eat 1 slice, what fraction did you eat?', opts: ['1/2','1/4','3/4','4/1'], ans: 1 },
+    { q: 'Which of the following is the capital city of the Philippines?', opts: ['Cebu','Davao','Manila','Quezon City'], ans: 2 },
+    { q: 'What is the process by which plants make their own food using sunlight?', opts: ['Respiration','Fermentation','Photosynthesis','Digestion'], ans: 2 },
+  ];
+  window._quizState = { questions, current: 0, score: 0, selected: null, answered: false, timer: 300, timerInterval: null };
+
+  return `<div class="page" style="max-width:760px;">
+    <!-- Quiz header -->
+    <div class="flex-between mb-16">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span style="font-size:13px;font-weight:700;color:var(--text-900);padding:6px 14px;background:white;border:1px solid var(--border);border-radius:99px;">MATH QUEST</span>
+        <span style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--text-500);" id="quiz-timer">⏱ 5:00</span>
+      </div>
+      <div>
+        <span style="font-size:10px;font-weight:700;color:var(--text-400);text-transform:uppercase;letter-spacing:0.5px;">Question</span>
+        <div style="font-family:var(--font-display);font-size:22px;font-weight:900;color:var(--text-900);text-align:right;" id="quiz-count">1 <span style="color:var(--text-400);font-size:16px;">/ ${questions.length}</span></div>
+      </div>
+    </div>
+
+    <!-- Progress bar -->
+    <div class="progress-track mb-28" style="height:8px;"><div class="progress-fill" id="quiz-progress" style="height:8px;width:${Math.round(1/questions.length*100)}%;"></div></div>
+
+    <!-- Question card -->
+    <div class="card mb-16" style="padding:36px 40px;" id="quiz-card">
+      <h2 style="font-size:24px;line-height:1.4;color:var(--text-900);" id="quiz-question">${questions[0].q}</h2>
+    </div>
+
+    <!-- Options -->
+    <div style="display:flex;flex-direction:column;gap:10px;" id="quiz-options">
+      ${['A','B','C','D'].map((k,i) => `
+        <div class="quiz-option" id="opt-${i}" onclick="quizSelect(${i})">
+          <div class="quiz-option-key" id="opt-key-${i}">${k}</div>
+          <span>${questions[0].opts[i]}</span>
+        </div>`).join('')}
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;margin-top:20px;">
+      <button class="btn btn-primary" id="quiz-next-btn" style="display:none;" onclick="quizNext()">Next Question →</button>
+    </div>
+  </div>`;
+}
+
+function quizSelect(idx) {
+  const qs = window._quizState;
+  if (qs.answered) return;
+  qs.selected = idx;
+  qs.answered = true;
+  const q = qs.questions[qs.current];
+
+  ['A','B','C','D'].forEach((_,i) => {
+    const opt = document.getElementById(`opt-${i}`);
+    const key = document.getElementById(`opt-key-${i}`);
+    if (i === q.ans) { opt.classList.add('correct'); key.style.background = '#D1FAE5'; key.style.color = '#065F46'; }
+    else if (i === idx) { opt.classList.add('wrong'); key.style.background = '#FEE2E2'; key.style.color = '#991B1B'; }
+  });
+
+  if (idx === q.ans) { qs.score++; showToast('Correct! 🎉', '⭐'); }
+  else { showToast('Not quite — keep going!', '💪'); }
+
+  const nextBtn = document.getElementById('quiz-next-btn');
+  if (nextBtn) nextBtn.style.display = '';
+}
+
+function quizNext() {
+  const qs = window._quizState;
+  qs.current++;
+  qs.answered = false; qs.selected = null;
+
+  if (qs.current >= qs.questions.length) {
+    document.getElementById('page-container').innerHTML = `
+      <div class="page" style="max-width:500px;margin:0 auto;text-align:center;padding-top:60px;">
+        <div style="font-size:64px;margin-bottom:16px;">🎊</div>
+        <h1 style="font-size:28px;margin-bottom:8px;">Quiz Complete!</h1>
+        <p style="color:var(--text-400);margin-bottom:28px;">You scored <strong>${qs.score}/${qs.questions.length}</strong></p>
+        <div style="display:flex;gap:12px;justify-content:center;">
+          <button class="btn btn-primary" onclick="navigate('quiz')">Try Again</button>
+          <button class="btn btn-ghost" onclick="navigate('dashboard')">Dashboard</button>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const q = qs.questions[qs.current];
+  document.getElementById('quiz-question').textContent = q.q;
+  document.getElementById('quiz-count').innerHTML = `${qs.current+1} <span style="color:var(--text-400);font-size:16px;">/ ${qs.questions.length}</span>`;
+  document.getElementById('quiz-progress').style.width = Math.round((qs.current+1)/qs.questions.length*100) + '%';
+  document.getElementById('quiz-next-btn').style.display = 'none';
+
+  ['A','B','C','D'].forEach((k,i) => {
+    const opt = document.getElementById(`opt-${i}`);
+    const key = document.getElementById(`opt-key-${i}`);
+    opt.className = 'quiz-option';
+    key.style.background = '';
+    key.style.color = '';
+    opt.children[1].textContent = q.opts[i];
+  });
+}
+
+function bindQuiz() {
+  // Timer
+  const qs = window._quizState;
+  qs.timerInterval = setInterval(() => {
+    qs.timer--;
+    const m = Math.floor(qs.timer / 60);
+    const s = String(qs.timer % 60).padStart(2,'0');
+    const el = document.getElementById('quiz-timer');
+    if (el) el.textContent = `⏱ ${m}:${s}`;
+    if (qs.timer <= 0) { clearInterval(qs.timerInterval); }
+  }, 1000);
+}
+
+/* ============================================================
+   PAGE: AI TUTOR CHAT
+   ============================================================ */
+function AIChatPage() {
+  const userName = state.user?.name || state.user?.firstName || state.user?.username || 'there';
+  const firstName = userName.split(' ')[0];
+  return `<div class="page" style="display:flex;flex-direction:column;height:calc(100vh - 72px);">
+    <!-- Chat header -->
+    <div class="card mb-16" style="padding:16px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:44px;height:44px;border-radius:12px;background:var(--primary);display:flex;align-items:center;justify-content:center;color:white;font-size:20px;">✦</div>
+        <div>
+          <h3 style="font-size:16px;margin-bottom:1px;">Bibo AI Tutor</h3>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div style="width:7px;height:7px;background:#10B981;border-radius:50%;"></div>
+            <span style="font-size:11px;font-weight:700;color:#10B981;text-transform:uppercase;letter-spacing:0.5px;">Online & Ready</span>
+          </div>
+        </div>
+      </div>
+      <button style="width:34px;height:34px;border-radius:50%;background:var(--bg);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-400);">${icons.history}</button>
+    </div>
+
+    <!-- Messages -->
+    <div id="chat-messages" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:16px;padding:4px 0 16px;">
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <div style="width:36px;height:36px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:white;font-size:16px;flex-shrink:0;">✦</div>
+        <div class="chat-bubble-ai" style="padding:14px 18px;max-width:72%;">
+          <p style="font-size:14px;color:var(--text-700);line-height:1.6;">Hello ${firstName}! I'm Bibo, your AI study buddy. What are we learning today? I can help with Math, Science, or English!</p>
+          <p style="font-size:11px;color:var(--text-400);margin-top:6px;">10:00 AM</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Suggestions -->
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;flex-shrink:0;" id="chat-suggestions">
+      ${['🧮 Explain Fractions','✏️ Check my Grammar','🌍 Science Trivia','🇵🇭 Tagalog Translation'].map(q =>
+        `<button class="btn btn-ghost btn-sm" style="border-radius:99px;font-size:12px;" onclick="sendSuggestion(this,'${q}')">${q}</button>`
+      ).join('')}
+    </div>
+
+    <!-- Input -->
+    <div style="display:flex;gap:10px;align-items:flex-end;flex-shrink:0;" class="card" style="padding:12px 16px;">
+      <textarea id="chat-input" placeholder="Ask Bibo anything..." rows="1"
+        class="bibo-input" style="flex:1;resize:none;overflow:hidden;min-height:44px;max-height:120px;border-radius:99px;padding:10px 16px;line-height:1.5;"
+        oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}"></textarea>
+      <button style="color:var(--text-400);background:none;border:none;cursor:pointer;width:40px;height:40px;display:flex;align-items:center;justify-content:center;">${icons.mic}</button>
+      <button id="chat-send" onclick="sendChat()" class="btn btn-primary btn-icon" style="width:44px;height:44px;border-radius:50%;padding:0;">${icons.send}</button>
+    </div>
+    <p style="font-size:11px;color:var(--text-400);text-align:center;margin-top:8px;flex-shrink:0;">⚠ Bibo can make mistakes. Always check with your teacher!</p>
+  </div>`;
+}
+
+function bindAIChat() {}
+
+function sendSuggestion(btn, text) {
+  const suggestionsDiv = document.getElementById('chat-suggestions');
+  if (suggestionsDiv) suggestionsDiv.style.display = 'none';
+  const cleanText = text.replace(/^[^\w]+/, '').replace(/^\S+\s/, '');
+  document.getElementById('chat-input').value = cleanText;
+  sendChat();
+}
+
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = ''; input.style.height = 'auto';
+
+  const msgs = document.getElementById('chat-messages');
+  const now = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+
+  msgs.innerHTML += `<div style="display:flex;justify-content:flex-end;">
+    <div class="chat-bubble-user" style="padding:12px 16px;max-width:72%;">
+      <p style="font-size:14px;line-height:1.5;">${escapeHtml(msg)}</p>
+    </div>
+  </div>`;
+
+  const typingId = 'typing-' + Date.now();
+  msgs.innerHTML += `<div style="display:flex;gap:12px;align-items:flex-start;" id="${typingId}">
+    <div style="width:36px;height:36px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:white;font-size:16px;flex-shrink:0;">✦</div>
+    <div class="chat-bubble-ai" style="padding:14px 18px;">
+      <div style="display:flex;gap:5px;align-items:center;">
+        <div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
+      </div>
+    </div>
+  </div>`;
+  msgs.scrollTop = msgs.scrollHeight;
+  document.getElementById('chat-send').disabled = true;
+
+  state.chatHistory.push({ role: 'user', content: msg });
+
+  try {
+    const res = await api.aiChat({ message: msg, history: state.chatHistory });
+    const reply = res.reply || res.message || res.response || 'I got your message!';
+    state.chatHistory.push({ role: 'assistant', content: reply });
+    document.getElementById(typingId).outerHTML = `<div style="display:flex;gap:12px;align-items:flex-start;">
+      <div style="width:36px;height:36px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:white;font-size:16px;flex-shrink:0;">✦</div>
+      <div class="chat-bubble-ai" style="padding:14px 18px;max-width:72%;">
+        <p style="font-size:14px;color:var(--text-700);line-height:1.6;">${escapeHtml(reply)}</p>
+        <p style="font-size:11px;color:var(--text-400);margin-top:6px;">${now}</p>
+      </div>
+    </div>`;
+  } catch(e) {
+    document.getElementById(typingId).outerHTML = `<div style="display:flex;gap:12px;align-items:flex-start;">
+      <div style="width:36px;height:36px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:white;font-size:16px;flex-shrink:0;">✦</div>
+      <div class="chat-bubble-ai" style="padding:14px 18px;max-width:72%;">
+        <p style="font-size:14px;color:var(--accent-red);">Sorry, I couldn't connect. Please try again! 😅</p>
+      </div>
+    </div>`;
+  }
+  document.getElementById('chat-send').disabled = false;
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+/* ============================================================
+   PAGE: RESEARCH / DISCOVER
+   ============================================================ */
+function ResearchPage() {
+  const topics = [
+    { icon: icons.location, title: 'Bacoor History', desc: "Discover the 'City of Strike' and the history of Zapote Bridge.", color: '#F59E0B', pale: '#FEF3C7' },
+    { icon: icons.globe,    title: 'Space & Stars', desc: 'How far is the moon? Learn about our amazing solar system.', color: '#3B3FC4', pale: '#EEF0FF' },
+    { icon: icons.beaker,   title: 'Ocean Life',    desc: 'Meet the creatures living in the deep blue sea.', color: '#10B981', pale: '#D1FAE5' },
+    { icon: icons.book,     title: 'Ancient Giants',desc: 'Explore the era of Dinosaurs and how they lived.', color: '#8B5CF6', pale: '#EDE9FE' },
+  ];
+  return `<div class="page">
+    <div style="text-align:center;margin-bottom:36px;">
+      <p style="font-size:11px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;">✦ Powered by BIBO AI</p>
+      <h1 style="font-size:40px;line-height:1.15;max-width:560px;margin:0 auto 28px;">What do you want to discover today?</h1>
+      <div style="position:relative;max-width:640px;margin:0 auto;">
+        <span style="position:absolute;left:18px;top:50%;transform:translateY(-50%);color:var(--text-400);">${icons.research}</span>
+        <input type="text" placeholder="Search for history, science, or local facts..." 
+          class="bibo-input" style="padding:16px 20px 16px 50px;border-radius:var(--radius-xl);font-size:15px;box-shadow:var(--shadow-md);" />
+      </div>
+    </div>
+
+    <!-- Trending topics -->
+    <div class="section-header">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="color:var(--primary);">${icons.trend}</span>
+        <span class="section-title">Trending Topics</span>
+      </div>
+    </div>
+    <div class="grid-4 mb-32">
+      ${topics.map(t => `
+        <div class="card card-interactive" style="padding:22px;">
+          <div style="width:44px;height:44px;border-radius:12px;background:${t.pale};display:flex;align-items:center;justify-content:center;color:${t.color};margin-bottom:14px;">${t.icon}</div>
+          <h3 style="font-size:16px;margin-bottom:8px;">${t.title}</h3>
+          <p style="font-size:13px;color:var(--text-400);line-height:1.5;margin-bottom:14px;">${t.desc}</p>
+          <span style="font-size:13px;font-weight:700;color:${t.color};cursor:pointer;">Explore →</span>
+        </div>`).join('')}
+    </div>
+
+    <!-- Local spotlight -->
+    <div style="display:grid;grid-template-columns:1fr 1.5fr;gap:24px;align-items:center;">
+      <div style="height:200px;background:linear-gradient(135deg,#1E2A78,#3B3FC4);border-radius:var(--radius-xl);display:flex;align-items:center;justify-content:center;font-size:60px;">🏙</div>
+      <div class="card" style="padding:28px;">
+        <span style="display:inline-block;background:#FEF3C7;color:#92400E;font-size:11px;font-weight:700;letter-spacing:0.5px;padding:4px 12px;border-radius:99px;margin-bottom:12px;">Local Spotlight: Bacoor</span>
+        <h2 style="font-size:20px;margin-bottom:8px;">The Battle of Zapote Bridge</h2>
+        <p style="font-size:13px;color:var(--text-400);line-height:1.6;margin-bottom:16px;">Learn about the pivotal battle that took place right here in Bacoor during the Philippine-American War in 1897.</p>
+        <button class="btn btn-primary btn-sm">Read More →</button>
+      </div>
+    </div>
+
+    <style>@media(max-width:700px){.research-local-grid{grid-template-columns:1fr !important;}}</style>
+  </div>`;
+}
+
+/* ============================================================
+   PAGE: ACHIEVEMENTS / HALL OF FAME
+   ============================================================ */
+function AchievementsPage() {
+  const badges = [
+    { icon:'⚡', title:'Early Bird', desc:'Completed a lesson before 8 AM', earned:'Oct 12', locked:false },
+    { icon:'🎯', title:'Math Whiz', desc:'Scored 100% in 5 Math Quizzes', earned:'Oct 15', locked:false },
+    { icon:'📖', title:'Storyteller', desc:'Finished the English Reading Path', earned:null, locked:true },
+    { icon:'🏆', title:'Bacoor Hero', desc:'Researched 3 local history facts', earned:null, locked:true },
+  ];
+  const leaderboard = [
+    { rank:1, initials:'MC', name:'Maria C.', xp:'12,450', isMe:false },
+    { rank:2, initials:'JD', name:'Juan D. (You)', xp:'10,200', isMe:true },
+    { rank:3, initials:'PS', name:'Pedro S.', xp:'9,800', isMe:false },
+    { rank:4, initials:'EG', name:'Elena G.', xp:'8,500', isMe:false },
+  ];
+  return `<div class="page">
+    <!-- Header -->
+    <div class="flex-between mb-28">
+      <div>
+        <h1 style="font-size:28px;margin-bottom:4px;">Hall of Fame</h1>
+        <p style="color:var(--text-400);font-size:14px;">Every lesson is a step toward greatness!</p>
+      </div>
+      <div class="card" style="padding:16px 24px;text-align:center;">
+        <div style="display:flex;gap:32px;">
+          <div><p style="font-size:10px;font-weight:700;color:var(--text-400);text-transform:uppercase;margin-bottom:2px;">Total XP</p><p style="font-family:var(--font-display);font-size:22px;font-weight:900;color:var(--primary);">10,200</p></div>
+          <div><p style="font-size:10px;font-weight:700;color:var(--text-400);text-transform:uppercase;margin-bottom:2px;">Global Rank</p><p style="font-family:var(--font-display);font-size:22px;font-weight:900;color:var(--accent-orange);">#2</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stat cards -->
+    <div class="grid-4 mb-32">
+      ${[
+        { icon:'🔥', label:'Current Streak', val:'5 Days', color:'#F59E0B' },
+        { icon:'✅', label:'Lessons Finished', val:'24', color:'#10B981' },
+        { icon:'⭐', label:'Perfect Quizzes', val:'12', color:'#F59E0B' },
+        { icon:'📈', label:'Learning Hours', val:'48h', color:'var(--primary)' },
+      ].map(s => `
+        <div class="card" style="padding:20px;">
+          <p style="font-size:10px;font-weight:700;color:var(--text-400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">${s.label}</p>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:22px;">${s.icon}</span>
+            <span style="font-family:var(--font-display);font-size:22px;font-weight:900;color:${s.color};">${s.val}</span>
+          </div>
+        </div>`).join('')}
+    </div>
+
+    <!-- Badges + Leaderboard -->
+    <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:24px;align-items:start;">
+      <div>
+        <div class="section-header">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="color:var(--primary);font-size:20px;">🏅</span>
+            <span class="section-title">My Badges</span>
+          </div>
+        </div>
+        <div class="grid-2">
+          ${badges.map(b => `
+            <div class="card" style="padding:20px;${b.locked ? 'opacity:0.45;' : ''}">
+              <div style="width:44px;height:44px;border-radius:12px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:12px;">${b.locked ? '🏆' : b.icon}</div>
+              <h3 style="font-size:14px;margin-bottom:4px;">${b.title}</h3>
+              <p style="font-size:12px;color:var(--text-400);margin-bottom:8px;">${b.desc}</p>
+              ${b.earned ? `<p style="font-size:11px;font-weight:700;color:var(--accent-green);text-transform:uppercase;letter-spacing:0.5px;">Earned ${b.earned}</p>` : `<p style="font-size:11px;color:var(--text-400);">🔒 Locked</p>`}
+            </div>`).join('')}
+        </div>
+      </div>
+
+      <div class="card" style="padding:20px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+          <span style="font-size:18px;">👥</span>
+          <span class="section-title">Top Learners</span>
+        </div>
+        ${leaderboard.map(r => `
+          <div class="leaderboard-row ${r.isMe ? 'me' : ''}">
+            <span style="font-size:13px;font-weight:800;color:${r.rank<=3?'var(--accent-orange)':'var(--text-400)'};width:24px;">#${r.rank}</span>
+            <div style="width:34px;height:34px;border-radius:50%;background:${r.isMe?'var(--primary)':'var(--bg)'};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:${r.isMe?'white':'var(--text-500)'};">${r.initials}</div>
+            <span style="flex:1;font-size:13px;font-weight:${r.isMe?'800':'600'};color:var(--text-900);">${r.name}</span>
+            <span style="font-size:13px;font-weight:700;color:${r.isMe?'var(--primary)':'var(--text-500)'};">${r.xp} XP</span>
+          </div>`).join('')}
+        <div style="text-align:center;margin-top:16px;">
+          <span style="font-size:13px;font-weight:700;color:var(--primary);cursor:pointer;">View Full Rankings →</span>
+        </div>
+      </div>
+    </div>
+
+    <style>@media(max-width:768px){.ach-grid{grid-template-columns:1fr !important;}}</style>
+  </div>`;
+}
+
+/* ============================================================
+   PAGE: SETTINGS
+   ============================================================ */
+function SettingsPage() {
+  const name = state.user?.name || state.user?.firstName || state.user?.username || 'Learner';
+  const username = state.user?.username || '';
+  return `<div class="page" style="max-width:680px;">
+    <h1 style="font-size:26px;margin-bottom:4px;">Settings</h1>
+    <p style="color:var(--text-400);font-size:14px;margin-bottom:28px;">Manage your account and preferences</p>
+
+    <!-- Profile -->
+    <div class="card mb-16" style="padding:24px;">
+      <h3 style="font-size:16px;margin-bottom:16px;">Profile</h3>
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
+        <div style="width:56px;height:56px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:white;font-family:var(--font-display);font-weight:900;font-size:20px;">${name[0].toUpperCase()}</div>
+        <div>
+          <p style="font-weight:700;font-size:15px;color:var(--text-900);">${name}</p>
+          <p style="font-size:13px;color:var(--text-400);">@${username}</p>
+        </div>
+        <button class="btn btn-ghost btn-sm" style="margin-left:auto;">Edit Profile</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        ${[['Display Name', name, 'text'],['Email', state.user?.email || '—', 'email']].map(([l,v]) => `
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;color:var(--text-400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">${l}</label>
+            <input type="text" value="${v}" class="bibo-input" readonly style="background:var(--bg);cursor:default;" />
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <!-- Preferences -->
+    <div class="card mb-16" style="padding:24px;">
+      <h3 style="font-size:16px;margin-bottom:16px;">Preferences</h3>
+      ${[
+        ['🔔', 'Push Notifications', 'Get reminders for daily learning goals'],
+        ['🔊', 'Sound Effects', 'Enable sounds for correct/wrong answers'],
+        ['🌙', 'Dark Mode', 'Switch to a darker interface'],
+      ].map(([icon,label,desc]) => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <span style="font-size:20px;">${icon}</span>
+            <div>
+              <p style="font-size:14px;font-weight:600;color:var(--text-900);">${label}</p>
+              <p style="font-size:12px;color:var(--text-400);">${desc}</p>
+            </div>
+          </div>
+          <div style="width:44px;height:24px;border-radius:99px;background:var(--border);cursor:pointer;position:relative;transition:background 0.2s;" onclick="this.style.background=this.style.background==='var(--primary)'?'var(--border)':'var(--primary)'">
+            <div style="width:20px;height:20px;border-radius:50%;background:white;position:absolute;top:2px;left:2px;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div>
+          </div>
+        </div>`).join('')}
+    </div>
+
+    <!-- Account -->
+    <div class="card mb-16" style="padding:24px;">
+      <h3 style="font-size:16px;margin-bottom:16px;">Account</h3>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <button class="btn btn-ghost" style="justify-content:flex-start;border-radius:var(--radius-sm);">🔑 Change Password</button>
+        <button class="btn btn-ghost" style="justify-content:flex-start;border-radius:var(--radius-sm);">📋 Download My Data</button>
+        <button style="display:flex;align-items:center;gap:10px;padding:10px 20px;border-radius:var(--radius-sm);background:none;border:1.5px solid #FECACA;color:var(--accent-red);font-size:14px;font-weight:700;cursor:pointer;transition:all 0.18s;" onclick="clearAuth();render();">
+          ${icons.logout} Sign Out
+        </button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   PAGE: PARENT VIEW
+   ============================================================ */
+function ParentViewPage() {
+  return `<div class="page">
+    <h1 style="font-size:26px;margin-bottom:28px;">Parent Dashboard 👨‍👩‍👧</h1>
+    <div class="card mb-16" style="padding:20px;display:flex;align-items:center;gap:14px;">
+      <div style="width:52px;height:52px;border-radius:14px;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:26px;">🦁</div>
+      <div>
+        <p style="font-weight:800;font-size:16px;color:var(--text-900);" id="parent-child-name">Loading...</p>
+        <p style="font-size:13px;color:var(--text-400);" id="parent-child-grade">Student</p>
+      </div>
+    </div>
+    <div id="parent-stats" class="grid-4 mb-24">${Loading()}</div>
+    <h3 style="font-size:16px;margin-bottom:14px;">Subject Progress</h3>
+    <div id="parent-subjects">${Loading()}</div>
+    <h3 style="font-size:16px;margin:24px 0 14px;">Areas to Improve 💪</h3>
+    <div id="parent-weak" class="card" style="padding:20px;">${Loading()}</div>
+  </div>`;
+}
+
+async function bindParent() {
+  try {
+    const user = state.user;
+    const name = user?.name || user?.firstName || 'Your Child';
+    document.getElementById('parent-child-name').textContent = name;
+    document.getElementById('parent-child-grade').textContent = `Grade ${user?.grade || '?'} · ${user?.school || 'BIBO Learner'}`;
+
+    const subjects = await api.getSubjects();
+    const total = subjects.reduce((a,s) => a+(s.lessonCount||0), 0);
+    const completed = subjects.reduce((a,s) => a+(s.completedCount||0), 0);
+    const pct = total ? Math.round(completed/total*100) : 0;
+
+    document.getElementById('parent-stats').innerHTML = `
+      ${[['Lessons Done',completed,'var(--accent-green)'],['Remaining',total-completed,'var(--primary)'],['Progress',pct+'%','var(--primary-mid)'],['Subjects',subjects.length,'var(--accent-orange)']].map(([l,v,c]) => `
+        <div class="card" style="padding:18px;text-align:center;">
+          <div style="font-family:var(--font-display);font-size:26px;font-weight:900;color:${c};">${v}</div>
+          <div style="font-size:11px;font-weight:600;color:var(--text-400);margin-top:4px;">${l}</div>
+        </div>`).join('')}`;
+
+    document.getElementById('parent-subjects').innerHTML = `<div style="display:flex;flex-direction:column;gap:10px;">
+      ${subjects.map(s => {
+        const st = getSubjectStyle(s.name);
+        const p = s.progress || 0;
+        return `<div class="card" style="padding:16px;display:flex;align-items:center;gap:12px;">
+          <span style="font-size:22px;">${st.icon}</span>
+          <div style="flex:1;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+              <span style="font-weight:700;font-size:14px;">${s.name}</span>
+              <span style="font-size:12px;font-weight:800;color:${st.color};">${p}%</span>
+            </div>
+            <div class="progress-track" style="height:6px;"><div class="progress-fill" style="height:6px;width:${p}%;background:${st.color};"></div></div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+    const weak = subjects.filter(s => (s.progress||0) < 50);
+    document.getElementById('parent-weak').innerHTML = weak.length
+      ? `<div style="display:flex;flex-direction:column;gap:14px;">${weak.map(s => {
+          const st = getSubjectStyle(s.name);
+          return `<div style="display:flex;align-items:center;gap:10px;"><span style="font-size:20px;">${st.icon}</span><div><p style="font-weight:700;font-size:13px;">${s.name}</p><p style="font-size:12px;color:var(--text-400);">Only ${s.progress||0}% — needs more practice</p></div></div>`;
+        }).join('')}</div>`
+      : `<div style="text-align:center;padding:24px;"><div style="font-size:36px;margin-bottom:8px;">🌟</div><p style="font-weight:700;">No weak areas! Great progress!</p></div>`;
+  } catch(e) {
+    document.getElementById('parent-stats').innerHTML = ErrorState(e.message);
+  }
+}
+
+/* ============================================================
+   PLACEHOLDER PAGES (navigated from sidebar)
+   ============================================================ */
+function GamesPageWrapper()       { document.getElementById('page-container').innerHTML = GamesPage(); }
+function QuizPageWrapper()        { document.getElementById('page-container').innerHTML = QuizPage(); bindQuiz(); }
+function ResearchPageWrapper()    { document.getElementById('page-container').innerHTML = ResearchPage(); }
+function AchievementsPageWrapper(){ document.getElementById('page-container').innerHTML = AchievementsPage(); }
+function SettingsPageWrapper()    { document.getElementById('page-container').innerHTML = SettingsPage(); }
+
+/* ============================================================
+   EXTENDED ROUTER (override to add new pages)
+   ============================================================ */
+const _originalRender = render;
+function render() {
+  const app = document.getElementById('app');
+
+  if (!state.token) {
+    app.innerHTML = '';
+    if (state.currentPage === 'register') {
+      app.innerHTML = `<div id="app-auth">${RegisterPage()}</div>`;
+      bindRegister();
+    } else {
+      app.innerHTML = `<div id="app-auth">${LoginPage()}</div>`;
+      bindLogin();
+    }
+    return;
+  }
+
+  app.innerHTML = `
+    <div id="app-layout">
+      ${SidebarHtml()}
+      <div id="main-content">
+        <div id="page-container"></div>
+      </div>
+    </div>`;
+
+  updateSidebarActive();
+
+  const pageMap = {
+    dashboard:    () => { document.getElementById('page-container').innerHTML = DashboardPage(); bindDashboard(); },
+    subjects:     () => { document.getElementById('page-container').innerHTML = SubjectsPage();  bindSubjects(); },
+    lessons:      () => { document.getElementById('page-container').innerHTML = LessonsPage();   bindLessons(); },
+    lesson:       () => { document.getElementById('page-container').innerHTML = LessonDetailPage(); bindLessonDetail(); },
+    ai:           () => { document.getElementById('page-container').innerHTML = AIChatPage();    bindAIChat(); },
+    parent:       () => { document.getElementById('page-container').innerHTML = ParentViewPage(); bindParent(); },
+    games:        GamesPageWrapper,
+    quiz:         QuizPageWrapper,
+    research:     ResearchPageWrapper,
+    achievements: AchievementsPageWrapper,
+    settings:     SettingsPageWrapper,
+  };
+  (pageMap[state.currentPage] || pageMap.dashboard)();
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+render();
+</script>
+</body>
+</html>

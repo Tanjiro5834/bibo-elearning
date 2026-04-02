@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BIBO Admin Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      :root {
+        --bg: #eaecf0;
+        --card-bg: #ffffff;
+        --primary: #3b3fc4;
+        --primary-dark: #2e31a8;
+        --primary-light: #eef0ff;
+        --accent-green: #10b981;
+        --accent-red: #ef4444;
+        --text-900: #0f1117;
+        --text-700: #374151;
+        --text-500: #6b7280;
+        --text-400: #9ca3af;
+        --border: #e5e7eb;
+        --shadow-sm: 0 1px 4px rgba(0,0,0,0.06);
+        --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+        --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+        --shadow-primary: 0 4px 20px rgba(59,63,196,0.28);
+        --radius-sm: 10px;
+        --radius-md: 14px;
+        --radius-lg: 18px;
+        --radius-xl: 24px;
+        --font-display: "Plus Jakarta Sans", sans-serif;
+        --font-body: "DM Sans", sans-serif;
+      }
+
+      html, body {
+        min-height: 100vh;
+        font-family: var(--font-body);
+        background: var(--bg);
+        color: var(--text-700);
+      }
+
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+      }
+
+      .auth-shell {
+        width: 100%;
+        max-width: 1180px;
+        min-height: 720px;
+        display: grid;
+        grid-template-columns: 1.08fr 0.92fr;
+        background: white;
+        border: 1px solid var(--border);
+        border-radius: 30px;
+        overflow: hidden;
+        box-shadow: var(--shadow-lg);
+      }
+
+      .auth-hero {
+        position: relative;
+        padding: 42px 40px;
+        background: linear-gradient(135deg, #1e2a78 0%, #3b3fc4 60%, #5b60e0 100%);
+        color: white;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        overflow: hidden;
+      }
+
+      .auth-hero::before {
+        content: "";
+        position: absolute;
+        width: 360px; height: 360px;
+        border-radius: 50%;
+        top: -80px; right: -80px;
+        background: rgba(255,255,255,0.06);
+      }
+
+      .auth-hero::after {
+        content: "";
+        position: absolute;
+        width: 280px; height: 280px;
+        border-radius: 50%;
+        bottom: -100px; left: -60px;
+        background: rgba(255,255,255,0.05);
+      }
+
+      .hero-top, .hero-middle, .hero-bottom { position: relative; z-index: 2; }
+
+      .brand { display: flex; align-items: center; gap: 12px; }
+
+      .brand-icon {
+        width: 48px; height: 48px;
+        border-radius: 14px;
+        background: rgba(255,255,255,0.14);
+        display: flex; align-items: center; justify-content: center;
+        font-family: var(--font-display);
+        font-size: 20px; font-weight: 900; color: white;
+        backdrop-filter: blur(8px);
+      }
+
+      .brand-title { font-family: var(--font-display); font-size: 20px; font-weight: 900; line-height: 1; }
+      .brand-sub { margin-top: 4px; font-size: 10px; font-weight: 700; letter-spacing: 1px; opacity: 0.72; text-transform: uppercase; }
+
+      .hero-chip {
+        display: inline-flex; align-items: center; gap: 8px;
+        background: rgba(255,255,255,0.12);
+        border: 1px solid rgba(255,255,255,0.14);
+        border-radius: 999px; padding: 8px 14px;
+        font-size: 12px; font-weight: 800; margin-bottom: 18px;
+        backdrop-filter: blur(6px);
+      }
+
+      .hero-copy h1 {
+        font-family: var(--font-display);
+        font-size: 42px; line-height: 1.08; font-weight: 900;
+        margin-bottom: 14px; max-width: 520px; letter-spacing: -0.6px;
+      }
+
+      .hero-copy p { max-width: 540px; font-size: 15px; line-height: 1.72; opacity: 0.92; }
+
+      .hero-features {
+        display: grid; grid-template-columns: 1fr 1fr;
+        gap: 14px; margin-top: 26px; max-width: 560px;
+      }
+
+      .feature-card {
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: var(--radius-lg); padding: 16px;
+        backdrop-filter: blur(10px);
+      }
+
+      .feature-icon {
+        width: 42px; height: 42px; border-radius: 12px;
+        background: rgba(255,255,255,0.14);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 20px; margin-bottom: 12px;
+      }
+
+      .feature-card h3 { font-size: 14px; font-weight: 800; margin-bottom: 6px; }
+      .feature-card p { font-size: 12px; line-height: 1.6; opacity: 0.84; }
+
+      .hero-bottom { display: flex; gap: 14px; flex-wrap: wrap; }
+
+      .stat-pill {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 10px 14px; border-radius: 999px;
+        background: rgba(255,255,255,0.12);
+        border: 1px solid rgba(255,255,255,0.12);
+        font-size: 12px; font-weight: 800;
+        backdrop-filter: blur(8px);
+      }
+
+      .auth-panel {
+        padding: 42px 38px;
+        display: flex; align-items: center; justify-content: center;
+        background: #fff;
+      }
+
+      .auth-card {
+        width: 100%; max-width: 430px;
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        padding: 34px 30px;
+        box-shadow: var(--shadow-sm);
+      }
+
+      .eyebrow {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 7px 12px; border-radius: 999px;
+        background: var(--primary-light); color: var(--primary);
+        font-size: 11px; font-weight: 800; letter-spacing: 0.7px;
+        text-transform: uppercase; margin-bottom: 16px;
+      }
+
+      .auth-card h2 {
+        font-family: var(--font-display);
+        font-size: 30px; font-weight: 900;
+        color: var(--text-900); line-height: 1.1;
+        margin-bottom: 8px; letter-spacing: -0.4px;
+      }
+
+      .auth-subtext { color: var(--text-500); font-size: 14px; line-height: 1.7; margin-bottom: 24px; }
+
+      .admin-tabs { display: flex; gap: 10px; margin-bottom: 22px; }
+
+      .tab-chip {
+        flex: 1; text-align: center; padding: 11px 14px;
+        border-radius: 999px; font-size: 13px; font-weight: 800;
+        border: 1px solid var(--border); background: #fafafa;
+        color: var(--text-500); cursor: pointer;
+        transition: all 0.2s ease; user-select: none;
+      }
+
+      .tab-chip.active {
+        background: var(--primary); color: white;
+        border-color: var(--primary); box-shadow: var(--shadow-primary);
+      }
+
+      .form-panel { display: none; animation: fadeIn 0.2s ease; }
+      .form-panel.active { display: block; }
+
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(6px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .field { margin-bottom: 14px; }
+      .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+      .field label { display: block; font-size: 12px; font-weight: 700; color: var(--text-500); margin-bottom: 7px; }
+
+      .bibo-input {
+        width: 100%; padding: 13px 15px;
+        border: 1.5px solid var(--border); border-radius: var(--radius-md);
+        font-family: var(--font-body); font-size: 14px; font-weight: 500;
+        color: var(--text-900); background: #fafafa; outline: none;
+        transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+      }
+
+      .bibo-input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(59,63,196,0.1);
+        background: white;
+      }
+
+      .bibo-input::placeholder { color: var(--text-400); }
+
+      .helper { font-size: 12px; color: var(--text-400); margin-top: 2px; line-height: 1.5; }
+
+      .btn {
+        display: inline-flex; align-items: center; justify-content: center;
+        gap: 8px; border: none; cursor: pointer;
+        font-family: var(--font-body); font-weight: 700;
+        border-radius: 999px; transition: all 0.18s;
+        text-decoration: none; width: 100%;
+      }
+
+      .btn-primary {
+        background: var(--primary); color: white;
+        padding: 13px 22px; font-size: 14px;
+        box-shadow: var(--shadow-primary); margin-top: 6px;
+      }
+
+      .btn-primary:hover:not(:disabled) { background: var(--primary-dark); transform: translateY(-1px); }
+      .btn-primary:disabled { opacity: 0.65; cursor: not-allowed; transform: none !important; }
+
+      .auth-footer-note {
+        margin-top: 18px; padding: 14px 16px;
+        border-radius: 16px; background: var(--primary-light);
+        color: var(--primary); font-size: 12px; line-height: 1.7;
+        border: 1px solid #dde2ff;
+      }
+
+      .msg { min-height: 20px; margin-top: 12px; font-size: 13px; font-weight: 700; }
+      .msg.error { color: var(--accent-red); }
+      .msg.success { color: var(--accent-green); }
+      .msg.info { color: var(--primary); }
+
+      @media (max-width: 980px) {
+        .auth-shell { grid-template-columns: 1fr; min-height: auto; }
+        .auth-hero { padding: 30px 24px; gap: 26px; }
+        .hero-copy h1 { font-size: 32px; max-width: none; }
+        .hero-copy p { max-width: none; }
+        .hero-features { grid-template-columns: 1fr; max-width: none; }
+        .auth-panel { padding: 28px 22px; }
+      }
+
+      @media (max-width: 560px) {
+        body { padding: 14px; }
+        .auth-card { padding: 24px 20px; }
+        .field-row { grid-template-columns: 1fr; }
+        .hero-copy h1 { font-size: 28px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="auth-shell">
+      <section class="auth-hero">
+        <div class="hero-top">
+          <div class="brand">
+            <div class="brand-icon">B</div>
+            <div>
+              <div class="brand-title">BIBO</div>
+              <div class="brand-sub">Admin Portal</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-middle">
+          <div class="hero-chip">🛡️ Administrator Access Only</div>
+          <div class="hero-copy">
+            <h1>Manage the learning world behind BIBO.</h1>
+            <p>Create and organize subjects, publish lessons, structure lesson sections, and keep the content pipeline clean for your student app.</p>
+          </div>
+          <div class="hero-features">
+            <div class="feature-card">
+              <div class="feature-icon">📚</div>
+              <h3>Curriculum Control</h3>
+              <p>Build subjects, lessons, and sections with a proper content workflow.</p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">🎯</div>
+              <h3>Admin-Only Space</h3>
+              <p>Keep student experience focused while content management stays separate and secure.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-bottom">
+          <div class="stat-pill">✨ Same BIBO design system</div>
+          <div class="stat-pill">🔐 Role-based entry point</div>
+          <div class="stat-pill">🧩 CMS-ready foundation</div>
+        </div>
+      </section>
+
+      <section class="auth-panel">
+        <div class="auth-card">
+          <div class="eyebrow">BIBO Admin Access</div>
+          <h2>Login or register</h2>
+          <p class="auth-subtext">Use your admin credentials to sign in, or register a new admin account.</p>
+
+          <div class="admin-tabs">
+            <button type="button" class="tab-chip active" data-tab="login">Login</button>
+            <button type="button" class="tab-chip" data-tab="register">Register</button>
+          </div>
+
+          <!-- LOGIN PANEL -->
+          <!-- Backend: POST /api/auth/login -->
+          <!-- Body: { username, password } -->
+          <div id="loginPanel" class="form-panel active">
+            <form id="loginForm">
+              <div class="field">
+                <label for="loginUsername">Username</label>
+                <input id="loginUsername" class="bibo-input" type="text" placeholder="admin" required />
+              </div>
+              <div class="field">
+                <label for="loginPassword">Password</label>
+                <input id="loginPassword" class="bibo-input" type="password" placeholder="Enter your password" required />
+              </div>
+              <button class="btn btn-primary" type="submit" id="loginBtn">Login to Admin Dashboard</button>
+              <div id="loginMessage" class="msg"></div>
+            </form>
+          </div>
+
+          <!-- REGISTER PANEL -->
+          <!-- Backend: POST /api/auth/register/teacher (used as admin proxy) -->
+          <!-- Body: { username, email, password } -->
+          <div id="registerPanel" class="form-panel">
+            <form id="registerForm">
+              <div class="field">
+                <label for="registerUsername">Username</label>
+                <input id="registerUsername" class="bibo-input" type="text" placeholder="admin_username" required />
+              </div>
+              <div class="field">
+                <label for="registerEmail">Email</label>
+                <input id="registerEmail" class="bibo-input" type="email" placeholder="admin@bibo.com" required />
+              </div>
+              <div class="field">
+                <label for="registerPassword">Password</label>
+                <input id="registerPassword" class="bibo-input" type="password" placeholder="Create a password" required />
+                <div class="helper">Use a strong password for admin access.</div>
+              </div>
+              <div class="field">
+                <label for="registerConfirmPassword">Confirm Password</label>
+                <input id="registerConfirmPassword" class="bibo-input" type="password" placeholder="Confirm your password" required />
+              </div>
+              <button class="btn btn-primary" type="submit" id="registerBtn">Create Admin Account</button>
+              <div id="registerMessage" class="msg"></div>
+            </form>
+          </div>
+
+          <div class="auth-footer-note">
+            Login uses <strong>username + password</strong>. Only <strong>ADMIN</strong> role accounts can access this portal. Register creates a teacher account — add an <code>/api/auth/register/admin</code> endpoint on the backend for proper admin registration.
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      const API_BASE = "http://localhost:8080/api";
+
+      // --- Tab switching ---
+      const tabs = document.querySelectorAll(".tab-chip");
+      const loginPanel = document.getElementById("loginPanel");
+      const registerPanel = document.getElementById("registerPanel");
+
+      tabs.forEach((tab) => {
+        tab.addEventListener("click", () => {
+          tabs.forEach((t) => t.classList.remove("active"));
+          tab.classList.add("active");
+          const activeTab = tab.dataset.tab;
+          loginPanel.classList.toggle("active", activeTab === "login");
+          registerPanel.classList.toggle("active", activeTab === "register");
+        });
+      });
+
+      // --- Utility ---
+      async function request(method, path, body = null, token = null) {
+        const headers = { "Content-Type": "application/json" };
+        if (token) headers["Authorization"] = "Bearer " + token;
+
+        const response = await fetch(API_BASE + path, {
+          method,
+          headers,
+          body: body ? JSON.stringify(body) : null,
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(data.error || data.message || "Request failed");
+        }
+
+        return data;
+      }
+
+      function setMessage(el, text, type = "") {
+        el.className = "msg " + type;
+        el.textContent = text;
+      }
+
+      // --- LOGIN ---
+      // Calls: POST /api/auth/login
+      // Body:  { username, password }
+      document.getElementById("loginForm").addEventListener("submit", async function (e) {
+        e.preventDefault();
+        const loginBtn = document.getElementById("loginBtn");
+        const msg = document.getElementById("loginMessage");
+
+        setMessage(msg, "Signing in...", "info");
+        loginBtn.disabled = true;
+
+        const username = document.getElementById("loginUsername").value.trim();
+        const password = document.getElementById("loginPassword").value.trim();
+
+        try {
+          const result = await request("POST", "/auth/login", { username, password });
+
+          const token = result.token || result.accessToken;
+          if (!token) throw new Error("No token received from server.");
+
+          // Check role — only allow ADMIN
+          const user = result.user || result;
+          const roleName = String(user?.role?.name || user?.roleName || user?.role || "").toUpperCase();
+
+          if (roleName && roleName !== "ADMIN") {
+            throw new Error("This account does not have admin access.");
+          }
+
+          localStorage.setItem("bibo_admin_token", token);
+          localStorage.setItem("bibo_admin_user", JSON.stringify(user || null));
+
+          setMessage(msg, "Login successful. Redirecting...", "success");
+          setTimeout(() => { window.location.href = "admin_dashboard.html"; }, 700);
+
+        } catch (error) {
+          setMessage(msg, error.message || "Login failed.", "error");
+        } finally {
+          loginBtn.disabled = false;
+        }
+      });
+
+      // --- REGISTER ---
+      // Calls: POST /api/auth/register/teacher (temporary — no /register/admin endpoint exists yet)
+      // Body:  { username, email, password }
+      // TODO: Add POST /api/auth/register/admin on backend with RoleName.ADMIN
+      document.getElementById("registerForm").addEventListener("submit", async function (e) {
+        e.preventDefault();
+        const registerBtn = document.getElementById("registerBtn");
+        const msg = document.getElementById("registerMessage");
+
+        setMessage(msg, "Creating account...", "info");
+        registerBtn.disabled = true;
+
+        const username = document.getElementById("registerUsername").value.trim();
+        const email = document.getElementById("registerEmail").value.trim();
+        const password = document.getElementById("registerPassword").value.trim();
+        const confirmPassword = document.getElementById("registerConfirmPassword").value.trim();
+
+        try {
+          if (password !== confirmPassword) throw new Error("Passwords do not match.");
+
+          // Payload matches RegisterRequest.java: { username, email, password }
+          await request("POST", "/auth/register/teacher", { username, email, password });
+
+          setMessage(msg, "Account created! You can now log in.", "success");
+          this.reset();
+
+          // Switch back to login tab
+          tabs.forEach((t) => t.classList.remove("active"));
+          document.querySelector('[data-tab="login"]').classList.add("active");
+          loginPanel.classList.add("active");
+          registerPanel.classList.remove("active");
+
+        } catch (error) {
+          setMessage(msg, error.message || "Registration failed.", "error");
+        } finally {
+          registerBtn.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>
