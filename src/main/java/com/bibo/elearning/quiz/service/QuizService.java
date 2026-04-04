@@ -9,6 +9,7 @@ import com.bibo.elearning.quiz.entity.Choice;
 import com.bibo.elearning.quiz.entity.QuizAttempt;
 import com.bibo.elearning.quiz.dto.request.CreateQuizRequest;
 import com.bibo.elearning.quiz.dto.request.SubmitQuizRequest;
+import com.bibo.elearning.quiz.dto.response.QuizResponse;
 import com.bibo.elearning.quiz.dto.response.QuizResultResponse;
 import com.bibo.elearning.lesson.entity.Lesson;
 import com.bibo.elearning.quiz.repository.QuizRepository;
@@ -25,12 +26,10 @@ public class QuizService {
     private final LessonRepository lessonRepository;
     private final QuizMapper quizMapper;
     
-    public Quiz createQuiz(CreateQuizRequest request){
+    public QuizResponse createQuiz(CreateQuizRequest request) {
         Lesson lesson = lessonRepository.findById(request.getLessonId())
-        .orElseThrow(() -> new RuntimeException("Lesson not found"));
-
+            .orElseThrow(() -> new RuntimeException("Lesson not found"));
         Quiz quiz = quizMapper.toEntity(request, lesson);
-
         List<Question> questions = request.getQuestions().stream().map(q -> {
             Question question = new Question();
             question.setQuestionText(q.getQuestionText());
@@ -45,9 +44,8 @@ public class QuizService {
             question.setChoices(choices);
             return question;
         }).toList();
-
         quiz.setQuestions(questions);
-        return quizRepository.save(quiz);
+        return quizMapper.toResponse(quizRepository.save(quiz));
     }
 
     public QuizResultResponse submitQuiz(SubmitQuizRequest request){
@@ -78,7 +76,8 @@ public class QuizService {
         return quizMapper.toResultResponse(attempt);
     }
 
-    public List<Quiz> getQuizzesByLesson(Long lessonId) {
-        return quizRepository.findByLessonId(lessonId);
+    public List<QuizResponse> getQuizzesByLesson(Long lessonId) {
+        return quizRepository.findByLessonIdWithQuestions(lessonId)
+        .stream().map(quizMapper::toResponse).toList();
     }
 }

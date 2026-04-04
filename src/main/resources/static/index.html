@@ -2144,10 +2144,11 @@
    PAGE: LESSONS
    ============================================================ */
       function LessonsPage() {
-         const s = state.selectedSubject
-          || _allSubjects.find(x => x.id === state.selectedSubjectId);
+        const s =
+          state.selectedSubject ||
+          _allSubjects.find((x) => x.id === state.selectedSubjectId);
 
-         const st = s ? getSubjectStyle(s.name) : SUBJECT_STYLES.default;
+        const st = s ? getSubjectStyle(s.name) : SUBJECT_STYLES.default;
 
         return `<div class="page">
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;">
@@ -2172,27 +2173,31 @@
       }
 
       async function bindLessons() {
-      const list = document.getElementById("lessons-list");
-      const s =
-        state.selectedSubject ||
-        _allSubjects.find((x) => x.id === state.selectedSubjectId);
+        const list = document.getElementById("lessons-list");
+        const s =
+          state.selectedSubject ||
+          _allSubjects.find((x) => x.id === state.selectedSubjectId);
 
-      if (!s) {
-        list.innerHTML = ErrorState("No subject selected");
-        return;
-      }
-
-      try {
-        const lessons = await api.getLessons(s.id);
-
-        if (!lessons || !lessons.length) {
-          list.innerHTML = EmptyState("📭", "No lessons yet", "Check back soon!");
+        if (!s) {
+          list.innerHTML = ErrorState("No subject selected");
           return;
         }
 
-        const st = getSubjectStyle(s.name);
+        try {
+          const lessons = await api.getLessons(s.id);
 
-        list.innerHTML = `
+          if (!lessons || !lessons.length) {
+            list.innerHTML = EmptyState(
+              "📭",
+              "No lessons yet",
+              "Check back soon!",
+            );
+            return;
+          }
+
+          const st = getSubjectStyle(s.name);
+
+          list.innerHTML = `
           <div style="display:flex;flex-direction:column;gap:10px;">
             ${lessons
               .map((l, i) => {
@@ -2238,10 +2243,10 @@
               })
               .join("")}
           </div>`;
-      } catch (e) {
-        list.innerHTML = ErrorState(e.message);
+        } catch (e) {
+          list.innerHTML = ErrorState(e.message);
+        }
       }
-    }
 
       /* ============================================================
    PAGE: LESSON DETAIL
@@ -2491,166 +2496,227 @@
    PAGE: QUIZ
    ============================================================ */
       function QuizPage() {
-        const questions = [
-          {
-            q: "Imagine you have a delicious pizza cut into 4 equal slices. If you eat 1 slice, what fraction did you eat?",
-            opts: ["1/2", "1/4", "3/4", "4/1"],
-            ans: 1,
-          },
-          {
-            q: "Which of the following is the capital city of the Philippines?",
-            opts: ["Cebu", "Davao", "Manila", "Quezon City"],
-            ans: 2,
-          },
-          {
-            q: "What is the process by which plants make their own food using sunlight?",
-            opts: [
-              "Respiration",
-              "Fermentation",
-              "Photosynthesis",
-              "Digestion",
-            ],
-            ans: 2,
-          },
-        ];
         window._quizState = {
-          questions,
+          quiz: null, // full quiz object from API
+          questions: [], // normalized questions
           current: 0,
-          score: 0,
-          selected: null,
+          selectedChoiceId: null, // the choice ID picked this round
+          selectedChoiceIds: [], // all picks, one per question
           answered: false,
           timer: 300,
           timerInterval: null,
         };
 
-        return `<div class="page" style="max-width:760px;">
-    <!-- Quiz header -->
-    <div class="flex-between mb-16">
-      <div style="display:flex;align-items:center;gap:12px;">
-        <span style="font-size:13px;font-weight:700;color:var(--text-900);padding:6px 14px;background:white;border:1px solid var(--border);border-radius:99px;">MATH QUEST</span>
-        <span style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--text-500);" id="quiz-timer">⏱ 5:00</span>
-      </div>
-      <div>
-        <span style="font-size:10px;font-weight:700;color:var(--text-400);text-transform:uppercase;letter-spacing:0.5px;">Question</span>
-        <div style="font-family:var(--font-display);font-size:22px;font-weight:900;color:var(--text-900);text-align:right;" id="quiz-count">1 <span style="color:var(--text-400);font-size:16px;">/ ${questions.length}</span></div>
-      </div>
-    </div>
+        return `<div class="page" style="max-width:760px;" id="quiz-root">
+          <!-- Loading state while we fetch -->
+          <div id="quiz-loading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;gap:16px;">
+            <div class="spinner"></div>
+            <p style="color:var(--text-400);font-weight:600;">Loading quiz...</p>
+          </div>
 
-    <!-- Progress bar -->
-    <div class="progress-track mb-28" style="height:8px;"><div class="progress-fill" id="quiz-progress" style="height:8px;width:${Math.round((1 / questions.length) * 100)}%;"></div></div>
+          <!-- Actual quiz UI (hidden until loaded) -->
+          <div id="quiz-body" style="display:none;">
+            <!-- Header -->
+            <div class="flex-between mb-16">
+              <div style="display:flex;align-items:center;gap:12px;">
+                <span style="font-size:13px;font-weight:700;color:var(--text-900);padding:6px 14px;background:white;border:1px solid var(--border);border-radius:99px;" id="quiz-title">QUIZ</span>
+                <span style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--text-500);" id="quiz-timer">⏱ 5:00</span>
+              </div>
+              <div>
+                <span style="font-size:10px;font-weight:700;color:var(--text-400);text-transform:uppercase;letter-spacing:0.5px;">Question</span>
+                <div style="font-family:var(--font-display);font-size:22px;font-weight:900;color:var(--text-900);text-align:right;" id="quiz-count">1 / ?</div>
+              </div>
+            </div>
 
-    <!-- Question card -->
-    <div class="card mb-16" style="padding:36px 40px;" id="quiz-card">
-      <h2 style="font-size:24px;line-height:1.4;color:var(--text-900);" id="quiz-question">${questions[0].q}</h2>
-    </div>
+            <!-- Progress bar -->
+            <div class="progress-track mb-28" style="height:8px;">
+              <div class="progress-fill" id="quiz-progress" style="height:8px;width:0%;"></div>
+            </div>
 
-    <!-- Options -->
-    <div style="display:flex;flex-direction:column;gap:10px;" id="quiz-options">
-      ${["A", "B", "C", "D"]
-        .map(
-          (k, i) => `
-        <div class="quiz-option" id="opt-${i}" onclick="quizSelect(${i})">
-          <div class="quiz-option-key" id="opt-key-${i}">${k}</div>
-          <span>${questions[0].opts[i]}</span>
-        </div>`,
-        )
-        .join("")}
-    </div>
+            <!-- Question card -->
+            <div class="card mb-16" style="padding:36px 40px;">
+              <h2 style="font-size:24px;line-height:1.4;color:var(--text-900);" id="quiz-question"></h2>
+            </div>
 
-    <div style="display:flex;justify-content:flex-end;margin-top:20px;">
-      <button class="btn btn-primary" id="quiz-next-btn" style="display:none;" onclick="quizNext()">Next Question →</button>
-    </div>
-  </div>`;
+            <!-- Options -->
+            <div style="display:flex;flex-direction:column;gap:10px;" id="quiz-options"></div>
+
+            <div style="display:flex;justify-content:flex-end;margin-top:20px;">
+              <button class="btn btn-primary" id="quiz-next-btn" style="display:none;" onclick="quizNext()">Next Question →</button>
+            </div>
+          </div>
+        </div>`;
       }
 
-      function quizSelect(idx) {
+      function quizSelect(idx, choiceId) {
         const qs = window._quizState;
         if (qs.answered) return;
-        qs.selected = idx;
+
         qs.answered = true;
-        const q = qs.questions[qs.current];
+        qs.selectedChoiceId = choiceId;
+        qs.selectedChoiceIds[qs.current] = choiceId;
 
-        ["A", "B", "C", "D"].forEach((_, i) => {
-          const opt = document.getElementById(`opt-${i}`);
-          const key = document.getElementById(`opt-key-${i}`);
-          if (i === q.ans) {
-            opt.classList.add("correct");
-            key.style.background = "#D1FAE5";
-            key.style.color = "#065F46";
-          } else if (i === idx) {
-            opt.classList.add("wrong");
-            key.style.background = "#FEE2E2";
-            key.style.color = "#991B1B";
-          }
-        });
+        // Highlight selected — visual feedback only, correctness revealed after submit
+        const opt = document.getElementById(`opt-${idx}`);
+        opt.classList.add("selected");
 
-        if (idx === q.ans) {
-          qs.score++;
-          showToast("Correct! 🎉", "⭐");
-        } else {
-          showToast("Not quite — keep going!", "💪");
+        document.getElementById("quiz-next-btn").style.display = "";
+
+        // Update label for last question
+        if (qs.current === qs.questions.length - 1) {
+          document.getElementById("quiz-next-btn").textContent = "Submit Quiz ✓";
+          document.getElementById("quiz-next-btn").onclick = quizSubmit;
         }
-
-        const nextBtn = document.getElementById("quiz-next-btn");
-        if (nextBtn) nextBtn.style.display = "";
       }
 
       function quizNext() {
         const qs = window._quizState;
+        if (!qs.answered) return;
         qs.current++;
-        qs.answered = false;
-        qs.selected = null;
-
-        if (qs.current >= qs.questions.length) {
-          document.getElementById("page-container").innerHTML = `
-      <div class="page" style="max-width:500px;margin:0 auto;text-align:center;padding-top:60px;">
-        <div style="font-size:64px;margin-bottom:16px;">🎊</div>
-        <h1 style="font-size:28px;margin-bottom:8px;">Quiz Complete!</h1>
-        <p style="color:var(--text-400);margin-bottom:28px;">You scored <strong>${qs.score}/${qs.questions.length}</strong></p>
-        <div style="display:flex;gap:12px;justify-content:center;">
-          <button class="btn btn-primary" onclick="navigate('quiz')">Try Again</button>
-          <button class="btn btn-ghost" onclick="navigate('dashboard')">Dashboard</button>
-        </div>
-      </div>`;
-          return;
-        }
-
-        const q = qs.questions[qs.current];
-        document.getElementById("quiz-question").textContent = q.q;
-        document.getElementById("quiz-count").innerHTML =
-          `${qs.current + 1} <span style="color:var(--text-400);font-size:16px;">/ ${qs.questions.length}</span>`;
-        document.getElementById("quiz-progress").style.width =
-          Math.round(((qs.current + 1) / qs.questions.length) * 100) + "%";
-        document.getElementById("quiz-next-btn").style.display = "none";
-
-        ["A", "B", "C", "D"].forEach((k, i) => {
-          const opt = document.getElementById(`opt-${i}`);
-          const key = document.getElementById(`opt-key-${i}`);
-          opt.className = "quiz-option";
-          key.style.background = "";
-          key.style.color = "";
-          opt.children[1].textContent = q.opts[i];
-        });
+        renderQuizQuestion();
       }
 
-      function bindQuiz() {
-        // Timer
+      async function bindQuiz() {
         const qs = window._quizState;
-        qs.timerInterval = setInterval(() => {
-          qs.timer--;
-          const m = Math.floor(qs.timer / 60);
-          const s = String(qs.timer % 60).padStart(2, "0");
-          const el = document.getElementById("quiz-timer");
-          if (el) el.textContent = `⏱ ${m}:${s}`;
-          if (qs.timer <= 0) {
-            clearInterval(qs.timerInterval);
+
+        try {
+          // --- 1. Fetch quizzes for the current lesson ---
+          // Use state.currentLessonId if you track it, or a default for now
+          const lessonId = state.currentLessonId || 1;
+          const quizzes = await fetch(`/api/quiz/lesson/${lessonId}`, {
+            headers: { Authorization: `Bearer ${state.token}` },
+          }).then((r) => r.json());
+
+          if (!quizzes || quizzes.length === 0) {
+            document.getElementById("quiz-loading").innerHTML =
+              `<div style="text-align:center;padding:48px 0;">
+          <div style="font-size:48px;margin-bottom:12px;">📭</div>
+          <h3 style="margin-bottom:8px;">No quiz available</h3>
+          <p style="color:var(--text-400);">This lesson doesn't have a quiz yet.</p>
+        </div>`;
+            return;
           }
-        }, 1000);
+
+          // Take the first quiz (or let the student pick if multiple)
+          const quiz = quizzes[0];
+          qs.quiz = quiz;
+          qs.questions = quiz.questions; // array of { id, questionText, choices: [{id, choiceText}] }
+          qs.selectedChoiceIds = new Array(qs.questions.length).fill(null);
+
+          // --- 2. Populate UI ---
+          document.getElementById("quiz-loading").style.display = "none";
+          document.getElementById("quiz-body").style.display = "";
+          document.getElementById("quiz-title").textContent =
+            quiz.title || "QUIZ";
+          renderQuizQuestion();
+
+          // --- 3. Start timer ---
+          qs.timerInterval = setInterval(() => {
+            qs.timer--;
+            const m = Math.floor(qs.timer / 60);
+            const s = String(qs.timer % 60).padStart(2, "0");
+            const el = document.getElementById("quiz-timer");
+            if (el) el.textContent = `⏱ ${m}:${s}`;
+            if (qs.timer <= 0) {
+              clearInterval(qs.timerInterval);
+              quizSubmit(); // auto-submit on timeout
+            }
+          }, 1000);
+        } catch (e) {
+          document.getElementById("quiz-loading").innerHTML =
+            `<div style="text-align:center;padding:48px 0;color:var(--accent-red);">
+        <div style="font-size:48px;margin-bottom:12px;">⚠️</div>
+        <p style="font-weight:700;">Failed to load quiz</p>
+        <p style="font-size:13px;">${e.message}</p>
+      </div>`;
+        }
       }
+
+      function renderQuizQuestion() {
+        const qs = window._quizState;
+        const q = qs.questions[qs.current];
+        const total = qs.questions.length;
+
+        document.getElementById("quiz-question").textContent = q.questionText;
+        document.getElementById("quiz-count").innerHTML =
+          `${qs.current + 1} <span style="color:var(--text-400);font-size:16px;">/ ${total}</span>`;
+        document.getElementById("quiz-progress").style.width =
+          Math.round(((qs.current + 1) / total) * 100) + "%";
+        document.getElementById("quiz-next-btn").style.display = "none";
+        qs.answered = false;
+        qs.selectedChoiceId = null;
+
+        const keys = ["A", "B", "C", "D"];
+        document.getElementById("quiz-options").innerHTML = q.choices
+          .map((c, i) => `
+            <div class="quiz-option" id="opt-${i}" onclick="quizSelect(${i}, ${c.id})">
+              <div class="quiz-option-key" id="opt-key-${i}">${keys[i]}</div>
+              <span>${c.choiceText}</span>
+            </div>`)
+          .join("");
+      }
+
+      async function quizSubmit() {
+      const qs = window._quizState;
+      clearInterval(qs.timerInterval);
+
+      // Fill any unanswered questions with -1 (will just be wrong)
+      const choiceIds = qs.selectedChoiceIds.filter(id => id !== null);
+
+      document.getElementById("quiz-body").innerHTML =
+        `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;gap:16px;">
+          <div class="spinner"></div>
+          <p style="color:var(--text-400);font-weight:600;">Submitting your answers...</p>
+        </div>`;
+
+      try {
+        const result = await fetch("/api/quiz/submit", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${state.token}`,
+          },
+          body: JSON.stringify({
+            quizId: qs.quiz.id,
+            studentId: state.user.id, 
+            selectedChoiceIds: choiceIds,
+          }),
+        }).then(r => r.json());
+
+        // result shape: { score, totalItems, passed, ... }
+        const passed = result.passed;
+        const emoji = passed ? "🎊" : "💪";
+        const headline = passed ? "Quiz Passed!" : "Keep Practicing!";
+        const color = passed ? "var(--accent-green)" : "var(--accent-orange)";
+
+        document.getElementById("quiz-root").innerHTML = `
+          <div class="page" style="max-width:500px;margin:0 auto;text-align:center;padding-top:60px;">
+            <div style="font-size:64px;margin-bottom:16px;">${emoji}</div>
+            <h1 style="font-size:28px;margin-bottom:8px;">${headline}</h1>
+            <div style="display:inline-block;background:${color}22;border:2px solid ${color};border-radius:var(--radius-xl);padding:20px 40px;margin:16px 0 24px;">
+              <div style="font-family:var(--font-display);font-size:52px;font-weight:900;color:${color};line-height:1;">${result.score}%</div>
+              <div style="font-size:13px;font-weight:700;color:var(--text-500);">${result.score >= (qs.quiz.passingScore || 75) ? "Passing score reached ✓" : `Passing score: ${qs.quiz.passingScore || 75}%`}</div>
+            </div>
+            <p style="color:var(--text-400);margin-bottom:28px;">
+              You answered <strong>${Math.round((result.score / 100) * result.totalItems)} of ${result.totalItems}</strong> correctly.
+            </p>
+            <div style="display:flex;gap:12px;justify-content:center;">
+              <button class="btn btn-primary" onclick="navigate('quiz')">Try Again</button>
+              <button class="btn btn-ghost" onclick="navigate('dashboard')">Dashboard</button>
+            </div>
+          </div>`;
+      } catch (e) {
+        document.getElementById("quiz-root").innerHTML = `
+          <div style="text-align:center;padding:48px 0;color:var(--accent-red);">
+            <p style="font-weight:700;">Submission failed: ${e.message}</p>
+            <button class="btn btn-ghost" style="margin-top:16px;" onclick="navigate('quiz')">Try Again</button>
+          </div>`;
+      }
+    }
 
       /* ============================================================
-   PAGE: AI TUTOR CHAT
-   ============================================================ */
+      PAGE: AI TUTOR CHAT
+      ============================================================ */
       function AIChatPage() {
         const userName =
           state.user?.name ||

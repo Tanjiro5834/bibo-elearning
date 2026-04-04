@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.bibo.elearning.quiz.dto.request.CreateQuizRequest;
 import com.bibo.elearning.quiz.dto.request.SubmitQuizRequest;
+import com.bibo.elearning.quiz.dto.response.QuizResponse;
 import com.bibo.elearning.quiz.dto.response.QuizResultResponse;
 import com.bibo.elearning.quiz.entity.Quiz;
 import com.bibo.elearning.quiz.service.QuizService;
@@ -22,18 +23,18 @@ public class QuizController {
 
     private final QuizService quizService;
 
-    @PostMapping("/create")
-    public ResponseEntity<Quiz> createQuiz(@RequestBody CreateQuizRequest request) {
-        return ResponseEntity.ok(quizService.createQuiz(request));
-    }
-
     @PostMapping("/submit")
     public ResponseEntity<QuizResultResponse> submitQuiz(@RequestBody SubmitQuizRequest request) {
         return ResponseEntity.ok(quizService.submitQuiz(request));
     }
 
+    @PostMapping("/create")
+    public ResponseEntity<QuizResponse> createQuiz(@RequestBody CreateQuizRequest request) {
+        return ResponseEntity.ok(quizService.createQuiz(request));
+    }
+
     @GetMapping("/lesson/{lessonId}")
-    public ResponseEntity<List<Quiz>> getByLesson(@PathVariable Long lessonId) {
+    public ResponseEntity<List<QuizResponse>> getByLesson(@PathVariable Long lessonId) {
         return ResponseEntity.ok(quizService.getQuizzesByLesson(lessonId));
     }
 }
