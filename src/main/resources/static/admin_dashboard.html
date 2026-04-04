@@ -1132,43 +1132,60 @@ async function students() {
     <div class="card" style="padding:20px;background:var(--primary-light);border-color:#dde2ff;margin-bottom:24px;">
       <div style="display:flex;align-items:flex-start;gap:12px;">
         <span style="font-size:22px;">ℹ️</span>
-        <div><p style="font-weight:700;color:var(--primary);margin-bottom:4px;">Student Accounts</p>
-        <p style="font-size:13px;color:var(--text-500);">Students register through the main BIBO app. Their accounts appear here once registered.</p></div>
+        <div>
+          <p style="font-weight:700;color:var(--primary);margin-bottom:4px;">Student Accounts</p>
+          <p style="font-size:13px;color:var(--text-500);">Students register through the main BIBO app. Their accounts appear here once registered.</p>
+        </div>
       </div>
     </div>
     <div id="students-list">${Loading()}</div>
   </div>`;
 
   try {
-    const data = await apiFetch('GET', '/student/all').catch(() => null);
-    if (!data?.length) {
-      document.getElementById('students-list').innerHTML = Empty('👥', 'No students yet', 'Students appear here after registering through the BIBO app.');
+    const data = await apiFetch('GET', '/student/all');
+
+    if (!Array.isArray(data) || data.length === 0) {
+      document.getElementById('students-list').innerHTML =
+        Empty('👥', 'No students yet', 'Students appear here after registering through the BIBO app.');
       return;
     }
+
     document.getElementById('students-list').innerHTML = `
       <div class="card" style="overflow:hidden;">
         <table class="data-table">
-          <thead><tr><th>Student</th><th>Username</th><th>Level</th><th>Joined</th></tr></thead>
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Username</th>
+              <th>Level</th>
+              <th>Joined</th>
+            </tr>
+          </thead>
           <tbody>
             ${data.map(s => `
               <tr>
                 <td>
                   <div style="display:flex;align-items:center;gap:10px;">
                     <div style="width:36px;height:36px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--primary);font-size:14px;">
-                      ${(s.fullName || s.username || '?')[0].toUpperCase()}
+                      ${((s.fullName || s.username || '?').trim()[0] || '?').toUpperCase()}
                     </div>
-                    <span style="font-weight:600;">${s.fullName || '—'}</span>
+                    <span style="font-weight:600;">${s.fullName || s.name || '—'}</span>
                   </div>
                 </td>
-                <td style="color:var(--text-400);">@${s.username}</td>
-                <td><span class="badge badge-blue">${s.learningLevel || 'BEGINNER'}</span></td>
+                <td style="color:var(--text-400);">@${s.username || '—'}</td>
+                <td><span class="badge badge-blue">${s.learningLevel || s.level || 'BEGINNER'}</span></td>
                 <td style="font-size:13px;color:var(--text-400);">${s.createdAt ? new Date(s.createdAt).toLocaleDateString() : '—'}</td>
-              </tr>`).join('')}
+              </tr>
+            `).join('')}
           </tbody>
         </table>
       </div>`;
   } catch (e) {
-    document.getElementById('students-list').innerHTML = Empty('👥', 'No students yet', 'Students appear here after registering through the BIBO app.');
+    document.getElementById('students-list').innerHTML = `
+      <div class="card" style="padding:16px;color:var(--accent-red);">
+        ⚠️ Failed to load students: ${e.message}
+      </div>
+    `;
   }
 }
 

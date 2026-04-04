@@ -1,11 +1,13 @@
 package com.bibo.elearning.student.service;
 
+import java.util.List;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import com.bibo.elearning.auth.common.enums.RoleName;
 import com.bibo.elearning.auth.security.custom.CustomUserDetails;
 import com.bibo.elearning.auth.user.entity.User;
-import com.bibo.elearning.student.dto.CreateStudentProfileRequest;
-import com.bibo.elearning.student.dto.StudentProfileResponse;
+import com.bibo.elearning.student.dto.request.CreateStudentProfileRequest;
+import com.bibo.elearning.student.dto.response.StudentProfileResponse;
 import com.bibo.elearning.student.model.StudentProfile;
 import com.bibo.elearning.student.repository.StudentProfileRepository;
 import lombok.RequiredArgsConstructor;
@@ -38,8 +40,15 @@ public class StudentService {
                 .getContext()
                 .getAuthentication()
                 .getPrincipal();
-                
+
         return userDetails.getUser();
+    }
+
+    public List<StudentProfileResponse> getAllStudents() {
+        return studentProfileRepository.findByUserRoleNameOrderByCreatedAtDesc(RoleName.STUDENT)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
     }
 
     public StudentProfileResponse getMyProfile() {
@@ -52,14 +61,16 @@ public class StudentService {
     }
 
     private StudentProfileResponse mapToResponse(StudentProfile profile) {
+        User user = profile.getUser();
         return StudentProfileResponse.builder()
                 .id(profile.getId())
-                .username(profile.getUser().getUsername())
-                .email(profile.getUser().getEmail())
+                .username(user != null ? user.getUsername() : "N/A")
+                .email(user != null ? user.getEmail() : "N/A")
                 .fullName(profile.getFullName())
                 .age(profile.getAge())
-                .learningLevel(profile.getLearningLevel())
+                .learningLevel(profile.getLearningLevel() != null ? profile.getLearningLevel() : "BEGINNER")
                 .avatarUrl(profile.getAvatarUrl())
+                .createdAt(profile.getCreatedAt())
                 .build();
     }
 }

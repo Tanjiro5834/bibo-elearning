@@ -1,5 +1,6 @@
-package com.bibo.elearning.student.dto;
+package com.bibo.elearning.student.dto.response;
 
+import java.time.LocalDateTime;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -13,4 +14,5 @@ public class StudentProfileResponse {
     private Integer age;
     private String learningLevel;
     private String avatarUrl;
+    private LocalDateTime createdAt;
 }

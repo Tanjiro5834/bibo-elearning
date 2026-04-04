@@ -1,5 +1,6 @@
 package com.bibo.elearning.student.model;
 import lombok.*;
+import java.time.LocalDateTime;
 import com.bibo.elearning.auth.user.entity.User;
 import com.bibo.elearning.student.enums.GradeLevel;
 import com.bibo.elearning.student.enums.LearningPathStatus;
@@ -29,4 +30,12 @@ public class StudentProfile {
 
     @Column(length = 255)
     private String avatarUrl;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @PrePersist
+    public void prePersist() {
+        this.createdAt = LocalDateTime.now();
+    }
 }

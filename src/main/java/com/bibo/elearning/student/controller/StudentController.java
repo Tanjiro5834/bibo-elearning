@@ -1,5 +1,7 @@
 package com.bibo.elearning.student.controller;
 
+import java.util.List;
+import org.springframework.boot.actuate.web.exchanges.HttpExchange.Response;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -8,8 +10,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import com.bibo.elearning.student.dto.CreateStudentProfileRequest;
-import com.bibo.elearning.student.dto.StudentProfileResponse;
+import com.bibo.elearning.student.dto.request.CreateStudentProfileRequest;
+import com.bibo.elearning.student.dto.response.StudentProfileResponse;
 import com.bibo.elearning.student.service.StudentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +34,11 @@ public class StudentController {
     @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<StudentProfileResponse> getMyProfile() {
         return ResponseEntity.ok(studentService.getMyProfile());
+    }
+
+    @GetMapping("/all")
+    public ResponseEntity<List<StudentProfileResponse>> getAllStudents(){
+        return ResponseEntity.ok(studentService.getAllStudents());
     }
 
     @GetMapping("/hash")

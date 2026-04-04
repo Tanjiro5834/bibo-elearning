@@ -1,4 +1,4 @@
-package com.bibo.elearning.student.dto;
+package com.bibo.elearning.student.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
