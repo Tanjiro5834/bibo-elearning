@@ -6,12 +6,13 @@ import java.util.stream.Collectors;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import com.bibo.elearning.auth.common.enums.LessonStatus;
+import com.bibo.elearning.auth.common.enums.ProgressStatus;
 import com.bibo.elearning.auth.security.custom.CustomUserDetails;
 import com.bibo.elearning.auth.user.entity.User;
 import com.bibo.elearning.lesson.dto.request.UpdateLessonProgressRequest;
 import com.bibo.elearning.lesson.dto.response.LessonDetailResponse;
 import com.bibo.elearning.lesson.dto.response.LessonProgressResponse;
+import com.bibo.elearning.lesson.dto.response.LessonSectionResponse;
 import com.bibo.elearning.lesson.dto.response.StudentLessonDashboardResponse;
 import com.bibo.elearning.lesson.entity.LessonProgress;
 import com.bibo.elearning.lesson.mapper.LessonProgressMapper;
@@ -102,7 +103,7 @@ public class LessonProgressService {
         StudentProfile student = getCurrentStudentProfile();
 
         return lessonProgressRepository
-                .findByStudentProfileIdAndStatus(student.getId(), LessonStatus.IN_PROGRESS)
+                .findByStudentProfileIdAndStatus(student.getId(), ProgressStatus.IN_PROGRESS)
                 .stream()
                 .map(lessonProgressMapper::toResponse)
                 .collect(Collectors.toList());
@@ -112,7 +113,7 @@ public class LessonProgressService {
         StudentProfile student = getCurrentStudentProfile();
 
         return lessonProgressRepository
-                .findByStudentProfileIdAndStatus(student.getId(), LessonStatus.COMPLETED)
+                .findByStudentProfileIdAndStatus(student.getId(), ProgressStatus.COMPLETED)
                 .stream()
                 .map(lessonProgressMapper::toResponse)
                 .collect(Collectors.toList());
@@ -130,7 +131,47 @@ public class LessonProgressService {
     }
 
     public LessonDetailResponse continueLesson(Long lessonId) {
-        return null;
+        StudentProfile student = getCurrentStudentProfile();
+
+        var lesson = lessonRepository.findById(lessonId)
+        .orElseThrow(() -> new RuntimeException("Lesson not found"));
+
+        LessonProgress progress = lessonProgressRepository
+        .findByStudentProfileIdAndLessonId(student.getId(), lessonId)
+        .orElseGet(() -> {
+            LessonProgress newProgress = LessonProgress.builder()
+                        .studentProfile(student)
+                        .lesson(lesson)
+                        .build();
+                newProgress.markStarted();
+                return lessonProgressRepository.save(newProgress);
+        });
+
+        progress.markStarted();
+        progress.setLastAccessedAt(java.time.LocalDateTime.now());
+        lessonProgressRepository.save(progress);
+
+        return LessonDetailResponse.builder()
+        .id(lesson.getId())
+        .subjectId(lesson.getSubject().getId())
+        .subjectName(lesson.getSubject().getName())
+        .title(lesson.getTitle())
+        .description(lesson.getDescription())
+        .estimatedMinutes(lesson.getEstimatedMinutes())
+        .learningLevel(lesson.getLearningLevel())
+        .published(lesson.getPublished())
+        .sections(
+                lesson.getSections().stream()
+                        .map(section -> LessonSectionResponse.builder()
+                                .id(section.getId())
+                                .title(section.getTitle())
+                                .content(section.getContent())
+                                .contentOrder(section.getContentOrder())
+                                .contentType(section.getContentType())
+                                .build())
+                        .toList()
+        )
+        .build();
     }
 
     private User getCurrentUser() {

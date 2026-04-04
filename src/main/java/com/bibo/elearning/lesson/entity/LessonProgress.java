@@ -63,8 +63,9 @@ public class LessonProgress {
         this.currentSectionOrder = sectionOrder;
         this.lastAccessedAt = LocalDateTime.now();
 
-        if (totalSections != null && totalSections > 0) {
-            this.progressPercent = (int) Math.round((sectionOrder * 100.0) / totalSections);
+        if (totalSections != null && totalSections > 0 && sectionOrder != null) {
+            int normalizedOrder = Math.max(1, sectionOrder);
+            this.progressPercent = (int) Math.round((normalizedOrder * 100.0) / totalSections);
         }
 
         if (this.status == ProgressStatus.NOT_STARTED) {

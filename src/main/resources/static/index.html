@@ -1045,21 +1045,31 @@
         login: (data) => api.request("POST", "/auth/login", data),
         registerStudent: (data) =>
           api.request("POST", "/auth/register/student", data),
+
         registerParent: (data) =>
           api.request("POST", "/auth/register/parent", data),
+
         registerTeacher: (data) =>
           api.request("POST", "/auth/register/teacher", data),
 
         getMe: () => api.request("GET", "/student/me", null, state.token),
+
         getSubjects: () =>
           api.request("GET", "/subjects/active", null, state.token),
+
         getLessons: (sid) =>
           api.request("GET", `/lessons/subject/${sid}`, null, state.token),
 
         getLesson: (lid) =>
           api.request("GET", `/lessons/${lid}`, null, state.token),
-        getProgress: (lid) =>
-          api.request("GET", `/progress/${lid}`, null, state.token),
+
+        getProgress: (lessonId) =>
+          api.request(
+            "GET",
+            `/student/lessons/${lessonId}/progress`,
+            null,
+            state.token,
+          ),
 
         getSectionsByLesson: (lessonId) =>
           api.request(
@@ -1069,16 +1079,35 @@
             state.token,
           ),
 
-        startProgress: (lid) =>
-          api.request("POST", `/progress/${lid}/start`, {}, state.token),
-        updateProgress: (lid, d) =>
-          api.request("PUT", `/progress/${lid}`, d, state.token),
-        completeLesson: (lid) =>
-          api.request("POST", `/progress/${lid}/complete`, {}, state.token),
+        startProgress: (lessonId) =>
+          api.request(
+            "POST",
+            `/student/lessons/${lessonId}/start`,
+            {},
+            state.token,
+          ),
+
+        updateProgress: (lessonId, data) =>
+          api.request(
+            "PATCH",
+            `/student/lessons/${lessonId}/progress`,
+            data,
+            state.token,
+          ),
+
+        completeLesson: (lessonId) =>
+          api.request(
+            "POST",
+            `/student/lessons/${lessonId}/complete`,
+            {},
+            state.token,
+          ),
 
         aiChat: (data) => api.request("POST", "/ai/chat", data, state.token),
+
         getQuizzesByLesson: (lessonId) =>
           api.request("GET", `/quiz/lesson/${lessonId}`, null, state.token),
+
         submitQuiz: (data) =>
           api.request("POST", "/quiz/submit", data, state.token),
       };
@@ -2138,15 +2167,14 @@
       async function bindSubjects() {
         try {
           _allSubjects = await api.getSubjects();
-          const total = _allSubjects.reduce(
-            (a, s) => a + (s.lessonCount || 0),
-            0,
-          );
-          const done = _allSubjects.reduce(
-            (a, s) => a + (s.completedCount || 0),
-            0,
-          );
-          const pct = total ? Math.round((done / total) * 100) : 0;
+          const pct = _allSubjects.length
+            ? Math.round(
+                _allSubjects.reduce((sum, s) => sum + (s.progress || 0), 0) / _allSubjects.length
+              )
+            : 0;
+
+          const done = _allSubjects.reduce((sum, s) => sum + (s.completedCount || 0), 0);
+          const total = _allSubjects.reduce((sum, s) => sum + (s.lessonCount || 0), 0);
           document.getElementById("overall-pct").textContent = pct + "%";
           document.getElementById("overall-done").textContent = done;
           document.getElementById("overall-unlocked").textContent =
@@ -2311,22 +2339,42 @@
         }
 
         try {
-          const sections = await api.getSectionsByLesson(l.id);
+          await api.startProgress(l.id);
+
+          const [sections, progress] = await Promise.all([
+            api.getSectionsByLesson(l.id),
+            api.getProgress(l.id),
+          ]);
 
           lessonState.lesson = l;
           lessonState.sections = sections || [];
-          lessonState.progress = null;
-          lessonState.current = 0;
+          lessonState.progress = progress || null;
 
-          document.getElementById("lesson-title").textContent = l.title || "Lesson";
+          const savedOrder = progress?.currentSectionOrder ?? 0;
+
+          let currentIndex = 0;
+          if (lessonState.sections.length > 0) {
+            const foundIndex = lessonState.sections.findIndex(
+              (s, i) => (s.contentOrder ?? i) === savedOrder,
+            );
+            currentIndex = foundIndex >= 0 ? foundIndex : 0;
+          }
+
+          lessonState.current = currentIndex;
+
+          document.getElementById("lesson-title").textContent =
+            l.title || "Lesson";
           renderLessonSection();
         } catch (e) {
-          document.getElementById("lesson-body").innerHTML = ErrorState(e.message);
+          document.getElementById("lesson-body").innerHTML = ErrorState(
+            e.message,
+          );
         }
       }
 
       function renderLessonSection() {
         const { sections, current } = lessonState;
+
         if (!sections.length) {
           document.getElementById("lesson-body").innerHTML = EmptyState(
             "📭",
@@ -2335,18 +2383,22 @@
           );
           return;
         }
+
         const total = sections.length;
         const pct = Math.round(((current + 1) / total) * 100);
         const isLast = current === total - 1;
         const isFirst = current === 0;
+
         document.getElementById("lesson-progress-fill").style.width = pct + "%";
         document.getElementById("lesson-progress-txt").textContent = pct + "%";
+
         document.getElementById("section-dots").innerHTML = sections
           .map(
             (_, i) =>
               `<div class="section-dot ${i < current ? "done" : i === current ? "active" : ""}"></div>`,
           )
           .join("");
+
         const sec = sections[current];
         const contentHtml = sec.content
           ? `<div style="color:var(--text-700);line-height:1.8;font-size:15px;margin-top:16px;">${sec.content}</div>`
@@ -2354,12 +2406,14 @@
         const imageHtml = sec.imageUrl
           ? `<img src="${sec.imageUrl}" alt="${sec.title || ""}" style="width:100%;border-radius:var(--radius-lg);margin-top:16px;max-height:280px;object-fit:cover;" />`
           : "";
+
         document.getElementById("lesson-body").innerHTML = `
     <div class="card" style="padding:28px;">
       <span class="badge badge-new" style="margin-bottom:12px;display:inline-flex;">Section ${current + 1} of ${total}</span>
       <h2 style="font-size:20px;margin-bottom:0;">${sec.title || "Section " + (current + 1)}</h2>
       ${imageHtml}${contentHtml}
     </div>`;
+
         document.getElementById("btn-prev").style.display = isFirst
           ? "none"
           : "";
@@ -2369,8 +2423,10 @@
         document.getElementById("btn-complete").style.display = isLast
           ? ""
           : "none";
+
         api
           .updateProgress(lessonState.lesson.id, {
+            progressPercent: pct,
             currentSectionOrder: sec.contentOrder ?? current,
           })
           .catch(() => {});
