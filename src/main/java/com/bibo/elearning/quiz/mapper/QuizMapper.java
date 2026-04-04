@@ -44,7 +44,6 @@ public class QuizMapper {
                 ChoiceResponse cDto = new ChoiceResponse();
                 cDto.setId(c.getId());
                 cDto.setChoiceText(c.getChoiceText());
-                cDto.setCorrect(c.isCorrect());
                 return cDto;
             }).toList());
             return qDto;
