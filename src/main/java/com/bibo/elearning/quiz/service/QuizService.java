@@ -29,11 +29,14 @@ public class QuizService {
     public QuizResponse createQuiz(CreateQuizRequest request) {
         Lesson lesson = lessonRepository.findById(request.getLessonId())
             .orElseThrow(() -> new RuntimeException("Lesson not found"));
+
         Quiz quiz = quizMapper.toEntity(request, lesson);
+
         List<Question> questions = request.getQuestions().stream().map(q -> {
             Question question = new Question();
             question.setQuestionText(q.getQuestionText());
             question.setQuiz(quiz);
+
             List<Choice> choices = q.getChoices().stream().map(c -> {
                 Choice choice = new Choice();
                 choice.setChoiceText(c.getChoiceText());
@@ -41,9 +44,11 @@ public class QuizService {
                 choice.setQuestion(question);
                 return choice;
             }).toList();
+
             question.setChoices(choices);
             return question;
         }).toList();
+        
         quiz.setQuestions(questions);
         return quizMapper.toResponse(quizRepository.save(quiz));
     }

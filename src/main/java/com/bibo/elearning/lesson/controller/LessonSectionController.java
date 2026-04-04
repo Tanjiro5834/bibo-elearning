@@ -23,19 +23,13 @@ public class LessonSectionController {
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<LessonSectionResponse> createSection(
-            @RequestBody CreateLessonSectionRequest request) {
-        return ResponseEntity.ok(
-            lessonSectionService.createSection(request.getLessonId(), request)
-        );
+    public ResponseEntity<LessonSectionResponse> createSection(@RequestBody CreateLessonSectionRequest request) {
+        return ResponseEntity.ok(lessonSectionService.createSection(request.getLessonId(), request));
     }
 
     @GetMapping("/lesson/{lessonId}")
     @PreAuthorize("hasAnyRole('ADMIN','STUDENT','PARENT','TEACHER')")
-    public ResponseEntity<List<LessonSectionResponse>> getSectionsByLesson(
-            @PathVariable Long lessonId) {
-        return ResponseEntity.ok(
-                lessonSectionService.getSectionsByLessonId(lessonId)
-        );
+    public ResponseEntity<List<LessonSectionResponse>> getSectionsByLesson(@PathVariable Long lessonId) {
+        return ResponseEntity.ok(lessonSectionService.getSectionsByLessonId(lessonId));
     }
 }

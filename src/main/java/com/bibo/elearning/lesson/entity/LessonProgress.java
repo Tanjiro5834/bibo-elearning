@@ -44,7 +44,6 @@ public class LessonProgress {
 
     private LocalDateTime completedAt;
 
-    // ── helper methods ──────────────────────────────────────────
 
     public void markStarted() {
         if (this.status == ProgressStatus.NOT_STARTED) {

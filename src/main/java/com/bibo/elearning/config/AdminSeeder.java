@@ -22,15 +22,12 @@ public class AdminSeeder {
     @Bean
     CommandLineRunner seedAdmin() {
         return args -> {
-
             String email = "admin@bibo.com";
-
             if (userRepository.existsByEmail(email)) {
                 System.out.println("✅ Admin already exists");
                 return;
             }
 
-            // 🔥 IMPORTANT: fetch ADMIN role from DB
             Role adminRole = roleRepository.findByName(RoleName.ADMIN)
                     .orElseThrow(() -> new RuntimeException("ADMIN role not found"));
 
@@ -44,7 +41,7 @@ public class AdminSeeder {
 
             userRepository.save(admin);
 
-            System.out.println("🔥 Admin created: admin@bibo.com / admin123");
+            System.out.println("Admin created: admin@bibo.com / admin123");
         };
     }
 
@@ -75,8 +72,7 @@ public class AdminSeeder {
                         .build()
                 );
             }
-
-            System.out.println("✅ Roles seeded");
+            System.out.println("Roles seeded");
         };
     }
 }

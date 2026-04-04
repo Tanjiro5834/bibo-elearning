@@ -8,6 +8,7 @@ import com.bibo.elearning.quiz.entity.Quiz;
 
 public interface QuizRepository extends JpaRepository<Quiz, Long> {
     List<Quiz> findByLessonId(Long lessonId);
+    
     @Query("SELECT q FROM Quiz q LEFT JOIN FETCH q.questions WHERE q.lesson.id = :lessonId")
     List<Quiz> findByLessonIdWithQuestions(@Param("lessonId") Long lessonId);
 }

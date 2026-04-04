@@ -13,7 +13,7 @@ public class Quiz {
 
     private String title;
     private String description;
-    private int passingScore; // e.g. 75
+    private int passingScore;
 
     @ManyToOne
     @JoinColumn(name = "lesson_id")

@@ -36,15 +36,12 @@ public class LessonSection {
     @Column(length = 150)
     private String title;
 
-    // 🧠 main content (text, html, markdown, etc.)
     @Column(columnDefinition = "TEXT", nullable = false)
     private String content;
 
-    // 📌 order of the section (1,2,3,...)
     @Column(nullable = false)
     private Integer contentOrder;
 
-    // 📦 type of content (TEXT, VIDEO, etc.)
     @Enumerated(EnumType.STRING)
     @Column(length = 30, nullable = false)
     private ContentType contentType;

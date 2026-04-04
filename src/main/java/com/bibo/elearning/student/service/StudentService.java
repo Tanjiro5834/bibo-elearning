@@ -38,6 +38,7 @@ public class StudentService {
                 .getContext()
                 .getAuthentication()
                 .getPrincipal();
+                
         return userDetails.getUser();
     }
 

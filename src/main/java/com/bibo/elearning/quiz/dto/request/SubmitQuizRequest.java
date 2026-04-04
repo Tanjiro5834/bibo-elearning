@@ -5,5 +5,5 @@ import lombok.Data;
 public class SubmitQuizRequest {
     private Long studentId;
     private Long quizId;
-    private List<Long> selectedChoiceIds; // one per question
+    private List<Long> selectedChoiceIds;
 }

@@ -5,6 +5,7 @@ import lombok.Data;
 public class UpdateSubjectRequest {
     @NotBlank
     private String name;
+    
     @NotBlank
     private String description;
 }

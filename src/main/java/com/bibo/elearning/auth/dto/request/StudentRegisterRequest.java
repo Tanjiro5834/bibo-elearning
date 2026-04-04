@@ -8,7 +8,6 @@ import lombok.Setter;
 @Getter
 @Setter
 public class StudentRegisterRequest extends RegisterRequest {
-
     @NotBlank
     private String fullName;
 
