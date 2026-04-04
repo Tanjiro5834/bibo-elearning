@@ -1105,7 +1105,7 @@ async function submitQuiz() {
     const choices = [0, 1, 2, 3].map(i => {
       const t = document.getElementById(`ch-${n}-${i}`)?.value.trim();
       if (!t) return null;
-      return { choiceText: t, isCorrect: i === correctIdx };
+      return { choiceText: t, correct: i === correctIdx };
     });
     if (choices.some(c => !c)) { errEl.textContent = `All 4 choices required for Question ${n}.`; errEl.style.display = ''; return; }
     questions.push({ questionText: qt, choices });

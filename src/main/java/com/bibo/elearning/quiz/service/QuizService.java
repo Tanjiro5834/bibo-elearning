@@ -40,7 +40,7 @@ public class QuizService {
             List<Choice> choices = q.getChoices().stream().map(c -> {
                 Choice choice = new Choice();
                 choice.setChoiceText(c.getChoiceText());
-                choice.setCorrect(c.isCorrect());
+                choice.setCorrect(c.getCorrect());
                 choice.setQuestion(question);
                 return choice;
             }).toList();
@@ -48,21 +48,33 @@ public class QuizService {
             question.setChoices(choices);
             return question;
         }).toList();
-        
+
         quiz.setQuestions(questions);
         return quizMapper.toResponse(quizRepository.save(quiz));
     }
 
     public QuizResultResponse submitQuiz(SubmitQuizRequest request){
         Quiz quiz = quizRepository.findById(request.getQuizId())
-        .orElseThrow(() -> new RuntimeException("Quiz not found"));
+        .orElseThrow(() -> new RuntimeException("Quiz not found."));
 
         int correct = 0;
+
+        System.out.println("Selected IDs: " + request.getSelectedChoiceIds());
         for(Question question : quiz.getQuestions()){
+            Choice correctChoice = null;
             for(Choice choice : question.getChoices()){
-                if (choice.isCorrect() && request.getSelectedChoiceIds().contains(choice.getId())) {
-                    correct++;
+                System.out.println(
+                    "ChoiceID=" + choice.getId() +
+                    " correct=" + choice.isCorrect()
+                );
+                if(choice.isCorrect()){
+                    correctChoice = choice;
+                    break;
                 }
+            }
+
+            if(correctChoice != null && request.getSelectedChoiceIds().contains(correctChoice.getId())){
+                correct++;
             }
         }
 

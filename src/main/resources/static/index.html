@@ -2646,9 +2646,10 @@
         clearInterval(qs.timerInterval);
 
         // Collect only non-null picks (skipped questions won't count)
-        const selectedChoiceIds = qs.selectedChoiceIds.filter(
-          (id) => id !== null,
-        );
+        // const selectedChoiceIds = qs.selectedChoiceIds.filter(
+        //   (id) => id !== null,
+        // );
+        const selectedChoiceIds = [...qs.selectedChoiceIds];
 
         document.getElementById("quiz-root").innerHTML = `
     <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:320px;gap:16px;">
