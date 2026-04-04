@@ -4,7 +4,8 @@ import java.time.LocalDateTime;
 
 import jakarta.persistence.*;
 import lombok.*;
-
+import java.util.ArrayList;
+import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
@@ -41,6 +42,10 @@ public class Lesson {
 
     @Column(nullable = false)
     private LocalDateTime updatedAt;
+
+    @OneToMany(mappedBy = "lesson", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OrderBy("contentOrder ASC")
+    private List<LessonSection> sections = new ArrayList<>();
 
     @PrePersist
     public void prePersist() {

@@ -30,7 +30,7 @@ public class LessonSection {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn
+    @JoinColumn(name = "lesson_id")
     private Lesson lesson;
 
     @Column(length = 150)

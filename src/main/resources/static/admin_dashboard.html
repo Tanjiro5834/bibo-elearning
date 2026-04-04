@@ -769,15 +769,62 @@ async function submitEditLesson(id) {
 async function sections() {
   document.getElementById('page-container').innerHTML = `<div class="page">
     ${PageHeader('Lesson Sections', 'Add content blocks to lessons', '+ New Section', 'openCreateSection()')}
+
     <div class="card" style="padding:20px;background:var(--primary-light);border-color:#dde2ff;margin-bottom:24px;">
       <div style="display:flex;align-items:flex-start;gap:12px;">
         <span style="font-size:22px;">💡</span>
-        <div><p style="font-weight:700;color:var(--primary);margin-bottom:4px;">How Sections Work</p>
-        <p style="font-size:13px;color:var(--text-500);">Each section is a content block inside a lesson. Add sections in order — they appear sequentially to students. Supported types: Text, Image, Video, Activity.</p></div>
+        <div>
+          <p style="font-weight:700;color:var(--primary);margin-bottom:4px;">How Sections Work</p>
+          <p style="font-size:13px;color:var(--text-500);">
+            Each section is a content block inside a lesson. Add sections in order — they appear sequentially to students.
+            Supported types: Text, Image, Video, Activity.
+          </p>
+        </div>
       </div>
     </div>
-    <div id="sections-content">${Empty('📄', 'Click "+ New Section"', 'Select a lesson and add its content blocks.')}</div>
+
+    <div class="field" style="margin-bottom:18px;">
+      <label>Select Lesson</label>
+      <select id="sections-lesson-filter" class="bibo-input">
+        <option value="">Select lesson</option>
+      </select>
+    </div>
+
+    <div id="sections-content">${Empty('📄', 'Select a lesson', 'Choose a lesson to view its sections.')}</div>
   </div>`;
+
+  const select = document.getElementById('sections-lesson-filter');
+  let options = '<option value="">Select lesson</option>';
+
+  try {
+    const subs = await apiFetch('GET', '/subjects');
+
+    for (const s of (subs || [])) {
+      try {
+        const ls = await apiFetch('GET', `/lessons/subject/${s.id}`);
+        if (ls?.length) {
+          options += `<optgroup label="${s.name}">`;
+          options += ls.map(l => `<option value="${l.id}">${l.title}</option>`).join('');
+          options += `</optgroup>`;
+        }
+      } catch (e) {}
+    }
+
+    select.innerHTML = options;
+
+    select.addEventListener('change', async function () {
+      const lessonId = parseInt(this.value);
+      if (!lessonId) {
+        document.getElementById('sections-content').innerHTML =
+          Empty('📄', 'Select a lesson', 'Choose a lesson to view its sections.');
+        return;
+      }
+      await loadSections(lessonId);
+    });
+  } catch (e) {
+    document.getElementById('sections-content').innerHTML =
+      `<div style="color:var(--accent-red);padding:16px;">⚠️ ${e.message}</div>`;
+  }
 }
 
 async function openCreateSection() {
@@ -818,21 +865,97 @@ async function openCreateSection() {
 }
 
 async function submitSection() {
-  const lessonId = document.getElementById('sec-lesson').value;
+  const lessonId = parseInt(document.getElementById('sec-lesson').value);
   const title    = document.getElementById('sec-title').value.trim();
   const content  = document.getElementById('sec-content').value.trim();
   const type     = document.getElementById('sec-type').value;
   const order    = parseInt(document.getElementById('sec-order').value) || 1;
   const errEl    = document.getElementById('sec-err');
-  if (!lessonId) { errEl.textContent = 'Select a lesson.';       errEl.style.display = ''; return; }
-  if (!title)    { errEl.textContent = 'Section title required.'; errEl.style.display = ''; return; }
-  const btn = document.getElementById('sec-btn'); btn.disabled = true; btn.textContent = 'Adding...';
+  const btn      = document.getElementById('sec-btn');
+
+  errEl.textContent = '';
+  errEl.style.display = 'none';
+
+  if (!lessonId) {
+    errEl.textContent = 'Select a lesson.';
+    errEl.style.display = '';
+    return;
+  }
+
+  if (!title) {
+    errEl.textContent = 'Section title required.';
+    errEl.style.display = '';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Adding...';
+
   try {
-    await apiFetch('POST', '/lesson-sections', { lessonId: parseInt(lessonId), title, content, contentType: type, contentOrder: order });
-    closeModal(); showToast('Section added!', '📄');
+    await apiFetch('POST', '/lesson-sections', {
+      lessonId,
+      title,
+      content,
+      contentType: type,
+      contentOrder: order
+    });
+
+    closeModal();
+    showToast('Section added!', '📄');
+
+    // refresh rendered sections in UI
+    await loadSections(lessonId);
+
   } catch (e) {
-    errEl.textContent = e.message; errEl.style.display = '';
-    btn.disabled = false; btn.textContent = 'Add Section';
+    errEl.textContent = e.message;
+    errEl.style.display = '';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Add Section';
+  }
+}
+
+async function loadSections(lessonId) {
+  const container = document.getElementById('sections-content');
+  if (!container || !lessonId) return;
+
+  container.innerHTML = Loading();
+
+  try {
+    //const sections = await api.getSectionsByLesson(lessonId);
+     const sections = await apiFetch('GET', `/lesson-sections/lesson/${lessonId}`);
+
+    if (!sections || sections.length === 0) {
+      container.innerHTML = Empty('📄', 'No sections yet', 'Add the first section for this lesson.');
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="card" style="overflow:hidden;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Order</th>
+              <th>Title</th>
+              <th>Type</th>
+              <th>Content</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${sections.map(section => `
+              <tr>
+                <td>${section.contentOrder ?? '—'}</td>
+                <td>${section.title ?? '—'}</td>
+                <td>${section.contentType ?? '—'}</td>
+                <td>${section.content ?? '—'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch (e) {
+    container.innerHTML = `<div style="color:var(--accent-red);padding:16px;">⚠️ ${e.message}</div>`;
   }
 }
 

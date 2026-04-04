@@ -1029,13 +1029,16 @@
           if (validToken) headers["Authorization"] = `Bearer ${token}`;
           const opts = { method, headers };
           if (body) opts.body = JSON.stringify(body);
+
           const res = await fetch(API_BASE + path, opts);
+
           if (!res.ok) {
             const err = await res
               .json()
               .catch(() => ({ message: "Something went wrong" }));
             throw new Error(err.message || `HTTP ${res.status}`);
           }
+
           return res.json();
         },
 
@@ -1046,21 +1049,33 @@
           api.request("POST", "/auth/register/parent", data),
         registerTeacher: (data) =>
           api.request("POST", "/auth/register/teacher", data),
+
         getMe: () => api.request("GET", "/student/me", null, state.token),
         getSubjects: () =>
           api.request("GET", "/subjects/active", null, state.token),
         getLessons: (sid) =>
           api.request("GET", `/lessons/subject/${sid}`, null, state.token),
+
         getLesson: (lid) =>
           api.request("GET", `/lessons/${lid}`, null, state.token),
         getProgress: (lid) =>
           api.request("GET", `/progress/${lid}`, null, state.token),
+
+        getSectionsByLesson: (lessonId) =>
+          api.request(
+            "GET",
+            `/lesson-sections/lesson/${lessonId}`,
+            null,
+            state.token,
+          ),
+
         startProgress: (lid) =>
           api.request("POST", `/progress/${lid}/start`, {}, state.token),
         updateProgress: (lid, d) =>
           api.request("PUT", `/progress/${lid}`, d, state.token),
         completeLesson: (lid) =>
           api.request("POST", `/progress/${lid}/complete`, {}, state.token),
+
         aiChat: (data) => api.request("POST", "/ai/chat", data, state.token),
         getQuizzesByLesson: (lessonId) =>
           api.request("GET", `/quiz/lesson/${lessonId}`, null, state.token),
@@ -2179,7 +2194,7 @@
 
       function openLessonFromList(lesson) {
         setState({ selectedLesson: lesson, currentLessonId: lesson.id });
-        navigate('lesson');
+        navigate("lesson");
       }
 
       async function bindLessons() {
@@ -2294,27 +2309,19 @@
           navigate("subjects");
           return;
         }
+
         try {
-          const [lesson, progress] = await Promise.all([
-            api.getLesson(l.id),
-            api.getProgress(l.id).catch(() => null),
-          ]);
-          lessonState.lesson = lesson;
-          lessonState.sections = lesson.sections || [];
-          lessonState.progress = progress;
-          const savedOrder = progress?.currentSectionOrder ?? 0;
-          lessonState.current = lessonState.sections.findIndex(
-            (s) => s.order === savedOrder,
-          );
-          if (lessonState.current < 0) lessonState.current = 0;
-          if (!progress || progress.status === "NOT_STARTED")
-            api.startProgress(l.id).catch(() => {});
-          document.getElementById("lesson-title").textContent = lesson.title;
+          const sections = await api.getSectionsByLesson(l.id);
+
+          lessonState.lesson = l;
+          lessonState.sections = sections || [];
+          lessonState.progress = null;
+          lessonState.current = 0;
+
+          document.getElementById("lesson-title").textContent = l.title || "Lesson";
           renderLessonSection();
         } catch (e) {
-          document.getElementById("lesson-body").innerHTML = ErrorState(
-            e.message,
-          );
+          document.getElementById("lesson-body").innerHTML = ErrorState(e.message);
         }
       }
 
@@ -2364,7 +2371,7 @@
           : "none";
         api
           .updateProgress(lessonState.lesson.id, {
-            currentSectionOrder: sec.order ?? current,
+            currentSectionOrder: sec.contentOrder ?? current,
           })
           .catch(() => {});
       }
