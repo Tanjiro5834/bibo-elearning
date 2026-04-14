@@ -59,14 +59,9 @@ public class QuizService {
 
         int correct = 0;
 
-        System.out.println("Selected IDs: " + request.getSelectedChoiceIds());
         for(Question question : quiz.getQuestions()){
             Choice correctChoice = null;
             for(Choice choice : question.getChoices()){
-                System.out.println(
-                    "ChoiceID=" + choice.getId() +
-                    " correct=" + choice.isCorrect()
-                );
                 if(choice.isCorrect()){
                     correctChoice = choice;
                     break;
