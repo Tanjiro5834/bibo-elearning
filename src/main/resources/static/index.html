@@ -2616,15 +2616,10 @@
 
       function quizSelect(idx, choiceId) {
         const qs = window._quizState;
-        if (qs.answered) return;
-
-        qs.answered = true;
         qs.selectedChoiceIds[qs.current] = choiceId;
 
         // Highlight selected choice
-        document
-          .querySelectorAll(".quiz-option")
-          .forEach((el) => el.classList.remove("selected"));
+        document.querySelectorAll(".quiz-option").forEach((el) => el.classList.remove("selected"));
         const opt = document.getElementById(`opt-${idx}`);
         if (opt) opt.classList.add("selected");
 
@@ -2633,7 +2628,11 @@
 
       function quizNext() {
         const qs = window._quizState;
-        if (!qs.answered) {
+        // if (!qs.answered) {
+        //   showToast("Please select an answer first.", "⚠️");
+        //   return;
+        // }
+        if (qs.selectedChoiceIds[qs.current] === null) {
           showToast("Please select an answer first.", "⚠️");
           return;
         }
@@ -3354,6 +3353,9 @@
         document.getElementById("page-container").innerHTML = GamesPage();
       }
       function QuizPageWrapper() {
+        if (window._quizState?.timerInterval) {
+          clearInterval(window._quizState.timerInterval);
+        }
         document.getElementById("page-container").innerHTML = QuizPage();
         bindQuiz();
       }
