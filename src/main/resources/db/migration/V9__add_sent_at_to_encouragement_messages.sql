@@ -1,0 +1,2 @@
+ALTER TABLE encouragement_messages 
+ADD COLUMN sent_at DATETIME DEFAULT CURRENT_TIMESTAMP;
