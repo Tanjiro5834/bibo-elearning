@@ -41,6 +41,10 @@ public class ParentService {
     private final StudentProfileRepository studentProfileRepository;
 
     public void linkChild(String parentUsername, LinkChildRequest request) {
+        if (request == null || request.getChildUsername() == null || request.getChildUsername().trim().isEmpty()) {
+            throw new IllegalArgumentException("Child username is required");
+        }
+        
         User parent = userRepository.findByUsername(parentUsername)
                 .orElseThrow(() -> new UserNotFoundException("Parent not found: " + parentUsername));
         User child = userRepository.findByUsername(request.getChildUsername())

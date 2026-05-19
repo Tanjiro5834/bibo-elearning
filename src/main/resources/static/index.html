@@ -1016,7 +1016,8 @@
    ============================================================ */
 
       // ── API Layer (unchanged) ──────────────────────────────────
-      const API_BASE = "/api";
+      //const API_BASE = "/api";
+      const API_BASE = "";
 
       const api = {
         async request(method, path, body = null, token = null) {
@@ -2132,6 +2133,29 @@
       <div class="progress-track" style="height:10px;">
         <div class="progress-fill" id="overall-bar" style="height:10px;width:0%;background:linear-gradient(90deg,var(--primary),var(--primary-mid),#8B5CF6);"></div>
       </div>
+    </div>
+
+        <!-- Link New Child -->
+    <div class="card mb-24" style="padding:24px;">
+      <h3 style="font-size:16px;font-weight:800;margin-bottom:16px;">🔗 Link a Child</h3>
+      <p style="color:var(--text-400);font-size:13px;margin-bottom:16px;">
+        Enter your child's username to link their account
+      </p>
+      
+      <div class="input-group" style="margin-bottom:16px;">
+        <input 
+          id="child-username-input" 
+          type="text" 
+          placeholder="Enter child username (e.g. juan_delacruz)" 
+          class="bibo-input" 
+        />
+      </div>
+      
+      <button onclick="linkChild()" 
+              class="btn btn-primary" 
+              style="width:100%;padding:12px;">
+        Link Child Account
+      </button>
     </div>
 
     <!-- Filter tabs -->
@@ -3345,12 +3369,16 @@
           <p style="font-size:13px;color:var(--text-400);" id="parent-child-grade">Student</p>
         </div>
       </div>
-      <!-- Child Switcher (UI only) -->
+      <!-- Child Switcher -->
       <div style="display:flex;align-items:center;gap:8px;">
         <span style="font-size:12px;font-weight:600;color:var(--text-400);">Linked Children</span>
         <div style="display:flex;gap:6px;">
-          <div style="width:34px;height:34px;border-radius:50%;background:var(--primary);border:2px solid var(--primary);display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;" title="Active child">🦁</div>
-          <div onclick="showToast('Child switching coming soon!')" style="width:34px;height:34px;border-radius:50%;background:var(--bg);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;opacity:0.6;" title="Add child">➕</div>
+          <div onclick="showLinkedChildrenModal()" 
+               style="width:34px;height:34px;border-radius:50%;background:var(--primary);border:2px solid var(--primary);display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;" 
+               title="View linked children">🦁</div>
+          <div onclick="showLinkChildModal()" 
+               style="width:34px;height:34px;border-radius:50%;background:var(--bg);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;opacity:0.9;" 
+               title="Link new child">➕</div>
         </div>
       </div>
     </div>
@@ -3518,9 +3546,209 @@
       </div>
     </div>
 
+    <div id="link-child-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center;">
+      <div class="card" style="width:100%;max-width:420px;padding:28px;">
+        <h3 style="font-size:20px;margin-bottom:8px;">🔗 Link a Child</h3>
+        <p style="color:var(--text-400);margin-bottom:20px;">Enter your child's username</p>
+        
+        <input 
+          id="modal-child-username" 
+          type="text" 
+          placeholder="Child username (e.g. juandelacruz123)" 
+          class="bibo-input" 
+          style="margin-bottom:20px;"
+        />
+        
+        <div style="display:flex;gap:12px;">
+          <button onclick="closeLinkChildModal()" 
+                  class="btn btn-ghost" 
+                  style="flex:1;">Cancel</button>
+          <button onclick="linkChildFromModal()" 
+                  id="link-child-confirm-btn"
+                  class="btn btn-primary" 
+                  style="flex:1;">Link Child</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- View Linked Children Modal -->
+    <div id="linked-children-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:10000;align-items:center;justify-content:center;">
+      <div class="card" style="width:100%;max-width:500px;padding:28px;max-height:80vh;overflow-y:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+          <h3 style="margin:0;">👨‍👩‍👧 Linked Children</h3>
+          <button onclick="closeLinkedChildrenModal()" class="btn btn-ghost" style="padding:8px 16px;">Close</button>
+        </div>
+        
+        <div id="linked-children-list" style="display:flex;flex-direction:column;gap:12px;">
+          <!-- Populated by JS -->
+        </div>
+        
+        <button onclick="showLinkChildModal();closeLinkedChildrenModal()" 
+                class="btn btn-primary" 
+                style="width:100%;margin-top:20px;">
+          + Link Another Child
+        </button>
+      </div>
+    </div>
+
   </div>`;
       }
 
+      async function linkChild() {
+          const input = document.getElementById("child-username-input");
+          const username = input.value.trim();
+
+          if (!username) {
+              showToast("Please enter child username", "⚠️");
+              return;
+          }
+
+          const btn = event.currentTarget; // or find button another way
+          const originalText = btn.textContent;
+          btn.disabled = true;
+          btn.textContent = "Linking...";
+
+          try {
+              await api.request("POST", "/parent/link-child", {
+                  childUsername: username
+              }, state.token);
+
+              showToast("Child linked successfully! 🎉", "✅");
+              input.value = ""; // clear input
+              
+              // Refresh parent dashboard
+              setTimeout(() => {
+                  bindParent();
+              }, 800);
+
+          } catch (err) {
+              showToast(err.message || "Failed to link child", "❌");
+          } finally {
+              btn.disabled = false;
+              btn.textContent = originalText;
+          }
+      }
+
+      function showLinkedChildrenModal() {
+          const modal = document.getElementById("linked-children-modal");
+          if (!modal) return;
+          
+          modal.style.display = "flex";
+          loadLinkedChildren();
+      }
+
+      function closeLinkedChildrenModal() {
+          const modal = document.getElementById("linked-children-modal");
+          if (modal) modal.style.display = "none";
+      }
+
+      async function loadLinkedChildren() {
+          const container = document.getElementById("linked-children-list");
+          const titleEl = document.querySelector("#linked-children-modal h3");
+          
+          container.innerHTML = Loading("Loading children...");
+
+          try {
+              const children = await api.request("GET", "/parent/children", null, state.token);
+              
+              if (titleEl) {
+                  titleEl.textContent = `👨‍👩‍👧 Linked Children (${children.length || 0})`;
+              }
+
+              if (!children || children.length === 0) {
+                  container.innerHTML = `<p style="text-align:center;padding:40px;color:var(--text-400);">No children linked yet.</p>`;
+                  return;
+              }
+
+              container.innerHTML = children.map(child => {
+                  const fullName = `${child.firstName || ''} ${child.lastName || ''}`.trim() || 
+                                child.username || "Unknown Child";
+                  
+                  return `
+                  <div class="card" style="padding:16px;display:flex;align-items:center;gap:14px;">
+                      <div style="width:48px;height:48px;border-radius:12px;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:24px;">🦁</div>
+                      <div style="flex:1;min-width:0;">
+                          <p style="font-weight:700;font-size:15px;">${fullName}</p>
+                          <p style="font-size:13px;color:var(--text-400);">@${child.username || 'unknown'}</p>
+                      </div>
+                      <div style="text-align:right;">
+                          <span style="font-size:13px;font-weight:700;color:var(--accent-green);">Linked</span>
+                      </div>
+                  </div>`;
+              }).join("");
+
+          } catch (e) {
+              console.error(e);
+              container.innerHTML = `<p style="color:var(--accent-red);text-align:center;padding:40px;">Failed to load linked children</p>`;
+          }
+      }
+
+      function showLinkChildModal() {
+          const modal = document.getElementById("link-child-modal");
+          if (!modal) {
+              showToast("Modal not ready. Please refresh the page.", "⚠️");
+              return;
+          }
+          modal.style.display = "flex";
+          setTimeout(() => {
+              const input = document.getElementById("modal-child-username");
+              if (input) input.focus();
+          }, 50);
+      }
+
+      function closeLinkChildModal() {
+          const modal = document.getElementById("link-child-modal");
+          if (modal) modal.style.display = "none";
+          
+          const input = document.getElementById("modal-child-username");
+          if (input) input.value = "";
+      }
+
+      async function linkChildFromModal() {
+          const input = document.getElementById("modal-child-username");
+          if (!input) return;
+
+          const childUsername = input.value.trim();
+          if (!childUsername) {
+              showToast("Please enter child username", "⚠️");
+              return;
+          }
+
+          const btn = document.getElementById("link-child-confirm-btn");
+          const originalText = btn ? btn.textContent : "Link Child";
+
+          if (btn) {
+              btn.disabled = true;
+              btn.textContent = "Linking...";
+          }
+
+          try {
+              await api.request("POST", "/parent/link-child", {
+                  childUsername: childUsername
+              }, state.token);
+
+              showToast("Child linked successfully! 🎉", "✅");
+              closeLinkChildModal();
+              setTimeout(() => bindParent(), 800);   // refresh dashboard
+
+          } catch (error) {
+              console.error(error);
+              
+              if (error.message.includes("already linked")) {
+                  showToast("This child is already linked to your account!", "ℹ️");
+              } else if (error.message.includes("not found")) {
+                  showToast("Child username not found. Please check spelling.", "❌");
+              } else {
+                  showToast(error.message || "Failed to link child", "❌");
+              }
+          } finally {
+              if (btn) {
+                  btn.disabled = false;
+                  btn.textContent = originalText;
+              }
+          }
+      }
+      
       function toggleParentNotifs() {
         const d = document.getElementById("notif-dropdown");
         d.style.display = d.style.display === "none" ? "block" : "none";
@@ -3539,71 +3767,86 @@
       });
 
       async function bindParent() {
-        try {
-          const user = state.user;
-          const name = user?.name || user?.firstName || "Your Child";
-          document.getElementById("parent-child-name").textContent = name;
-          document.getElementById("parent-child-grade").textContent =
-            `Grade ${user?.grade || "?"} · ${user?.school || "BIBO Learner"}`;
+          try {
+              const user = state.user;
+              const name = user?.name || user?.firstName || user?.username || "Your Child";
+              
+              document.getElementById("parent-child-name").textContent = name;
+              document.getElementById("parent-child-grade").textContent = 
+                  `Grade ${user?.grade || "?"} · ${user?.school || "BIBO Learner"}`;
 
-          const subjects = await api.getSubjects();
-          const total = subjects.reduce((a, s) => a + (s.lessonCount || 0), 0);
-          const completed = subjects.reduce(
-            (a, s) => a + (s.completedCount || 0),
-            0,
-          );
-          const pct = total ? Math.round((completed / total) * 100) : 0;
+              // Get subjects safely
+              let subjects = [];
+              try {
+                  subjects = await api.getSubjects();
+              } catch (e) {
+                  console.warn("Could not load subjects:", e.message);
+                  // Don't crash the whole dashboard
+              }
 
-          document.getElementById("parent-stats").innerHTML = `
-      ${[
-        ["Lessons Done", completed, "var(--accent-green)"],
-        ["Remaining", total - completed, "var(--primary)"],
-        ["Progress", pct + "%", "var(--primary-mid)"],
-        ["Subjects", subjects.length, "var(--accent-orange)"],
-      ]
-        .map(
-          ([l, v, c]) => `
-        <div class="card" style="padding:18px;text-align:center;">
-          <div style="font-family:var(--font-display);font-size:26px;font-weight:900;color:${c};">${v}</div>
-          <div style="font-size:11px;font-weight:600;color:var(--text-400);margin-top:4px;">${l}</div>
-        </div>`,
-        )
-        .join("")}`;
+              const total = subjects.reduce((a, s) => a + (s.lessonCount || 0), 0);
+              const completed = subjects.reduce((a, s) => a + (s.completedCount || 0), 0);
+              const pct = total ? Math.round((completed / total) * 100) : 0;
 
-          document.getElementById("parent-subjects").innerHTML =
-            `<div style="display:flex;flex-direction:column;gap:10px;">
-      ${subjects
-        .map((s) => {
-          const st = getSubjectStyle(s.name);
-          const p = s.progress || 0;
-          return `<div class="card" style="padding:16px;display:flex;align-items:center;gap:12px;">
-          <span style="font-size:22px;">${st.icon}</span>
-          <div style="flex:1;">
-            <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-              <span style="font-weight:700;font-size:14px;">${s.name}</span>
-              <span style="font-size:12px;font-weight:800;color:${st.color};">${p}%</span>
-            </div>
-            <div class="progress-track" style="height:6px;"><div class="progress-fill" style="height:6px;width:${p}%;background:${st.color};"></div></div>
-          </div>
-        </div>`;
-        })
-        .join("")}
-    </div>`;
+              document.getElementById("parent-stats").innerHTML = `
+            ${[
+              ["Lessons Done", completed, "var(--accent-green)"],
+              ["Remaining", total - completed, "var(--primary)"],
+              ["Progress", pct + "%", "var(--primary-mid)"],
+              ["Subjects", subjects.length || "—", "var(--accent-orange)"],
+            ]
+              .map(([l, v, c]) => `
+              <div class="card" style="padding:18px;text-align:center;">
+                <div style="font-family:var(--font-display);font-size:26px;font-weight:900;color:${c};">${v}</div>
+                <div style="font-size:11px;font-weight:600;color:var(--text-400);margin-top:4px;">${l}</div>
+              </div>`).join("")}`;
 
-          const weak = subjects.filter((s) => (s.progress || 0) < 50);
-          document.getElementById("parent-weak").innerHTML = weak.length
-            ? `<div style="display:flex;flex-direction:column;gap:14px;">${weak
-                .map((s) => {
-                  const st = getSubjectStyle(s.name);
-                  return `<div style="display:flex;align-items:center;gap:10px;"><span style="font-size:20px;">${st.icon}</span><div><p style="font-weight:700;font-size:13px;">${s.name}</p><p style="font-size:12px;color:var(--text-400);">Only ${s.progress || 0}% — needs more practice</p></div></div>`;
-                })
-                .join("")}</div>`
-            : `<div style="text-align:center;padding:24px;"><div style="font-size:36px;margin-bottom:8px;">🌟</div><p style="font-weight:700;">No weak areas! Great progress!</p></div>`;
-        } catch (e) {
-          document.getElementById("parent-stats").innerHTML = ErrorState(
-            e.message,
-          );
-        }
+              // Subject Progress
+              if (subjects.length > 0) {
+                  document.getElementById("parent-subjects").innerHTML = `
+                    <div style="display:flex;flex-direction:column;gap:10px;">
+                      ${subjects.map((s) => {
+                          const st = getSubjectStyle(s.name);
+                          const p = s.progress || 0;
+                          return `<div class="card" style="padding:16px;display:flex;align-items:center;gap:12px;">
+                            <span style="font-size:22px;">${st.icon}</span>
+                            <div style="flex:1;">
+                              <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                                <span style="font-weight:700;font-size:14px;">${s.name}</span>
+                                <span style="font-size:12px;font-weight:800;color:${st.color};">${p}%</span>
+                              </div>
+                              <div class="progress-track" style="height:6px;">
+                                <div class="progress-fill" style="height:6px;width:${p}%;background:${st.color};"></div>
+                              </div>
+                            </div>
+                          </div>`;
+                      }).join("")}
+                    </div>`;
+              } else {
+                  document.getElementById("parent-subjects").innerHTML = 
+                      `<p style="color:var(--text-400);padding:20px;text-align:center;">No subjects data available yet.</p>`;
+              }
+
+              // Weak areas
+              const weak = subjects.filter((s) => (s.progress || 0) < 50);
+              document.getElementById("parent-weak").innerHTML = weak.length
+                  ? `<div style="display:flex;flex-direction:column;gap:14px;">${weak.map((s) => {
+                      const st = getSubjectStyle(s.name);
+                      return `<div style="display:flex;align-items:center;gap:10px;">
+                        <span style="font-size:20px;">${st.icon}</span>
+                        <div><p style="font-weight:700;font-size:13px;">${s.name}</p>
+                        <p style="font-size:12px;color:var(--text-400);">Only ${s.progress || 0}% — needs more practice</p></div>
+                      </div>`;
+                  }).join("")}</div>`
+                  : `<div style="text-align:center;padding:40px 20px;">
+                      <div style="font-size:48px;margin-bottom:12px;">🌟</div>
+                      <p style="font-weight:700;">No weak areas! Great progress!</p>
+                    </div>`;
+
+          } catch (e) {
+              console.error(e);
+              document.getElementById("parent-stats").innerHTML = ErrorState("Failed to load dashboard");
+          }
       }
 
       /* ============================================================
