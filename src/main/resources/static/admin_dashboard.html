@@ -865,6 +865,12 @@
           icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
           section: "Users",
         },
+        {
+          id: "teacher-review-requests",
+          label: "Review Requests",
+          icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
+          section: "Users",
+        },
       ];
 
       const navItems = isAdmin ? ADMIN_NAV : TEACHER_NAV;
@@ -935,6 +941,7 @@
         sections: sections,
         quizzes: quizzes,
         students: students,
+        "teacher-review-requests": teacherReviewRequests,
       };
 
       function navigate(page) {
@@ -1668,132 +1675,270 @@
       // TEACHER PAGES (moved from original admin dashboard)
       // ═══════════════════════════════════════════════════════════════
 
+      // ── TEACHER DASHBOARD ───────────────────────────────────────────
       async function teacherDashboard() {
-        document.getElementById("page-container").innerHTML =
-          `<div class="page">
-    <div class="hero-banner" style="background:linear-gradient(135deg,#065f46 0%,#10b981 60%,#34d399 100%);">
-      <div style="position:relative;z-index:1;">
-        <p style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;opacity:0.7;margin-bottom:8px;">👩‍🏫 Teacher Dashboard</p>
-        <h1 style="color:white;font-size:30px;font-weight:900;margin-bottom:8px;">Welcome back, ${username}!</h1>
-        <p style="color:rgba(255,255,255,0.75);font-size:14px;margin-bottom:22px;">Manage your subjects, lessons, and monitor student progress.</p>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <button class="btn" style="background:rgba(255,255,255,0.15);color:white;padding:10px 18px;font-size:13px;border:1px solid rgba(255,255,255,0.2);" onclick="openCreateSubject()">+ New Subject</button>
-          <button class="btn" style="background:rgba(255,255,255,0.15);color:white;padding:10px 18px;font-size:13px;border:1px solid rgba(255,255,255,0.2);" onclick="navigate('lessons');setTimeout(openCreateLesson,100)">+ New Lesson</button>
-          <button class="btn" style="background:rgba(255,255,255,0.15);color:white;padding:10px 18px;font-size:13px;border:1px solid rgba(255,255,255,0.2);" onclick="navigate('quizzes');setTimeout(openCreateQuiz,100)">+ New Quiz</button>
-        </div>
-      </div>
-    </div>
-    <div class="grid-4 mb-32" id="teacher-stats">
-      ${[1, 2, 3, 4].map(() => `<div class="card stat-card"><div class="spinner"></div></div>`).join("")}
-    </div>
-    <div class="section-header"><span class="section-title">Quick Actions</span></div>
-    <div class="grid-3 mb-32">
-      ${[
-        {
-          icon: "📚",
-          label: "Manage Subjects",
-          sub: "Add and edit curriculum subjects",
-          page: "subjects",
-        },
-        {
-          icon: "📝",
-          label: "Manage Lessons",
-          sub: "Create lessons inside subjects",
-          page: "lessons",
-        },
-        {
-          icon: "✅",
-          label: "Manage Quizzes",
-          sub: "Build quizzes for each lesson",
-          page: "quizzes",
-        },
-      ]
-        .map(
-          (a) => `
-        <div class="card card-interactive" style="padding:24px;" onclick="navigate('${a.page}')">
-          <div style="width:52px;height:52px;border-radius:14px;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:14px;">${a.icon}</div>
-          <h3 style="font-size:16px;margin-bottom:6px;">${a.label}</h3>
-          <p style="font-size:13px;color:var(--text-400);">${a.sub}</p>
-        </div>`,
-        )
-        .join("")}
-    </div>
-    <div class="section-header">
-      <span class="section-title">Subjects Overview</span>
-      <span style="font-size:13px;font-weight:700;color:var(--primary);cursor:pointer;" onclick="navigate('subjects')">View All →</span>
-    </div>
-    <div id="teacher-subjects">${Loading()}</div>
-  </div>`;
+        document.getElementById("page-container").innerHTML = `
+          <div class="page">
+            <div class="hero-banner" style="background:linear-gradient(135deg,#065f46 0%,#10b981 60%,#34d399 100%);">
+              <div style="position:relative;z-index:1;">
+                <p style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;opacity:0.7;margin-bottom:8px;">👩‍🏫 TEACHER PORTAL</p>
+                <h1 style="color:white;font-size:30px;font-weight:900;margin-bottom:8px;">Welcome back, ${username}!</h1>
+                <p style="color:rgba(255,255,255,0.85);font-size:14px;">Manage your classes and respond to parent requests.</p>
+              </div>
+            </div>
+
+            <div class="grid-4 mb-32" id="teacher-stats">
+              ${[1,2,3,4].map(() => `<div class="card stat-card"><div class="spinner"></div></div>`).join("")}
+            </div>
+
+            <div class="section-header"><span class="section-title">Quick Actions</span></div>
+            <div class="grid-3 mb-32">
+              ${[
+                {icon:"📚", label:"Subjects", page:"subjects"},
+                {icon:"📝", label:"Lessons", page:"lessons"},
+                {icon:"✅", label:"Quizzes", page:"quizzes"},
+                {icon:"👥", label:"My Students", page:"students"},
+                {icon:"📋", label:"Review Requests", page:"teacher-review-requests"},
+              ].map(a => `
+                <div class="card card-interactive" style="padding:24px;" onclick="navigate('${a.page}')">
+                  <div style="width:52px;height:52px;border-radius:14px;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:14px;">${a.icon}</div>
+                  <h3 style="font-size:16px;margin-bottom:6px;">${a.label}</h3>
+                </div>
+              `).join("")}
+            </div>
+          </div>`;
 
         try {
-          const subjectList = await apiFetch("GET", "/subjects");
-          const subCount = subjectList?.length || 0;
-          let lessonCount = 0;
-          for (const s of subjectList || []) {
-            try {
-              const ls = await apiFetch("GET", `/lessons/subject/${s.id}`);
-              lessonCount += ls?.length || 0;
-            } catch (e) {}
-          }
-          document.getElementById("teacher-stats").innerHTML = [
-            {
-              label: "Total Subjects",
-              value: subCount,
-              icon: "📚",
-              color: "var(--primary)",
-            },
-            {
-              label: "Total Lessons",
-              value: lessonCount,
-              icon: "📝",
-              color: "var(--accent-green)",
-            },
-            {
-              label: "Students",
-              value: "—",
-              icon: "👥",
-              color: "var(--accent-orange)",
-            },
-            {
-              label: "Quizzes",
-              value: "—",
-              icon: "✅",
-              color: "var(--primary-mid)",
-            },
-          ]
-            .map(
-              (s) =>
-                `<div class="card stat-card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><span class="stat-label">${s.label}</span><span style="font-size:22px;">${s.icon}</span></div><div class="stat-value" style="color:${s.color};">${s.value}</div></div>`,
-            )
-            .join("");
+          console.log("🔄 Loading teacher dashboard stats...");
 
-          if (!subjectList?.length) {
-            document.getElementById("teacher-subjects").innerHTML = Empty(
-              "📭",
-              "No subjects yet",
-              "Create your first subject.",
+          let studentCount = 0;
+          try {
+            const studentsData = await apiFetch("GET", "/teacher/students");
+            const reviewRequests = await apiFetch("GET", "/teacher/review-requests");
+            //document.getElementById("total-students-stat").textContent = Array.isArray(studentsData) ? studentsData.length : 0;
+
+            if (Array.isArray(studentsData)) {
+            studentCount = studentsData.length;
+          } else if (studentsData && typeof studentsData === 'object') {
+            // Check for paginated response
+            if (Array.isArray(studentsData.content)) {
+              studentCount = studentsData.content.length;
+            } else if (Array.isArray(studentsData.students)) {
+              studentCount = studentsData.students.length;
+            } else if (Array.isArray(studentsData.data)) {
+              studentCount = studentsData.data.length;
+            } else if (studentsData.totalElements !== undefined) {
+              studentCount = studentsData.totalElements;
+            } else {
+              // If it's a single object but not empty
+              studentCount = Object.keys(studentsData).length > 0 ? 1 : 0;
+            }
+          }
+            
+            console.log("✅ Final student count:", studentCount);
+          } catch (e) {
+            console.error("❌ Students API failed:", e.message);
+          }
+
+          // Subjects
+          let subjectCount = 0;
+          try {
+            const subjects = await apiFetch("GET", "/subjects");
+            subjectCount = Array.isArray(subjects) ? subjects.length : 0;
+          } catch (e) {}
+
+          let lessonCount = 0;
+          try {
+            const subjects = await apiFetch("GET", "/subjects");
+            if (Array.isArray(subjects) && subjects.length > 0) {
+              for (const sub of subjects) {
+                try {
+                  const lessons = await apiFetch("GET", `/lessons/subject/${sub.id}`);
+                  lessonCount += Array.isArray(lessons) ? lessons.length : 0;
+                } catch (e) {}
+              }
+            }
+          } catch (e) {
+            console.warn("⚠️ Lessons count failed:", e.message);
+          }
+
+          let reviewCount = 0;
+          try {
+            const reviews = await apiFetch("GET", "/teacher/review-requests");
+            reviewCount = Array.isArray(reviews) ? reviews.length : 0;
+          } catch (e) {}
+
+          document.getElementById("teacher-stats").innerHTML = `
+            <div class="card stat-card">
+              <div class="stat-label">MY STUDENTS</div>
+              <div class="stat-value" style="color:var(--accent-green);">${studentCount}</div>
+            </div>
+            <div class="card stat-card">
+              <div class="stat-label">REVIEW REQUESTS</div>
+              <div class="stat-value" style="color:var(--accent-orange);">${reviewCount}</div>
+            </div>
+            <div class="card stat-card">
+              <div class="stat-label">SUBJECTS</div>
+              <div class="stat-value" style="color:var(--primary);">${subjectCount}</div>
+            </div>
+            <div class="card stat-card">
+              <div class="stat-label">ACTIVE LESSONS</div>
+              <div class="stat-value" style="color:var(--accent-green);">${lessonCount}</div>
+            </div>
+          `;
+
+        } catch (e) {
+          console.error("Dashboard error:", e);
+          document.getElementById("teacher-stats").innerHTML = `
+            <div style="grid-column:1/-1; padding:30px; text-align:center; color:var(--accent-red);">
+              ⚠️ Could not load some statistics
+            </div>`;
+        }
+      }
+
+      // ── STUDENTS ─────────────────────────────────────────────────────
+      async function students() {
+  document.getElementById("page-container").innerHTML = `
+    <div class="page">
+      ${PageHeader("My Students", "Students under your supervision", "", "")}
+      <div id="students-list">${Loading()}</div>
+    </div>`;
+
+  try {
+    const data = await apiFetch("GET", "/teacher/students");
+    console.log("API Response:", data); // Debug log
+    
+    // Handle different response formats
+    let studentsList = [];
+    if (Array.isArray(data)) {
+      studentsList = data;
+    } else if (data && typeof data === 'object') {
+      // Try common response structures
+      if (Array.isArray(data.content)) studentsList = data.content;
+      else if (Array.isData(data.students)) studentsList = data.students;
+      else if (Array.isArray(data.data)) studentsList = data.data;
+      else if (data.totalElements !== undefined && data.content) studentsList = data.content;
+    }
+    
+    if (!studentsList || studentsList.length === 0) {
+      document.getElementById("students-list").innerHTML = Empty(
+        "👥",
+        "No students yet",
+        "Students will appear here once assigned."
+      );
+      return;
+    }
+
+    document.getElementById("students-list").innerHTML = `
+      <div class="card" style="overflow:hidden;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Username</th>
+              <th>Level</th>
+              <th>Joined</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${studentsList.map(s => {
+              const name = s.fullName || s.name || s.firstName + ' ' + s.lastName || s.username || "—";
+              const level = s.learningLevel || s.level || "BEGINNER";
+              return `
+                <tr>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                      <div style="width:36px;height:36px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--primary);font-size:14px;">
+                        ${(name[0] || "?").toUpperCase()}
+                      </div>
+                      <span style="font-weight:600;">${name}</span>
+                    </div>
+                  </td>
+                  <td style="color:var(--text-400);">@${s.username || "—"}</td>
+                  <td><span class="badge badge-blue">${level}</span></td>
+                  <td style="font-size:13px;color:var(--text-400);">${s.createdAt ? new Date(s.createdAt).toLocaleDateString() : "—"}</td>
+                </tr>
+              `;
+            }).join("")}
+          </tbody>
+        </table>
+      </div>`;
+  } catch (e) {
+    console.error("Students API error:", e);
+    document.getElementById("students-list").innerHTML = 
+      `<div style="color:var(--accent-red);padding:20px;">⚠️ ${e.message}</div>`;
+  }
+}
+
+      // ── TEACHER REVIEW REQUESTS ─────────────────────────────────────
+      async function teacherReviewRequests() {
+        document.getElementById("page-container").innerHTML = `
+    <div class="page">
+      ${PageHeader("Review Requests", "Parent requests for progress review", "", "")}
+      <div id="teacher-review-list">${Loading()}</div>
+    </div>`;
+
+        try {
+          const data = await apiFetch("GET", "/teacher/review-requests");
+          if (!data?.length) {
+            document.getElementById("teacher-review-list").innerHTML = Empty(
+              "📋",
+              "No review requests",
+              "Parent requests will appear here.",
             );
             return;
           }
-          subjectList.forEach((s) => {
-            window._subjectMap[s.id] = s;
-          });
-          document.getElementById("teacher-subjects").innerHTML =
-            `<div style="display:flex;flex-direction:column;gap:10px;">
-      ${subjectList
-        .slice(0, 5)
-        .map((s) => {
-          const st = getSubjectStyle(s.name);
-          return `<div class="card" style="padding:16px;display:flex;align-items:center;gap:14px;">
-          <div style="width:44px;height:44px;border-radius:12px;background:${st.pale};display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">${st.icon}</div>
-          <div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:15px;color:var(--text-900);">${s.name}</div><div style="font-size:13px;color:var(--text-400);" class="truncate">${s.description || "—"}</div></div>
-          <span class="badge badge-green">Active</span>
-          <button class="btn btn-ghost btn-sm" onclick="openSubjectLessons(${s.id})">Lessons</button>
-        </div>`;
-        })
-        .join("")}
-    </div>`;
-        } catch (e) {}
+
+          document.getElementById("teacher-review-list").innerHTML = `
+      <div class="card" style="overflow:hidden;">
+        <table class="data-table">
+          <thead><tr><th>Parent</th><th>Child</th><th>Requested</th><th>Status</th><th style="text-align:right;">Actions</th></tr></thead>
+          <tbody>
+            ${data
+              .map(
+                (r) => `
+              <tr>
+                <td style="font-weight:600;">${r.parentName || "@" + (r.parentUsername || "—")}</td>
+                <td style="font-weight:600;">${r.childName || "@" + (r.childUsername || "—")}</td>
+                <td style="font-size:13px;color:var(--text-400);">${r.requestedAt ? new Date(r.requestedAt).toLocaleDateString() : "—"}</td>
+                <td><span class="badge ${r.status === "PENDING" ? "badge-orange" : r.status === "IN_REVIEW" ? "badge-blue" : "badge-green"}">${r.status}</span></td>
+                <td style="text-align:right;">
+                  ${
+                    r.status === "PENDING"
+                      ? `<button class="btn btn-sm" style="background:#ECFDF5;color:#047857;" onclick="updateTeacherReviewStatus(${r.id}, 'IN_REVIEW')">Start Review</button>`
+                      : ""
+                  }
+                  ${
+                    r.status === "IN_REVIEW"
+                      ? `<button class="btn btn-sm btn-primary" onclick="updateTeacherReviewStatus(${r.id}, 'DONE')">Mark Done</button>`
+                      : ""
+                  }
+                </td>
+              </tr>
+            `,
+              )
+              .join("")}
+          </tbody>
+        </table>
+      </div>`;
+        } catch (e) {
+          document.getElementById("teacher-review-list").innerHTML =
+            `<div style="color:var(--accent-red);padding:20px;">⚠️ ${e.message}</div>`;
+        }
+      }
+
+      async function updateTeacherReviewStatus(id, status) {
+        if (!confirm(`Mark this request as ${status}?`)) return;
+        try {
+          await apiFetch(
+            "PATCH",
+            `/teacher/review-requests/${id}/status?status=${status}`,
+          );
+          showToast(`Request updated to ${status}`, "✅");
+          await teacherReviewRequests();
+        } catch (e) {
+          showToast(e.message, "⚠️");
+        }
       }
 
       // ── SUBJECTS ──────────────────────────────────────────────────
