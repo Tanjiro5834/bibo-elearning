@@ -3,12 +3,12 @@ POST http://localhost:8080/api/auth/login
 Content-Type: application/json
 
 {
-  "username": "sample_parent",
-  "password": "samplepasswordparent"
+  "username": "sample",
+  "password": "password123"
 }
 
 ### Copy the token from response and replace below
-@token = eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJzYW1wbGVfcGFyZW50Iiwicm9sZSI6IlBBUkVOVCIsImlhdCI6MTc3OTIwMzEwOSwiZXhwIjoxNzc5MjA2NzA5fQ.8N4NA14V58uRMYnwmfqObAr_8U8DXEGqLASKBFlOtxprON4Y_a9_6ftoZfqDKuOk
+@token = "your_token_here"
 
 ### 1. Get All Children (CORRECTED)
 GET http://localhost:8080/parent/children

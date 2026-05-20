@@ -1016,8 +1016,8 @@
    ============================================================ */
 
       // ── API Layer (unchanged) ──────────────────────────────────
-      //const API_BASE = "/api";
-      const API_BASE = "";
+      const API_BASE = "/api";
+      //const API_BASE = "";
 
       const api = {
         async request(method, path, body = null, token = null) {
@@ -1421,13 +1421,16 @@
         .join("")}
     </div>
 
-    ${isParent ? `
+    ${
+      isParent
+        ? `
       <div style="margin-top:auto;padding:16px;background:linear-gradient(135deg,#1e2a78,#3b3fc4);border-radius:var(--radius-lg);color:white;">
         <div style="font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;opacity:0.7;margin-bottom:6px;">Logged in as</div>
         <div style="font-size:14px;font-weight:800;">👨‍👩‍👧 Parent</div>
         <div style="font-size:11px;opacity:0.7;margin-top:2px;">${state.user?.username || ""}</div>
       </div>
-      ` : `
+      `
+        : `
       <div class="sidebar-streak pulse-glow">
         <div class="streak-label">
           <span>Current Streak</span>
@@ -1439,7 +1442,8 @@
         </div>
         <div class="streak-bar"><div class="streak-bar-fill"></div></div>
       </div>
-    `}
+    `
+    }
 
     <button class="sidebar-logout" onclick="clearAuth(); render();">
       ${icons.logout}
@@ -2232,12 +2236,19 @@
           _allSubjects = await api.getSubjects();
           const pct = _allSubjects.length
             ? Math.round(
-                _allSubjects.reduce((sum, s) => sum + (s.progress || 0), 0) / _allSubjects.length
+                _allSubjects.reduce((sum, s) => sum + (s.progress || 0), 0) /
+                  _allSubjects.length,
               )
             : 0;
 
-          const done = _allSubjects.reduce((sum, s) => sum + (s.completedCount || 0), 0);
-          const total = _allSubjects.reduce((sum, s) => sum + (s.lessonCount || 0), 0);
+          const done = _allSubjects.reduce(
+            (sum, s) => sum + (s.completedCount || 0),
+            0,
+          );
+          const total = _allSubjects.reduce(
+            (sum, s) => sum + (s.lessonCount || 0),
+            0,
+          );
           document.getElementById("overall-pct").textContent = pct + "%";
           document.getElementById("overall-done").textContent = done;
           document.getElementById("overall-unlocked").textContent =
@@ -2587,7 +2598,7 @@
     </div>
 
     <!-- Featured hero -->
-    <div style="background:linear-gradient(135deg,#3730A3 0%,#4F46E5 50%,#6366F1 100%);border-radius:var(--radius-xl);padding:36px;margin-bottom:28px;position:relative;overflow:hidden;cursor:pointer;" onclick="navigate('subjects')">
+    <div style="background:linear-gradient(135deg,#3730A3 0%,#4F46E5 50%,#6366F1 100%);border-radius:var(--radius-xl);padding:36px;margin-bottom:28px;position:relative;overflow:hidden;cursor:pointer;" onclick="showToast('Coming soon! 🚧', '🎮')">
       <div style="position:absolute;right:-10px;top:50%;transform:translateY(-50%);opacity:0.15;">
         <svg viewBox="0 0 200 200" width="220" height="220" fill="none" stroke="white" stroke-width="6">
           <rect x="20" y="60" width="160" height="100" rx="30"/>
@@ -2609,7 +2620,7 @@
       ${games
         .map(
           (g) => `
-        <div class="card card-interactive" style="padding:20px;display:flex;flex-direction:column;" onclick="navigate('subjects')">
+        <div class="card card-interactive" style="padding:20px;display:flex;flex-direction:column;" onclick="launchGame('${g.id}')">
           <div style="width:48px;height:48px;border-radius:12px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:14px;">${g.icon}</div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
             <span style="font-size:10px;font-weight:700;color:var(--text-400);text-transform:uppercase;letter-spacing:0.5px;">${g.subj}</span>
@@ -2682,7 +2693,9 @@
         qs.selectedChoiceIds[qs.current] = choiceId;
 
         // Highlight selected choice
-        document.querySelectorAll(".quiz-option").forEach((el) => el.classList.remove("selected"));
+        document
+          .querySelectorAll(".quiz-option")
+          .forEach((el) => el.classList.remove("selected"));
         const opt = document.getElementById(`opt-${idx}`);
         if (opt) opt.classList.add("selected");
 
@@ -3343,19 +3356,44 @@
             <span style="font-size:11px;color:var(--primary);font-weight:700;cursor:pointer;" onclick="clearNotifs(event)">Mark all read</span>
           </div>
           ${[
-            {icon:"⚠️", color:"#fef3c7", title:"Math needs attention", desc:"Progress dropped below 40% this week", time:"2h ago", unread:true},
-            {icon:"🏆", color:"#d1fae5", title:"Quiz completed!", desc:"Scored 90% on Filipino Quiz 3", time:"Yesterday", unread:true},
-            {icon:"📚", color:"#eef0ff", title:"New lesson available", desc:"Science: The Water Cycle is now unlocked", time:"2 days ago", unread:true},
-          ].map(n => `
-          <div style="padding:12px 16px;display:flex;gap:10px;align-items:flex-start;background:${n.unread ? '#fafbff' : 'white'};border-bottom:1px solid var(--border);">
+            {
+              icon: "⚠️",
+              color: "#fef3c7",
+              title: "Math needs attention",
+              desc: "Progress dropped below 40% this week",
+              time: "2h ago",
+              unread: true,
+            },
+            {
+              icon: "🏆",
+              color: "#d1fae5",
+              title: "Quiz completed!",
+              desc: "Scored 90% on Filipino Quiz 3",
+              time: "Yesterday",
+              unread: true,
+            },
+            {
+              icon: "📚",
+              color: "#eef0ff",
+              title: "New lesson available",
+              desc: "Science: The Water Cycle is now unlocked",
+              time: "2 days ago",
+              unread: true,
+            },
+          ]
+            .map(
+              (n) => `
+          <div style="padding:12px 16px;display:flex;gap:10px;align-items:flex-start;background:${n.unread ? "#fafbff" : "white"};border-bottom:1px solid var(--border);">
             <div style="width:36px;height:36px;border-radius:10px;background:${n.color};display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">${n.icon}</div>
             <div style="flex:1;min-width:0;">
               <p style="font-size:13px;font-weight:700;color:var(--text-900);margin-bottom:2px;">${n.title}</p>
               <p style="font-size:12px;color:var(--text-500);margin-bottom:4px;">${n.desc}</p>
               <p style="font-size:11px;color:var(--text-400);">${n.time}</p>
             </div>
-            ${n.unread ? '<div style="width:8px;height:8px;border-radius:50%;background:var(--primary);flex-shrink:0;margin-top:4px;"></div>' : ''}
-          </div>`).join("")}
+            ${n.unread ? '<div style="width:8px;height:8px;border-radius:50%;background:var(--primary);flex-shrink:0;margin-top:4px;"></div>' : ""}
+          </div>`,
+            )
+            .join("")}
         </div>
       </div>
     </div>
@@ -3412,14 +3450,56 @@
         <h3 style="font-size:15px;font-weight:800;color:var(--text-900);margin-bottom:14px;">Recent Quiz Results 📝</h3>
         <div style="display:flex;flex-direction:column;gap:10px;">
           ${[
-            {subject:"Filipino", quiz:"Quiz 3 – Pantig", score:90, total:100, date:"May 18", icon:"🇵🇭", color:"#ef4444", bg:"#fee2e2"},
-            {subject:"Math", quiz:"Quiz 2 – Addition", score:60, total:100, date:"May 16", icon:"➕", color:"#3b3fc4", bg:"#eef0ff"},
-            {subject:"English", quiz:"Quiz 4 – Vowels", score:75, total:100, date:"May 14", icon:"📖", color:"#f59e0b", bg:"#fef3c7"},
-            {subject:"Science", quiz:"Quiz 1 – Plants", score:85, total:100, date:"May 12", icon:"🔬", color:"#0d9488", bg:"#ccfbf1"},
-          ].map(q => {
-            const pct = Math.round((q.score/q.total)*100);
-            const grade = pct >= 85 ? {label:"Excellent",c:"#065f46",bg:"#d1fae5"} : pct >= 70 ? {label:"Good",c:"#92400e",bg:"#fef3c7"} : {label:"Needs Work",c:"#991b1b",bg:"#fee2e2"};
-            return `<div class="card" style="padding:14px 16px;">
+            {
+              subject: "Filipino",
+              quiz: "Quiz 3 – Pantig",
+              score: 90,
+              total: 100,
+              date: "May 18",
+              icon: "🇵🇭",
+              color: "#ef4444",
+              bg: "#fee2e2",
+            },
+            {
+              subject: "Math",
+              quiz: "Quiz 2 – Addition",
+              score: 60,
+              total: 100,
+              date: "May 16",
+              icon: "➕",
+              color: "#3b3fc4",
+              bg: "#eef0ff",
+            },
+            {
+              subject: "English",
+              quiz: "Quiz 4 – Vowels",
+              score: 75,
+              total: 100,
+              date: "May 14",
+              icon: "📖",
+              color: "#f59e0b",
+              bg: "#fef3c7",
+            },
+            {
+              subject: "Science",
+              quiz: "Quiz 1 – Plants",
+              score: 85,
+              total: 100,
+              date: "May 12",
+              icon: "🔬",
+              color: "#0d9488",
+              bg: "#ccfbf1",
+            },
+          ]
+            .map((q) => {
+              const pct = Math.round((q.score / q.total) * 100);
+              const grade =
+                pct >= 85
+                  ? { label: "Excellent", c: "#065f46", bg: "#d1fae5" }
+                  : pct >= 70
+                    ? { label: "Good", c: "#92400e", bg: "#fef3c7" }
+                    : { label: "Needs Work", c: "#991b1b", bg: "#fee2e2" };
+              return `<div class="card" style="padding:14px 16px;">
               <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
                 <div style="width:34px;height:34px;border-radius:10px;background:${q.bg};display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">${q.icon}</div>
                 <div style="flex:1;min-width:0;">
@@ -3433,7 +3513,8 @@
               </div>
               <div class="progress-track" style="height:5px;"><div class="progress-fill" style="height:5px;width:${pct}%;background:${q.color};"></div></div>
             </div>`;
-          }).join("")}
+            })
+            .join("")}
         </div>
       </div>
     </div>
@@ -3460,9 +3541,12 @@
               </div>
             </div>
             <div style="display:flex;gap:8px;">
-              ${["⭐ Great job!", "💪 Keep going!", "🎉 I'm proud of you!"].map(m =>
-                `<button onclick="showToast('Message sent: ${m}')" style="flex:1;padding:7px 4px;font-size:11px;font-weight:700;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:white;cursor:pointer;color:var(--text-700);transition:all 0.18s;" onmouseover="this.style.borderColor='var(--primary)';this.style.color='var(--primary)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-700)'">${m}</button>`
-              ).join("")}
+              ${["⭐ Great job!", "💪 Keep going!", "🎉 I'm proud of you!"]
+                .map(
+                  (m) =>
+                    `<button onclick="showToast('Message sent: ${m}')" style="flex:1;padding:7px 4px;font-size:11px;font-weight:700;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:white;cursor:pointer;color:var(--text-700);transition:all 0.18s;" onmouseover="this.style.borderColor='var(--primary)';this.style.color='var(--primary)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-700)'">${m}</button>`,
+                )
+                .join("")}
             </div>
           </div>
           <!-- Set Daily Goal -->
@@ -3499,22 +3583,24 @@
       <p style="font-size:12px;color:var(--text-400);margin-bottom:16px;">Lessons completed per day this week</p>
       <div style="display:flex;gap:8px;align-items:flex-end;">
         ${[
-          {day:"Mon", val:4, max:6},
-          {day:"Tue", val:6, max:6},
-          {day:"Wed", val:2, max:6},
-          {day:"Thu", val:5, max:6},
-          {day:"Fri", val:3, max:6},
-          {day:"Sat", val:1, max:6},
-          {day:"Sun", val:0, max:6},
-        ].map(d => {
-          const h = d.max ? Math.round((d.val/d.max)*80)+20 : 20;
-          const isToday = d.day === "Thu";
-          return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;">
+          { day: "Mon", val: 4, max: 6 },
+          { day: "Tue", val: 6, max: 6 },
+          { day: "Wed", val: 2, max: 6 },
+          { day: "Thu", val: 5, max: 6 },
+          { day: "Fri", val: 3, max: 6 },
+          { day: "Sat", val: 1, max: 6 },
+          { day: "Sun", val: 0, max: 6 },
+        ]
+          .map((d) => {
+            const h = d.max ? Math.round((d.val / d.max) * 80) + 20 : 20;
+            const isToday = d.day === "Thu";
+            return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;">
             <span style="font-size:11px;font-weight:700;color:var(--text-900);">${d.val}</span>
-            <div style="width:100%;height:${h}px;border-radius:8px 8px 4px 4px;background:${d.val===0?'var(--border)':isToday?'var(--primary)':'var(--primary-mid)'};opacity:${d.val===0?0.4:1};transition:all 0.3s;cursor:pointer;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='${d.val===0?0.4:1}'"></div>
-            <span style="font-size:11px;font-weight:600;color:${isToday?'var(--primary)':'var(--text-400)'};">${d.day}</span>
+            <div style="width:100%;height:${h}px;border-radius:8px 8px 4px 4px;background:${d.val === 0 ? "var(--border)" : isToday ? "var(--primary)" : "var(--primary-mid)"};opacity:${d.val === 0 ? 0.4 : 1};transition:all 0.3s;cursor:pointer;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='${d.val === 0 ? 0.4 : 1}'"></div>
+            <span style="font-size:11px;font-weight:600;color:${isToday ? "var(--primary)" : "var(--text-400)"};">${d.day}</span>
           </div>`;
-        }).join("")}
+          })
+          .join("")}
       </div>
     </div>
 
@@ -3538,10 +3624,17 @@
             "Set a fixed study schedule every day, even 20 minutes helps.",
             "Celebrate small wins — praise boosts motivation for young learners.",
             "Review quiz results together and ask your child to explain their answers.",
-          ].map((t,i) => `<div style="display:flex;gap:8px;align-items:flex-start;">
-            <div style="width:20px;height:20px;border-radius:50%;background:var(--primary-light);color:var(--primary);font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">${i+1}</div>
+          ]
+            .map(
+              (
+                t,
+                i,
+              ) => `<div style="display:flex;gap:8px;align-items:flex-start;">
+            <div style="width:20px;height:20px;border-radius:50%;background:var(--primary-light);color:var(--primary);font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">${i + 1}</div>
             <p style="font-size:12px;color:var(--text-700);line-height:1.5;">${t}</p>
-          </div>`).join("")}
+          </div>`,
+            )
+            .join("")}
         </div>
       </div>
     </div>
@@ -3595,160 +3688,176 @@
       }
 
       async function linkChild() {
-          const input = document.getElementById("child-username-input");
-          const username = input.value.trim();
+        const input = document.getElementById("child-username-input");
+        const username = input.value.trim();
 
-          if (!username) {
-              showToast("Please enter child username", "⚠️");
-              return;
-          }
+        if (!username) {
+          showToast("Please enter child username", "⚠️");
+          return;
+        }
 
-          const btn = event.currentTarget; // or find button another way
-          const originalText = btn.textContent;
-          btn.disabled = true;
-          btn.textContent = "Linking...";
+        const btn = event.currentTarget; // or find button another way
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = "Linking...";
 
-          try {
-              await api.request("POST", "/parent/link-child", {
-                  childUsername: username
-              }, state.token);
+        try {
+          await api.request(
+            "POST",
+            "/parent/link-child",
+            {
+              childUsername: username,
+            },
+            state.token,
+          );
 
-              showToast("Child linked successfully! 🎉", "✅");
-              input.value = ""; // clear input
-              
-              // Refresh parent dashboard
-              setTimeout(() => {
-                  bindParent();
-              }, 800);
+          showToast("Child linked successfully! 🎉", "✅");
+          input.value = ""; // clear input
 
-          } catch (err) {
-              showToast(err.message || "Failed to link child", "❌");
-          } finally {
-              btn.disabled = false;
-              btn.textContent = originalText;
-          }
+          // Refresh parent dashboard
+          setTimeout(() => {
+            bindParent();
+          }, 800);
+        } catch (err) {
+          showToast(err.message || "Failed to link child", "❌");
+        } finally {
+          btn.disabled = false;
+          btn.textContent = originalText;
+        }
       }
 
       function showLinkedChildrenModal() {
-          const modal = document.getElementById("linked-children-modal");
-          if (!modal) return;
-          
-          modal.style.display = "flex";
-          loadLinkedChildren();
+        const modal = document.getElementById("linked-children-modal");
+        if (!modal) return;
+
+        modal.style.display = "flex";
+        loadLinkedChildren();
       }
 
       function closeLinkedChildrenModal() {
-          const modal = document.getElementById("linked-children-modal");
-          if (modal) modal.style.display = "none";
+        const modal = document.getElementById("linked-children-modal");
+        if (modal) modal.style.display = "none";
       }
 
       async function loadLinkedChildren() {
-          const container = document.getElementById("linked-children-list");
-          const titleEl = document.querySelector("#linked-children-modal h3");
-          
-          container.innerHTML = Loading("Loading children...");
+        const container = document.getElementById("linked-children-list");
+        const titleEl = document.querySelector("#linked-children-modal h3");
 
-          try {
-              const children = await api.request("GET", "/parent/children", null, state.token);
-              
-              if (titleEl) {
-                  titleEl.textContent = `👨‍👩‍👧 Linked Children (${children.length || 0})`;
-              }
+        container.innerHTML = Loading("Loading children...");
 
-              if (!children || children.length === 0) {
-                  container.innerHTML = `<p style="text-align:center;padding:40px;color:var(--text-400);">No children linked yet.</p>`;
-                  return;
-              }
+        try {
+          const children = await api.request(
+            "GET",
+            "/parent/children",
+            null,
+            state.token,
+          );
 
-              container.innerHTML = children.map(child => {
-                  const fullName = `${child.firstName || ''} ${child.lastName || ''}`.trim() || 
-                                child.username || "Unknown Child";
-                  
-                  return `
+          if (titleEl) {
+            titleEl.textContent = `👨‍👩‍👧 Linked Children (${children.length || 0})`;
+          }
+
+          if (!children || children.length === 0) {
+            container.innerHTML = `<p style="text-align:center;padding:40px;color:var(--text-400);">No children linked yet.</p>`;
+            return;
+          }
+
+          container.innerHTML = children
+            .map((child) => {
+              const fullName =
+                `${child.firstName || ""} ${child.lastName || ""}`.trim() ||
+                child.username ||
+                "Unknown Child";
+
+              return `
                   <div class="card" style="padding:16px;display:flex;align-items:center;gap:14px;">
                       <div style="width:48px;height:48px;border-radius:12px;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:24px;">🦁</div>
                       <div style="flex:1;min-width:0;">
                           <p style="font-weight:700;font-size:15px;">${fullName}</p>
-                          <p style="font-size:13px;color:var(--text-400);">@${child.username || 'unknown'}</p>
+                          <p style="font-size:13px;color:var(--text-400);">@${child.username || "unknown"}</p>
                       </div>
                       <div style="text-align:right;">
                           <span style="font-size:13px;font-weight:700;color:var(--accent-green);">Linked</span>
                       </div>
                   </div>`;
-              }).join("");
-
-          } catch (e) {
-              console.error(e);
-              container.innerHTML = `<p style="color:var(--accent-red);text-align:center;padding:40px;">Failed to load linked children</p>`;
-          }
+            })
+            .join("");
+        } catch (e) {
+          console.error(e);
+          container.innerHTML = `<p style="color:var(--accent-red);text-align:center;padding:40px;">Failed to load linked children</p>`;
+        }
       }
 
       function showLinkChildModal() {
-          const modal = document.getElementById("link-child-modal");
-          if (!modal) {
-              showToast("Modal not ready. Please refresh the page.", "⚠️");
-              return;
-          }
-          modal.style.display = "flex";
-          setTimeout(() => {
-              const input = document.getElementById("modal-child-username");
-              if (input) input.focus();
-          }, 50);
+        const modal = document.getElementById("link-child-modal");
+        if (!modal) {
+          showToast("Modal not ready. Please refresh the page.", "⚠️");
+          return;
+        }
+        modal.style.display = "flex";
+        setTimeout(() => {
+          const input = document.getElementById("modal-child-username");
+          if (input) input.focus();
+        }, 50);
       }
 
       function closeLinkChildModal() {
-          const modal = document.getElementById("link-child-modal");
-          if (modal) modal.style.display = "none";
-          
-          const input = document.getElementById("modal-child-username");
-          if (input) input.value = "";
+        const modal = document.getElementById("link-child-modal");
+        if (modal) modal.style.display = "none";
+
+        const input = document.getElementById("modal-child-username");
+        if (input) input.value = "";
       }
 
       async function linkChildFromModal() {
-          const input = document.getElementById("modal-child-username");
-          if (!input) return;
+        const input = document.getElementById("modal-child-username");
+        if (!input) return;
 
-          const childUsername = input.value.trim();
-          if (!childUsername) {
-              showToast("Please enter child username", "⚠️");
-              return;
+        const childUsername = input.value.trim();
+        if (!childUsername) {
+          showToast("Please enter child username", "⚠️");
+          return;
+        }
+
+        const btn = document.getElementById("link-child-confirm-btn");
+        const originalText = btn ? btn.textContent : "Link Child";
+
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = "Linking...";
+        }
+
+        try {
+          await api.request(
+            "POST",
+            "/parent/link-child",
+            {
+              childUsername: childUsername,
+            },
+            state.token,
+          );
+
+          showToast("Child linked successfully! 🎉", "✅");
+          closeLinkChildModal();
+          setTimeout(() => bindParent(), 800); // refresh dashboard
+        } catch (error) {
+          console.error(error);
+
+          if (error.message.includes("already linked")) {
+            showToast("This child is already linked to your account!", "ℹ️");
+          } else if (error.message.includes("not found")) {
+            showToast("Child username not found. Please check spelling.", "❌");
+          } else {
+            showToast(error.message || "Failed to link child", "❌");
           }
-
-          const btn = document.getElementById("link-child-confirm-btn");
-          const originalText = btn ? btn.textContent : "Link Child";
-
+        } finally {
           if (btn) {
-              btn.disabled = true;
-              btn.textContent = "Linking...";
+            btn.disabled = false;
+            btn.textContent = originalText;
           }
-
-          try {
-              await api.request("POST", "/parent/link-child", {
-                  childUsername: childUsername
-              }, state.token);
-
-              showToast("Child linked successfully! 🎉", "✅");
-              closeLinkChildModal();
-              setTimeout(() => bindParent(), 800);   // refresh dashboard
-
-          } catch (error) {
-              console.error(error);
-              
-              if (error.message.includes("already linked")) {
-                  showToast("This child is already linked to your account!", "ℹ️");
-              } else if (error.message.includes("not found")) {
-                  showToast("Child username not found. Please check spelling.", "❌");
-              } else {
-                  showToast(error.message || "Failed to link child", "❌");
-              }
-          } finally {
-              if (btn) {
-                  btn.disabled = false;
-                  btn.textContent = originalText;
-              }
-          }
+        }
       }
-      
+
       function toggleParentNotifs() {
         const d = document.getElementById("notif-dropdown");
         d.style.display = d.style.display === "none" ? "block" : "none";
@@ -3761,51 +3870,63 @@
       }
       document.addEventListener("click", (e) => {
         const dd = document.getElementById("notif-dropdown");
-        if (dd && !dd.closest && !e.target.closest?.('[onclick="toggleParentNotifs()"]')) {
+        if (
+          dd &&
+          !dd.closest &&
+          !e.target.closest?.('[onclick="toggleParentNotifs()"]')
+        ) {
           dd.style.display = "none";
         }
       });
 
       async function bindParent() {
+        try {
+          const user = state.user;
+          const name =
+            user?.name || user?.firstName || user?.username || "Your Child";
+
+          document.getElementById("parent-child-name").textContent = name;
+          document.getElementById("parent-child-grade").textContent =
+            `Grade ${user?.grade || "?"} · ${user?.school || "BIBO Learner"}`;
+
+          // Get subjects safely
+          let subjects = [];
           try {
-              const user = state.user;
-              const name = user?.name || user?.firstName || user?.username || "Your Child";
-              
-              document.getElementById("parent-child-name").textContent = name;
-              document.getElementById("parent-child-grade").textContent = 
-                  `Grade ${user?.grade || "?"} · ${user?.school || "BIBO Learner"}`;
+            subjects = await api.getSubjects();
+          } catch (e) {
+            console.warn("Subjects not available for parent:", e.message);
+            // Don't crash the whole dashboard
+          }
 
-              // Get subjects safely
-              let subjects = [];
-              try {
-                  subjects = await api.getSubjects();
-              } catch (e) {
-                  console.warn("Could not load subjects:", e.message);
-                  // Don't crash the whole dashboard
-              }
+          const total = subjects.reduce((a, s) => a + (s.lessonCount || 0), 0);
+          const completed = subjects.reduce(
+            (a, s) => a + (s.completedCount || 0),
+            0,
+          );
+          const pct = total ? Math.round((completed / total) * 100) : 0;
 
-              const total = subjects.reduce((a, s) => a + (s.lessonCount || 0), 0);
-              const completed = subjects.reduce((a, s) => a + (s.completedCount || 0), 0);
-              const pct = total ? Math.round((completed / total) * 100) : 0;
-
-              document.getElementById("parent-stats").innerHTML = `
+          document.getElementById("parent-stats").innerHTML = `
             ${[
               ["Lessons Done", completed, "var(--accent-green)"],
               ["Remaining", total - completed, "var(--primary)"],
               ["Progress", pct + "%", "var(--primary-mid)"],
               ["Subjects", subjects.length || "—", "var(--accent-orange)"],
             ]
-              .map(([l, v, c]) => `
+              .map(
+                ([l, v, c]) => `
               <div class="card" style="padding:18px;text-align:center;">
                 <div style="font-family:var(--font-display);font-size:26px;font-weight:900;color:${c};">${v}</div>
                 <div style="font-size:11px;font-weight:600;color:var(--text-400);margin-top:4px;">${l}</div>
-              </div>`).join("")}`;
+              </div>`,
+              )
+              .join("")}`;
 
-              // Subject Progress
-              if (subjects.length > 0) {
-                  document.getElementById("parent-subjects").innerHTML = `
+          // Subject Progress
+          if (subjects.length > 0) {
+            document.getElementById("parent-subjects").innerHTML = `
                     <div style="display:flex;flex-direction:column;gap:10px;">
-                      ${subjects.map((s) => {
+                      ${subjects
+                        .map((s) => {
                           const st = getSubjectStyle(s.name);
                           const p = s.progress || 0;
                           return `<div class="card" style="padding:16px;display:flex;align-items:center;gap:12px;">
@@ -3820,33 +3941,37 @@
                               </div>
                             </div>
                           </div>`;
-                      }).join("")}
+                        })
+                        .join("")}
                     </div>`;
-              } else {
-                  document.getElementById("parent-subjects").innerHTML = 
-                      `<p style="color:var(--text-400);padding:20px;text-align:center;">No subjects data available yet.</p>`;
-              }
+          } else {
+            document.getElementById("parent-subjects").innerHTML =
+              `<p style="color:var(--text-400);padding:20px;text-align:center;">No subjects data available yet.</p>`;
+          }
 
-              // Weak areas
-              const weak = subjects.filter((s) => (s.progress || 0) < 50);
-              document.getElementById("parent-weak").innerHTML = weak.length
-                  ? `<div style="display:flex;flex-direction:column;gap:14px;">${weak.map((s) => {
-                      const st = getSubjectStyle(s.name);
-                      return `<div style="display:flex;align-items:center;gap:10px;">
+          // Weak areas
+          const weak = subjects.filter((s) => (s.progress || 0) < 50);
+          document.getElementById("parent-weak").innerHTML = weak.length
+            ? `<div style="display:flex;flex-direction:column;gap:14px;">${weak
+                .map((s) => {
+                  const st = getSubjectStyle(s.name);
+                  return `<div style="display:flex;align-items:center;gap:10px;">
                         <span style="font-size:20px;">${st.icon}</span>
                         <div><p style="font-weight:700;font-size:13px;">${s.name}</p>
                         <p style="font-size:12px;color:var(--text-400);">Only ${s.progress || 0}% — needs more practice</p></div>
                       </div>`;
-                  }).join("")}</div>`
-                  : `<div style="text-align:center;padding:40px 20px;">
+                })
+                .join("")}</div>`
+            : `<div style="text-align:center;padding:40px 20px;">
                       <div style="font-size:48px;margin-bottom:12px;">🌟</div>
                       <p style="font-weight:700;">No weak areas! Great progress!</p>
                     </div>`;
-
-          } catch (e) {
-              console.error(e);
-              document.getElementById("parent-stats").innerHTML = ErrorState("Failed to load dashboard");
-          }
+        } catch (e) {
+          console.error(e);
+          document.getElementById("parent-stats").innerHTML = ErrorState(
+            "Failed to load dashboard",
+          );
+        }
       }
 
       /* ============================================================
@@ -3855,6 +3980,587 @@
       function GamesPageWrapper() {
         document.getElementById("page-container").innerHTML = GamesPage();
       }
+
+      function launchGame(id) {
+        if (id === "word") {
+          document.getElementById("page-container").innerHTML =
+            WordScramblePage();
+          bindWordScramble();
+        } else if (id === "math") {
+          document.getElementById("page-container").innerHTML = MathNinjaPage();
+          bindMathNinja();
+        } else {
+          showToast("Coming soon! 🚧", "🎮");
+        }
+      }
+
+      /* ============================================================
+        GAME: WORD SCRAMBLE
+        ============================================================ */
+      const WORD_SCRAMBLE_WORDS = [
+        { word: "BAHAY", hint: "Where you live", category: "Filipino" },
+        {
+          word: "TUBIG",
+          hint: "You drink this every day",
+          category: "Filipino",
+        },
+        { word: "ARAW", hint: "Shines in the sky", category: "Filipino" },
+        { word: "PUSO", hint: "Beats inside your chest", category: "Filipino" },
+        { word: "IBON", hint: "Animal that can fly", category: "Filipino" },
+        { word: "LAPIS", hint: "You write with this", category: "Filipino" },
+        { word: "APPLE", hint: "A red or green fruit", category: "English" },
+        { word: "CLOUD", hint: "Floats in the sky", category: "English" },
+        { word: "PLANT", hint: "Grows from a seed", category: "English" },
+        { word: "RIVER", hint: "Flowing body of water", category: "English" },
+        { word: "LIGHT", hint: "Makes things visible", category: "English" },
+        {
+          word: "BREAD",
+          hint: "Made from flour and baked",
+          category: "English",
+        },
+        { word: "SEVEN", hint: "A lucky number", category: "Math" },
+        { word: "MINUS", hint: "Subtraction operation", category: "Math" },
+        { word: "EQUAL", hint: "Both sides are the same", category: "Math" },
+        { word: "CIRCLE", hint: "A perfectly round shape", category: "Math" },
+        { word: "SQUARE", hint: "Four equal sides", category: "Math" },
+      ];
+
+      function scramble(word) {
+        const arr = word.split("");
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr.join("") === word ? scramble(word) : arr.join("");
+      }
+
+      function WordScramblePage() {
+        return `<div class="page" id="word-scramble-root">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;">
+            <button class="btn btn-ghost btn-sm" onclick="GamesPageWrapper()">← Back</button>
+            <div>
+              <h1 style="font-size:24px;margin-bottom:2px;">🧠 Word Scramble</h1>
+              <p style="font-size:13px;color:var(--text-400);">Unscramble the letters to find the hidden word!</p>
+            </div>
+          </div>
+
+          <!-- Stats -->
+          <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;">
+            ${[
+              ["⭐", "Score", "ws-score", "var(--primary)"],
+              ["📝", "Word", "ws-word-num", "var(--text-900)"],
+              ["⏱", "Time", "ws-timer", "var(--accent-orange)"],
+              ["🔥", "Streak", "ws-streak", "var(--accent-red)"],
+            ]
+              .map(
+                ([icon, label, id, color]) => `
+              <div class="card" style="padding:14px 20px;display:flex;align-items:center;gap:10px;flex:1;min-width:110px;">
+                <span style="font-size:20px;">${icon}</span>
+                <div>
+                  <div style="font-size:10px;font-weight:700;color:var(--text-400);text-transform:uppercase;letter-spacing:0.5px;">${label}</div>
+                  <div style="font-family:var(--font-display);font-size:22px;font-weight:900;color:${color};" id="${id}">${id === "ws-word-num" ? "1 / 10" : "0"}</div>
+                </div>
+              </div>`,
+              )
+              .join("")}
+          </div>
+
+          <!-- Game card -->
+          <div class="card" style="padding:36px;text-align:center;margin-bottom:20px;">
+            <div style="font-size:11px;font-weight:700;color:var(--text-400);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;" id="ws-category">—</div>
+
+            <!-- Timer ring -->
+            <div style="position:relative;width:80px;height:80px;margin:0 auto 20px;">
+              <svg viewBox="0 0 80 80" width="80" height="80">
+                <circle cx="40" cy="40" r="34" fill="none" stroke="var(--border)" stroke-width="6"/>
+                <circle cx="40" cy="40" r="34" fill="none" stroke="var(--primary)" stroke-width="6"
+                  stroke-dasharray="213.6" stroke-dashoffset="0" id="ws-timer-ring"
+                  stroke-linecap="round" transform="rotate(-90 40 40)" style="transition:stroke-dashoffset 1s linear;"/>
+              </svg>
+              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:22px;font-weight:900;color:var(--primary);" id="ws-timer-center">30</div>
+            </div>
+
+            <!-- Scrambled letters -->
+            <div style="display:flex;gap:8px;justify-content:center;margin-bottom:16px;flex-wrap:wrap;" id="ws-letters"></div>
+
+            <!-- Hint -->
+            <div style="display:inline-flex;align-items:center;gap:6px;background:var(--primary-light);color:var(--primary);padding:6px 14px;border-radius:99px;font-size:12px;font-weight:700;margin-bottom:24px;">
+              💡 <span id="ws-hint">—</span>
+            </div>
+
+            <!-- Input -->
+            <div style="display:flex;gap:10px;max-width:360px;margin:0 auto;">
+              <input id="ws-input" type="text" placeholder="Type your answer..." class="bibo-input"
+                style="text-align:center;font-size:18px;font-weight:800;text-transform:uppercase;letter-spacing:4px;"
+                oninput="this.value=this.value.toUpperCase()"
+                onkeydown="if(event.key==='Enter')wsCheckAnswer()" />
+              <button onclick="wsCheckAnswer()" class="btn btn-primary" style="padding:12px 20px;flex-shrink:0;">Check</button>
+            </div>
+
+            <div id="ws-feedback" style="margin-top:16px;min-height:28px;font-size:15px;font-weight:700;"></div>
+          </div>
+
+          <div style="display:flex;gap:10px;justify-content:center;">
+            <button onclick="wsSkip()" class="btn btn-ghost btn-sm">Skip →</button>
+            <button onclick="wsReveal()" class="btn btn-sm" style="background:var(--bg);color:var(--text-500);">Reveal (-5 pts)</button>
+          </div>
+        </div>`;
+      }
+
+      let _ws = {};
+
+      function bindWordScramble() {
+        const pool = [...WORD_SCRAMBLE_WORDS]
+          .sort(() => Math.random() - 0.5)
+          .slice(0, 10);
+        _ws = {
+          pool,
+          current: 0,
+          score: 0,
+          streak: 0,
+          timer: 30,
+          interval: null,
+          answered: false,
+        };
+        wsLoadWord();
+      }
+
+      function wsLoadWord() {
+        if (_ws.current >= _ws.pool.length) {
+          wsGameOver();
+          return;
+        }
+        const item = _ws.pool[_ws.current];
+        _ws.scrambled = scramble(item.word);
+        _ws.answered = false;
+        _ws.timer = 30;
+
+        document.getElementById("ws-word-num").textContent =
+          `${_ws.current + 1} / ${_ws.pool.length}`;
+        document.getElementById("ws-category").textContent =
+          item.category.toUpperCase();
+        document.getElementById("ws-hint").textContent = item.hint;
+        document.getElementById("ws-feedback").textContent = "";
+        document.getElementById("ws-input").value = "";
+        document.getElementById("ws-input").disabled = false;
+        document.getElementById("ws-timer-center").style.color =
+          "var(--primary)";
+        document.getElementById("ws-timer-ring").style.stroke =
+          "var(--primary)";
+        document.getElementById("ws-input").focus();
+
+        document.getElementById("ws-letters").innerHTML = _ws.scrambled
+          .split("")
+          .map(
+            (l) =>
+              `<div style="width:44px;height:54px;border-radius:10px;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:22px;font-weight:900;box-shadow:0 4px 0 var(--primary-dark);">${l}</div>`,
+          )
+          .join("");
+
+        wsUpdateTimerRing(30);
+        if (_ws.interval) clearInterval(_ws.interval);
+        _ws.interval = setInterval(() => {
+          _ws.timer--;
+          wsUpdateTimerRing(_ws.timer);
+          document.getElementById("ws-timer").textContent = _ws.timer;
+          document.getElementById("ws-timer-center").textContent = _ws.timer;
+          if (_ws.timer <= 10) {
+            document.getElementById("ws-timer-center").style.color =
+              "var(--accent-red)";
+            document.getElementById("ws-timer-ring").style.stroke =
+              "var(--accent-red)";
+          }
+          if (_ws.timer <= 0) {
+            clearInterval(_ws.interval);
+            wsTimeUp();
+          }
+        }, 1000);
+      }
+
+      function wsUpdateTimerRing(t) {
+        const ring = document.getElementById("ws-timer-ring");
+        if (ring) ring.style.strokeDashoffset = 213.6 - (t / 30) * 213.6;
+      }
+
+      function wsCheckAnswer() {
+        if (_ws.answered) return;
+        const val = document
+          .getElementById("ws-input")
+          .value.trim()
+          .toUpperCase();
+        if (!val) return;
+        clearInterval(_ws.interval);
+        _ws.answered = true;
+        document.getElementById("ws-input").disabled = true;
+        const correct = _ws.pool[_ws.current].word.toUpperCase();
+        if (val === correct) {
+          const pts = Math.max(10, _ws.timer * 2);
+          _ws.score += pts;
+          _ws.streak++;
+          document.getElementById("ws-feedback").innerHTML =
+            `<span style="color:var(--accent-green);">✅ Correct! +${pts} pts ${_ws.streak >= 3 ? "🔥 " + _ws.streak + " streak!" : ""}</span>`;
+        } else {
+          _ws.streak = 0;
+          document.getElementById("ws-feedback").innerHTML =
+            `<span style="color:var(--accent-red);">❌ Wrong! The answer was <strong>${correct}</strong></span>`;
+        }
+        document.getElementById("ws-score").textContent = _ws.score;
+        document.getElementById("ws-streak").textContent = _ws.streak;
+        setTimeout(() => {
+          _ws.current++;
+          wsLoadWord();
+        }, 1600);
+      }
+
+      function wsTimeUp() {
+        if (_ws.answered) return;
+        _ws.answered = true;
+        _ws.streak = 0;
+        document.getElementById("ws-streak").textContent = 0;
+        document.getElementById("ws-feedback").innerHTML =
+          `<span style="color:var(--accent-orange);">⏰ Time's up! The answer was <strong>${_ws.pool[_ws.current].word}</strong></span>`;
+        document.getElementById("ws-input").disabled = true;
+        setTimeout(() => {
+          _ws.current++;
+          wsLoadWord();
+        }, 1800);
+      }
+
+      function wsSkip() {
+        clearInterval(_ws.interval);
+        _ws.streak = 0;
+        document.getElementById("ws-streak").textContent = 0;
+        _ws.current++;
+        wsLoadWord();
+      }
+
+      function wsReveal() {
+        if (_ws.answered) return;
+        _ws.score = Math.max(0, _ws.score - 5);
+        document.getElementById("ws-score").textContent = _ws.score;
+        document.getElementById("ws-feedback").innerHTML =
+          `<span style="color:var(--primary);">💡 The answer is: <strong>${_ws.pool[_ws.current].word}</strong></span>`;
+        clearInterval(_ws.interval);
+        _ws.answered = true;
+        _ws.streak = 0;
+        document.getElementById("ws-streak").textContent = 0;
+        document.getElementById("ws-input").disabled = true;
+        setTimeout(() => {
+          _ws.current++;
+          wsLoadWord();
+        }, 1800);
+      }
+
+      function wsGameOver() {
+        clearInterval(_ws.interval);
+        const grade =
+          _ws.score >= 400
+            ? { e: "🏆", t: "Amazing!", c: "var(--accent-green)" }
+            : _ws.score >= 250
+              ? { e: "🎉", t: "Great job!", c: "var(--primary)" }
+              : _ws.score >= 100
+                ? { e: "👍", t: "Good try!", c: "var(--accent-orange)" }
+                : { e: "💪", t: "Keep practicing!", c: "var(--accent-red)" };
+        document.getElementById("word-scramble-root").innerHTML = `
+          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:40px 20px;">
+            <div style="font-size:72px;margin-bottom:16px;">${grade.e}</div>
+            <h1 style="font-size:32px;margin-bottom:8px;color:${grade.c};">${grade.t}</h1>
+            <p style="color:var(--text-400);margin-bottom:28px;">You completed all ${_ws.pool.length} words!</p>
+            <div style="background:${grade.c}18;border:2px solid ${grade.c};border-radius:var(--radius-xl);padding:24px 48px;margin-bottom:28px;">
+              <div style="font-family:var(--font-display);font-size:56px;font-weight:900;color:${grade.c};line-height:1;">${_ws.score}</div>
+              <div style="font-size:13px;font-weight:700;color:var(--text-500);margin-top:4px;">Total Points</div>
+              <div style="font-size:12px;color:var(--text-400);margin-top:2px;">Best Streak: ${_ws.streak} 🔥</div>
+            </div>
+            <div style="display:flex;gap:12px;">
+              <button class="btn btn-primary" onclick="document.getElementById('page-container').innerHTML=WordScramblePage();bindWordScramble();">Play Again</button>
+              <button class="btn btn-ghost" onclick="GamesPageWrapper()">Back to Games</button>
+            </div>
+          </div>`;
+      }
+
+      /* ============================================================
+   GAME: MATH NINJA
+   ============================================================ */
+      function generateMathQ(level) {
+        const ops =
+          level <= 2
+            ? ["+", "-"]
+            : level <= 4
+              ? ["+", "-", "×"]
+              : ["+", "-", "×", "÷"];
+        const op = ops[Math.floor(Math.random() * ops.length)];
+        const max = level <= 2 ? 20 : level <= 4 ? 50 : 100;
+        let a, b, answer, question;
+        if (op === "+") {
+          a = Math.floor(Math.random() * max) + 1;
+          b = Math.floor(Math.random() * max) + 1;
+          answer = a + b;
+          question = `${a} + ${b}`;
+        } else if (op === "-") {
+          a = Math.floor(Math.random() * max) + 1;
+          b = Math.floor(Math.random() * max) + 1;
+          if (b > a) [a, b] = [b, a];
+          answer = a - b;
+          question = `${a} − ${b}`;
+        } else if (op === "×") {
+          a = Math.floor(Math.random() * 12) + 1;
+          b = Math.floor(Math.random() * 12) + 1;
+          answer = a * b;
+          question = `${a} × ${b}`;
+        } else {
+          b = Math.floor(Math.random() * 10) + 1;
+          answer = Math.floor(Math.random() * 10) + 1;
+          a = answer * b;
+          question = `${a} ÷ ${b}`;
+        }
+        const wrongs = new Set();
+        while (wrongs.size < 3) {
+          const w = answer + (Math.floor(Math.random() * 10) - 5);
+          if (w !== answer && w >= 0) wrongs.add(w);
+        }
+        return {
+          question,
+          answer,
+          choices: [answer, ...wrongs].sort(() => Math.random() - 0.5),
+        };
+      }
+
+      function MathNinjaPage() {
+        return `<div class="page" id="math-ninja-root">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;">
+      <button class="btn btn-ghost btn-sm" onclick="GamesPageWrapper()">← Back</button>
+      <div>
+        <h1 style="font-size:24px;margin-bottom:2px;">⚡ Math Ninja</h1>
+        <p style="font-size:13px;color:var(--text-400);">Answer fast — the quicker you are, the more points you earn!</p>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+      <div class="card" style="padding:14px 20px;flex:1;min-width:100px;text-align:center;">
+        <div style="font-size:10px;font-weight:700;color:var(--text-400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;">Score</div>
+        <div style="font-family:var(--font-display);font-size:24px;font-weight:900;color:var(--primary);" id="mn-score">0</div>
+      </div>
+      <div class="card" style="padding:14px 20px;flex:1;min-width:100px;text-align:center;">
+        <div style="font-size:10px;font-weight:700;color:var(--text-400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;">Level</div>
+        <div style="font-family:var(--font-display);font-size:24px;font-weight:900;color:var(--accent-green);" id="mn-level">1</div>
+      </div>
+      <div class="card" style="padding:14px 20px;flex:1;min-width:100px;text-align:center;">
+        <div style="font-size:10px;font-weight:700;color:var(--text-400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;">Lives</div>
+        <div style="font-size:20px;letter-spacing:2px;" id="mn-lives">❤️❤️❤️</div>
+      </div>
+      <div class="card" style="padding:14px 20px;flex:1;min-width:100px;text-align:center;">
+        <div style="font-size:10px;font-weight:700;color:var(--text-400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;">Combo</div>
+        <div style="font-family:var(--font-display);font-size:24px;font-weight:900;color:var(--accent-orange);" id="mn-combo">x1</div>
+      </div>
+    </div>
+
+    <!-- Level progress -->
+    <div style="margin-bottom:20px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+        <span style="font-size:12px;font-weight:700;color:var(--text-400);">Progress to Level <span id="mn-next-level">2</span></span>
+        <span style="font-size:12px;font-weight:700;color:var(--primary);" id="mn-progress-txt">0 / 5</span>
+      </div>
+      <div class="progress-track" style="height:8px;">
+        <div class="progress-fill" id="mn-progress-bar" style="height:8px;width:0%;background:var(--accent-green);transition:width 0.4s ease;"></div>
+      </div>
+    </div>
+
+    <!-- Question card -->
+    <div class="card" style="padding:40px;text-align:center;margin-bottom:20px;" id="mn-question-card">
+      <!-- Time bar at top -->
+      <div style="position:absolute;top:0;left:0;right:0;height:5px;background:var(--border);border-radius:var(--radius-lg) var(--radius-lg) 0 0;overflow:hidden;">
+        <div id="mn-time-bar" style="height:5px;background:var(--accent-green);width:100%;transition:width 0.1s linear;"></div>
+      </div>
+
+      <div style="font-size:11px;font-weight:700;color:var(--text-400);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:12px;">What is...</div>
+      <div style="font-family:var(--font-display);font-size:52px;font-weight:900;color:var(--text-900);margin-bottom:32px;line-height:1;" id="mn-question">?</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:400px;margin:0 auto;" id="mn-choices"></div>
+
+      <div id="mn-feedback" style="margin-top:20px;min-height:28px;font-size:15px;font-weight:700;"></div>
+    </div>
+  </div>`;
+      }
+
+      let _mn = {};
+
+      function bindMathNinja() {
+        _mn = {
+          score: 0,
+          level: 1,
+          lives: 3,
+          combo: 1,
+          correct: 0,
+          perLevel: 5,
+          timeLimit: 10,
+          timer: 10,
+          interval: null,
+          answered: false,
+        };
+        mnLoadQuestion();
+      }
+
+      function mnLoadQuestion() {
+        const q = generateMathQ(_mn.level);
+        _mn.currentQ = q;
+        _mn.answered = false;
+        _mn.timer = Math.max(5, _mn.timeLimit - (_mn.level - 1));
+
+        document.getElementById("mn-question").textContent = q.question + " =";
+        document.getElementById("mn-feedback").textContent = "";
+
+        document.getElementById("mn-choices").innerHTML = q.choices
+          .map(
+            (c, i) =>
+              `<button onclick="mnAnswer(${c})" id="mn-opt-${i}"
+      style="padding:18px;font-family:var(--font-display);font-size:24px;font-weight:900;border-radius:var(--radius-md);border:2px solid var(--border);background:white;cursor:pointer;transition:all 0.18s;color:var(--text-900);"
+      onmouseover="if(!this.disabled)this.style.borderColor='var(--primary)';this.style.background='var(--primary-light)';"
+      onmouseout="if(!this.disabled&&!this.dataset.chosen)this.style.borderColor='var(--border)';this.style.background='white';">
+      ${c}
+    </button>`,
+          )
+          .join("");
+
+        mnStartTimer();
+      }
+
+      function mnStartTimer() {
+        const bar = document.getElementById("mn-time-bar");
+        if (_mn.interval) clearInterval(_mn.interval);
+        const total = _mn.timer * 10;
+        let ticks = total;
+        _mn.interval = setInterval(() => {
+          ticks--;
+          if (bar) {
+            const pct = (ticks / total) * 100;
+            bar.style.width = pct + "%";
+            bar.style.background =
+              pct > 50
+                ? "var(--accent-green)"
+                : pct > 25
+                  ? "var(--accent-orange)"
+                  : "var(--accent-red)";
+          }
+          if (ticks <= 0) {
+            clearInterval(_mn.interval);
+            mnTimeUp();
+          }
+        }, 100);
+      }
+
+      function mnAnswer(val) {
+        if (_mn.answered) return;
+        clearInterval(_mn.interval);
+        _mn.answered = true;
+
+        const correct = _mn.currentQ.answer;
+        const isCorrect = val === correct;
+
+        // Highlight chosen button
+        document.querySelectorAll("#mn-choices button").forEach((btn) => {
+          btn.disabled = true;
+          const bVal = parseInt(btn.textContent.trim());
+          if (bVal === correct) {
+            btn.style.background = "#d1fae5";
+            btn.style.borderColor = "var(--accent-green)";
+            btn.style.color = "#065f46";
+          } else if (bVal === val && !isCorrect) {
+            btn.style.background = "#fee2e2";
+            btn.style.borderColor = "var(--accent-red)";
+            btn.style.color = "#991b1b";
+          }
+        });
+
+        if (isCorrect) {
+          const pts = Math.ceil(_mn.timer * 10 * _mn.combo);
+          _mn.score += pts;
+          _mn.combo = Math.min(5, _mn.combo + 0.5);
+          _mn.correct++;
+          document.getElementById("mn-feedback").innerHTML =
+            `<span style="color:var(--accent-green);">✅ Correct! +${pts} pts ${_mn.combo > 1 ? "🔥 x" + _mn.combo + " combo!" : ""}</span>`;
+
+          // Level up
+          if (_mn.correct % _mn.perLevel === 0) {
+            _mn.level++;
+            document.getElementById("mn-level").textContent = _mn.level;
+            showToast(`Level ${_mn.level}! 🎉`, "⚡");
+          }
+        } else {
+          _mn.lives--;
+          _mn.combo = 1;
+          document.getElementById("mn-feedback").innerHTML =
+            `<span style="color:var(--accent-red);">❌ Wrong! Answer was <strong>${correct}</strong></span>`;
+        }
+
+        document.getElementById("mn-score").textContent = _mn.score;
+        document.getElementById("mn-combo").textContent = "x" + _mn.combo;
+        document.getElementById("mn-lives").textContent =
+          "❤️".repeat(Math.max(0, _mn.lives)) +
+          "🖤".repeat(Math.max(0, 3 - _mn.lives));
+
+        const inLevel = _mn.correct % _mn.perLevel;
+        document.getElementById("mn-progress-bar").style.width =
+          (inLevel / _mn.perLevel) * 100 + "%";
+        document.getElementById("mn-progress-txt").textContent =
+          `${inLevel} / ${_mn.perLevel}`;
+        document.getElementById("mn-next-level").textContent = _mn.level + 1;
+
+        if (_mn.lives <= 0) {
+          setTimeout(mnGameOver, 1200);
+          return;
+        }
+        setTimeout(mnLoadQuestion, 1400);
+      }
+
+      function mnTimeUp() {
+        if (_mn.answered) return;
+        _mn.answered = true;
+        _mn.lives--;
+        _mn.combo = 1;
+        document.getElementById("mn-combo").textContent = "x1";
+        document.getElementById("mn-lives").textContent =
+          "❤️".repeat(Math.max(0, _mn.lives)) +
+          "🖤".repeat(Math.max(0, 3 - _mn.lives));
+        document.getElementById("mn-feedback").innerHTML =
+          `<span style="color:var(--accent-orange);">⏰ Too slow! Answer was <strong>${_mn.currentQ.answer}</strong></span>`;
+        document
+          .querySelectorAll("#mn-choices button")
+          .forEach((btn) => (btn.disabled = true));
+        if (_mn.lives <= 0) {
+          setTimeout(mnGameOver, 1200);
+          return;
+        }
+        setTimeout(mnLoadQuestion, 1600);
+      }
+
+      function mnGameOver() {
+        clearInterval(_mn.interval);
+        const grade =
+          _mn.score >= 500
+            ? { e: "🥷", t: "Math Ninja Master!", c: "var(--accent-green)" }
+            : _mn.score >= 250
+              ? { e: "⚡", t: "Ninja in Training!", c: "var(--primary)" }
+              : _mn.score >= 100
+                ? { e: "👍", t: "Good Effort!", c: "var(--accent-orange)" }
+                : { e: "💪", t: "Keep Practicing!", c: "var(--accent-red)" };
+        document.getElementById("math-ninja-root").innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:40px 20px;">
+      <div style="font-size:72px;margin-bottom:16px;">${grade.e}</div>
+      <h1 style="font-size:32px;margin-bottom:8px;color:${grade.c};">${grade.t}</h1>
+      <p style="color:var(--text-400);margin-bottom:28px;">You reached Level ${_mn.level}!</p>
+      <div style="background:${grade.c}18;border:2px solid ${grade.c};border-radius:var(--radius-xl);padding:24px 48px;margin-bottom:28px;">
+        <div style="font-family:var(--font-display);font-size:56px;font-weight:900;color:${grade.c};line-height:1;">${_mn.score}</div>
+        <div style="font-size:13px;font-weight:700;color:var(--text-500);margin-top:4px;">Total Points</div>
+        <div style="font-size:12px;color:var(--text-400);margin-top:2px;">${_mn.correct} correct answers · Level ${_mn.level}</div>
+      </div>
+      <div style="display:flex;gap:12px;">
+        <button class="btn btn-primary" onclick="document.getElementById('page-container').innerHTML=MathNinjaPage();bindMathNinja();">Play Again</button>
+        <button class="btn btn-ghost" onclick="GamesPageWrapper()">Back to Games</button>
+      </div>
+    </div>`;
+      }
+
       function QuizPageWrapper() {
         if (window._quizState?.timerInterval) {
           clearInterval(window._quizState.timerInterval);

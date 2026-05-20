@@ -386,8 +386,8 @@
           const user = result.user || result;
           const roleName = String(user?.role?.name || user?.roleName || user?.role || "").toUpperCase();
 
-          if (roleName && roleName !== "ADMIN") {
-            throw new Error("This account does not have admin access.");
+          if (roleName && roleName !== "ADMIN" && roleName != "TEACHER") {
+             throw new Error("This account does not have admin or teacher access.");
           }
 
           localStorage.setItem("bibo_admin_token", token);

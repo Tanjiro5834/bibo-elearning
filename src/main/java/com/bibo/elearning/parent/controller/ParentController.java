@@ -18,7 +18,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/parent")
+@RequestMapping("/api/parent")
 @RequiredArgsConstructor
 public class ParentController {
 
