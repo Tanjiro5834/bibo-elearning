@@ -27,12 +27,11 @@ public class GeminiService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(apiKey); // Authorization: Bearer <key>
+        headers.setBearerAuth(apiKey);
 
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
         ResponseEntity<Map> response = restTemplate.postForEntity(GROQ_URL, request, Map.class);
 
-        // OpenAI-compatible response format
         List choices = (List) response.getBody().get("choices");
         Map message0 = (Map) ((Map) choices.get(0)).get("message");
         return (String) message0.get("content");

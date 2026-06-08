@@ -1,5 +1,7 @@
 package com.bibo.elearning.auth.user.entity;
 
+import java.util.ArrayList;
+import java.util.List;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -45,4 +47,12 @@ public class User {
 
     @Column(length = 150)
     private String school;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_id")
+    private User parent;
+
+    @Builder.Default
+    @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY)
+    private List<User> children = new ArrayList<>();
 }

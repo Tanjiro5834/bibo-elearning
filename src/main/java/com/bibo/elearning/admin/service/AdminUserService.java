@@ -3,10 +3,13 @@ package com.bibo.elearning.admin.service;
 import com.bibo.elearning.admin.dto.request.CreateUserRequest;
 import com.bibo.elearning.admin.dto.request.UpdateUserRequest;
 import com.bibo.elearning.admin.dto.response.UserResponse;
+import com.bibo.elearning.auth.common.enums.RoleName;
 import com.bibo.elearning.auth.user.entity.Role;
 import com.bibo.elearning.auth.user.entity.User;
 import com.bibo.elearning.auth.user.repository.RoleRepository;
 import com.bibo.elearning.auth.user.repository.UserRepository;
+import com.bibo.elearning.parent.entity.ParentChildLink;
+import com.bibo.elearning.parent.repository.ParentChildLinkRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -20,6 +23,7 @@ public class AdminUserService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final ParentChildLinkRepository parentChildLinkRepository;
     private final PasswordEncoder passwordEncoder;
 
     public List<UserResponse> getAllUsers() {
@@ -49,6 +53,42 @@ public class AdminUserService {
                 .role(role)
                 .enabled(true)
                 .build();
+
+        if (req.getRole() == RoleName.PARENT && req.getChildren() != null && !req.getChildren().isEmpty()) {
+            Role studentRole = roleRepository.findByName(RoleName.STUDENT)
+                    .orElseThrow(() -> new RuntimeException("STUDENT role not found"));
+
+            User parent = userRepository.save(user);
+
+            for (CreateUserRequest.ChildRequest c : req.getChildren()) {
+                if (userRepository.existsByUsername(c.getUsername()))
+                    throw new RuntimeException("Child username already exists: " + c.getUsername());
+                if (userRepository.existsByEmail(c.getEmail()))
+                    throw new RuntimeException("Child email already exists: " + c.getEmail());
+
+                User child = User.builder()
+                        .firstName(c.getFirstName())
+                        .lastName(c.getLastName())
+                        .username(c.getUsername())
+                        .email(c.getEmail())
+                        .password(passwordEncoder.encode(c.getPassword()))
+                        .role(studentRole)
+                        .age(c.getAge())
+                        .grade(c.getGrade())
+                        .school(c.getSchool())
+                        .parent(parent)
+                        .enabled(true)
+                        .build();
+
+                User savedChild = userRepository.save(child);
+
+                ParentChildLink link = new ParentChildLink();
+                link.setParent(parent);
+                link.setChild(savedChild);
+                parentChildLinkRepository.save(link);
+            }
+            return new UserResponse(parent);
+        }
 
         return new UserResponse(userRepository.save(user));
     }

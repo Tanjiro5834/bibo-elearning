@@ -1256,54 +1256,147 @@
 
       function openCreateAccount() {
         openModal(`
-    <div class="modal-header"><div class="modal-title">👥 New Account</div><button class="modal-close" onclick="closeModal()">✕</button></div>
-    <div id="acc-err" style="display:none;background:#FEE2E2;color:#991B1B;font-size:13px;font-weight:700;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:14px;"></div>
-    <div class="field-row">
-      <div class="field"><label>First Name</label><input id="acc-fname" class="bibo-input" placeholder="Juan" /></div>
-      <div class="field"><label>Last Name</label><input id="acc-lname" class="bibo-input" placeholder="Dela Cruz" /></div>
-    </div>
-    <div class="field"><label>Username</label><input id="acc-username" class="bibo-input" placeholder="juandc" /></div>
-    <div class="field"><label>Email</label><input id="acc-email" class="bibo-input" type="email" placeholder="juan@email.com" /></div>
-    <div class="field"><label>Password</label><input id="acc-password" class="bibo-input" type="password" placeholder="Minimum 8 characters" /></div>
-    <div class="field"><label>Role</label>
-      <select id="acc-role" class="bibo-input">
-        <option value="STUDENT">Student</option>
-        <option value="PARENT">Parent</option>
-        <option value="TEACHER">Teacher</option>
-        <option value="ADMIN">Admin</option>
-      </select>
-    </div>
-    <div style="display:flex;gap:10px;margin-top:8px;">
-      <button class="btn btn-ghost" style="flex:1;" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" style="flex:1;" id="acc-btn" onclick="submitCreateAccount()">Create Account</button>
-    </div>`);
+        <div class="modal-header">
+          <div class="modal-title">👥 New Account</div>
+          <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <div id="acc-err" style="display:none;background:#FEE2E2;color:#991B1B;font-size:13px;font-weight:700;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:14px;"></div>
+
+        <p style="font-size:12px;font-weight:700;color:var(--text-400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">Parent Account</p>
+        <div class="field-row">
+          <div class="field"><label>First Name</label><input id="acc-fname" class="bibo-input" placeholder="Maria" /></div>
+          <div class="field"><label>Last Name</label><input id="acc-lname" class="bibo-input" placeholder="Santos" /></div>
+        </div>
+        <div class="field"><label>Username</label><input id="acc-username" class="bibo-input" placeholder="mariasantos" /></div>
+        <div class="field"><label>Email</label><input id="acc-email" class="bibo-input" type="email" placeholder="maria@email.com" /></div>
+        <div class="field"><label>Password</label><input id="acc-password" class="bibo-input" type="password" placeholder="Minimum 8 characters" /></div>
+        <div class="field"><label>Role</label>
+          <select id="acc-role" class="bibo-input" onchange="toggleChildForm(this.value)">
+            <option value="TEACHER">Teacher</option>
+            <option value="PARENT">Parent</option>
+            <option value="ADMIN">Admin</option>
+          </select>
+        </div>
+
+        <div id="child-section" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <p style="font-size:12px;font-weight:700;color:var(--text-400);text-transform:uppercase;letter-spacing:0.5px;">Children</p>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <label style="font-size:12px;font-weight:700;color:var(--text-500);">How many?</label>
+              <input id="child-count-select" class="bibo-input" type="number" min="1" max="10" value="1"
+                style="width:80px;padding:6px 10px;"
+                oninput="renderChildForms(this.value)" />
+            </div>
+          </div>
+          <div id="child-forms-container"></div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:18px;">
+          <button class="btn btn-ghost" style="flex:1;" onclick="closeModal()">Cancel</button>
+          <button class="btn btn-primary" style="flex:1;" id="acc-btn" onclick="submitCreateAccount()">Create Account</button>
+        </div>
+      `);
+      }
+
+      function toggleChildForm(role) {
+        const section = document.getElementById("child-section");
+        if (role === "PARENT") {
+          section.style.display = "";
+          renderChildForms(1);
+        } else {
+          section.style.display = "none";
+        }
+      }
+
+      function renderChildForms(count) {
+        const container = document.getElementById("child-forms-container");
+        container.innerHTML = "";
+        for (let i = 1; i <= parseInt(count); i++) {
+          container.innerHTML += `
+          <div style="background:var(--bg);border-radius:var(--radius-md);padding:16px;margin-bottom:12px;">
+            <p style="font-size:12px;font-weight:700;color:var(--text-500);margin-bottom:10px;">Child ${i}</p>
+            <div class="field-row">
+              <div class="field"><label>First Name</label><input id="child-fname-${i}" class="bibo-input" placeholder="Juan" /></div>
+              <div class="field"><label>Last Name</label><input id="child-lname-${i}" class="bibo-input" placeholder="Santos" /></div>
+            </div>
+            <div class="field"><label>Username</label><input id="child-username-${i}" class="bibo-input" placeholder="juansantos${i}" /></div>
+            <div class="field"><label>Email</label><input id="child-email-${i}" class="bibo-input" type="email" placeholder="juan${i}@email.com" /></div>
+            <div class="field"><label>Password</label><input id="child-password-${i}" class="bibo-input" type="password" placeholder="Minimum 8 characters" /></div>
+            <div class="field-row">
+              <div class="field"><label>Age</label><input id="child-age-${i}" class="bibo-input" type="number" placeholder="8" /></div>
+              <div class="field"><label>Grade</label><input id="child-grade-${i}" class="bibo-input" placeholder="Grade 3" /></div>
+            </div>
+            <div class="field"><label>School</label><input id="child-school-${i}" class="bibo-input" placeholder="BIBO Elementary" /></div>
+          </div>
+        `;
+        }
       }
 
       async function submitCreateAccount() {
-        const firstName = document.getElementById("acc-fname").value.trim();
-        const lastName = document.getElementById("acc-lname").value.trim();
-        const username = document.getElementById("acc-username").value.trim();
-        const email = document.getElementById("acc-email").value.trim();
-        const password = document.getElementById("acc-password").value.trim();
         const role = document.getElementById("acc-role").value;
         const errEl = document.getElementById("acc-err");
         const btn = document.getElementById("acc-btn");
-        if (!username || !email || !password) {
+
+        const body = {
+          firstName: document.getElementById("acc-fname").value.trim(),
+          lastName: document.getElementById("acc-lname").value.trim(),
+          username: document.getElementById("acc-username").value.trim(),
+          email: document.getElementById("acc-email").value.trim(),
+          password: document.getElementById("acc-password").value.trim(),
+          role,
+        };
+
+        if (!body.username || !body.email || !body.password) {
           errEl.textContent = "Username, email and password are required.";
           errEl.style.display = "";
           return;
         }
+
+        if (role === "PARENT") {
+          const count = parseInt(
+            document.getElementById("child-count-select").value,
+          );
+          const children = [];
+
+          for (let i = 1; i <= count; i++) {
+            const child = {
+              firstName: document
+                .getElementById(`child-fname-${i}`)
+                .value.trim(),
+              lastName: document
+                .getElementById(`child-lname-${i}`)
+                .value.trim(),
+              username: document
+                .getElementById(`child-username-${i}`)
+                .value.trim(),
+              email: document.getElementById(`child-email-${i}`).value.trim(),
+              password: document
+                .getElementById(`child-password-${i}`)
+                .value.trim(),
+              age:
+                parseInt(document.getElementById(`child-age-${i}`).value) ||
+                null,
+              grade: document.getElementById(`child-grade-${i}`).value.trim(),
+              school: document.getElementById(`child-school-${i}`).value.trim(),
+            };
+
+            if (!child.username || !child.email || !child.password) {
+              errEl.textContent = `Child ${i}: username, email and password are required.`;
+              errEl.style.display = "";
+              return;
+            }
+
+            children.push(child);
+          }
+
+          body.children = children;
+        }
+
         btn.disabled = true;
         btn.textContent = "Creating...";
+
         try {
-          await apiFetch("POST", "/admin/users", {
-            firstName,
-            lastName,
-            username,
-            email,
-            password,
-            role,
-          });
+          await apiFetch("POST", "/admin/users", body);
           closeModal();
           showToast("Account created!", "👥");
           await loadAccounts();
@@ -1688,23 +1781,31 @@
             </div>
 
             <div class="grid-4 mb-32" id="teacher-stats">
-              ${[1,2,3,4].map(() => `<div class="card stat-card"><div class="spinner"></div></div>`).join("")}
+              ${[1, 2, 3, 4].map(() => `<div class="card stat-card"><div class="spinner"></div></div>`).join("")}
             </div>
 
             <div class="section-header"><span class="section-title">Quick Actions</span></div>
             <div class="grid-3 mb-32">
               ${[
-                {icon:"📚", label:"Subjects", page:"subjects"},
-                {icon:"📝", label:"Lessons", page:"lessons"},
-                {icon:"✅", label:"Quizzes", page:"quizzes"},
-                {icon:"👥", label:"My Students", page:"students"},
-                {icon:"📋", label:"Review Requests", page:"teacher-review-requests"},
-              ].map(a => `
+                { icon: "📚", label: "Subjects", page: "subjects" },
+                { icon: "📝", label: "Lessons", page: "lessons" },
+                { icon: "✅", label: "Quizzes", page: "quizzes" },
+                { icon: "👥", label: "My Students", page: "students" },
+                {
+                  icon: "📋",
+                  label: "Review Requests",
+                  page: "teacher-review-requests",
+                },
+              ]
+                .map(
+                  (a) => `
                 <div class="card card-interactive" style="padding:24px;" onclick="navigate('${a.page}')">
                   <div style="width:52px;height:52px;border-radius:14px;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:14px;">${a.icon}</div>
                   <h3 style="font-size:16px;margin-bottom:6px;">${a.label}</h3>
                 </div>
-              `).join("")}
+              `,
+                )
+                .join("")}
             </div>
           </div>`;
 
@@ -1714,27 +1815,30 @@
           let studentCount = 0;
           try {
             const studentsData = await apiFetch("GET", "/teacher/students");
-            const reviewRequests = await apiFetch("GET", "/teacher/review-requests");
+            const reviewRequests = await apiFetch(
+              "GET",
+              "/teacher/review-requests",
+            );
             //document.getElementById("total-students-stat").textContent = Array.isArray(studentsData) ? studentsData.length : 0;
 
             if (Array.isArray(studentsData)) {
-            studentCount = studentsData.length;
-          } else if (studentsData && typeof studentsData === 'object') {
-            // Check for paginated response
-            if (Array.isArray(studentsData.content)) {
-              studentCount = studentsData.content.length;
-            } else if (Array.isArray(studentsData.students)) {
-              studentCount = studentsData.students.length;
-            } else if (Array.isArray(studentsData.data)) {
-              studentCount = studentsData.data.length;
-            } else if (studentsData.totalElements !== undefined) {
-              studentCount = studentsData.totalElements;
-            } else {
-              // If it's a single object but not empty
-              studentCount = Object.keys(studentsData).length > 0 ? 1 : 0;
+              studentCount = studentsData.length;
+            } else if (studentsData && typeof studentsData === "object") {
+              // Check for paginated response
+              if (Array.isArray(studentsData.content)) {
+                studentCount = studentsData.content.length;
+              } else if (Array.isArray(studentsData.students)) {
+                studentCount = studentsData.students.length;
+              } else if (Array.isArray(studentsData.data)) {
+                studentCount = studentsData.data.length;
+              } else if (studentsData.totalElements !== undefined) {
+                studentCount = studentsData.totalElements;
+              } else {
+                // If it's a single object but not empty
+                studentCount = Object.keys(studentsData).length > 0 ? 1 : 0;
+              }
             }
-          }
-            
+
             console.log("✅ Final student count:", studentCount);
           } catch (e) {
             console.error("❌ Students API failed:", e.message);
@@ -1753,7 +1857,10 @@
             if (Array.isArray(subjects) && subjects.length > 0) {
               for (const sub of subjects) {
                 try {
-                  const lessons = await apiFetch("GET", `/lessons/subject/${sub.id}`);
+                  const lessons = await apiFetch(
+                    "GET",
+                    `/lessons/subject/${sub.id}`,
+                  );
                   lessonCount += Array.isArray(lessons) ? lessons.length : 0;
                 } catch (e) {}
               }
@@ -1786,7 +1893,6 @@
               <div class="stat-value" style="color:var(--accent-green);">${lessonCount}</div>
             </div>
           `;
-
         } catch (e) {
           console.error("Dashboard error:", e);
           document.getElementById("teacher-stats").innerHTML = `
@@ -1798,38 +1904,39 @@
 
       // ── STUDENTS ─────────────────────────────────────────────────────
       async function students() {
-  document.getElementById("page-container").innerHTML = `
+        document.getElementById("page-container").innerHTML = `
     <div class="page">
       ${PageHeader("My Students", "Students under your supervision", "", "")}
       <div id="students-list">${Loading()}</div>
     </div>`;
 
-  try {
-    const data = await apiFetch("GET", "/teacher/students");
-    console.log("API Response:", data); // Debug log
-    
-    // Handle different response formats
-    let studentsList = [];
-    if (Array.isArray(data)) {
-      studentsList = data;
-    } else if (data && typeof data === 'object') {
-      // Try common response structures
-      if (Array.isArray(data.content)) studentsList = data.content;
-      else if (Array.isData(data.students)) studentsList = data.students;
-      else if (Array.isArray(data.data)) studentsList = data.data;
-      else if (data.totalElements !== undefined && data.content) studentsList = data.content;
-    }
-    
-    if (!studentsList || studentsList.length === 0) {
-      document.getElementById("students-list").innerHTML = Empty(
-        "👥",
-        "No students yet",
-        "Students will appear here once assigned."
-      );
-      return;
-    }
+        try {
+          const data = await apiFetch("GET", "/teacher/students");
+          console.log("API Response:", data); // Debug log
 
-    document.getElementById("students-list").innerHTML = `
+          // Handle different response formats
+          let studentsList = [];
+          if (Array.isArray(data)) {
+            studentsList = data;
+          } else if (data && typeof data === "object") {
+            // Try common response structures
+            if (Array.isArray(data.content)) studentsList = data.content;
+            else if (Array.isData(data.students)) studentsList = data.students;
+            else if (Array.isArray(data.data)) studentsList = data.data;
+            else if (data.totalElements !== undefined && data.content)
+              studentsList = data.content;
+          }
+
+          if (!studentsList || studentsList.length === 0) {
+            document.getElementById("students-list").innerHTML = Empty(
+              "👥",
+              "No students yet",
+              "Students will appear here once assigned.",
+            );
+            return;
+          }
+
+          document.getElementById("students-list").innerHTML = `
       <div class="card" style="overflow:hidden;">
         <table class="data-table">
           <thead>
@@ -1841,10 +1948,16 @@
             </tr>
           </thead>
           <tbody>
-            ${studentsList.map(s => {
-              const name = s.fullName || s.name || s.firstName + ' ' + s.lastName || s.username || "—";
-              const level = s.learningLevel || s.level || "BEGINNER";
-              return `
+            ${studentsList
+              .map((s) => {
+                const name =
+                  s.fullName ||
+                  s.name ||
+                  s.firstName + " " + s.lastName ||
+                  s.username ||
+                  "—";
+                const level = s.learningLevel || s.level || "BEGINNER";
+                return `
                 <tr>
                   <td>
                     <div style="display:flex;align-items:center;gap:10px;">
@@ -1859,16 +1972,17 @@
                   <td style="font-size:13px;color:var(--text-400);">${s.createdAt ? new Date(s.createdAt).toLocaleDateString() : "—"}</td>
                 </tr>
               `;
-            }).join("")}
+              })
+              .join("")}
           </tbody>
         </table>
       </div>`;
-  } catch (e) {
-    console.error("Students API error:", e);
-    document.getElementById("students-list").innerHTML = 
-      `<div style="color:var(--accent-red);padding:20px;">⚠️ ${e.message}</div>`;
-  }
-}
+        } catch (e) {
+          console.error("Students API error:", e);
+          document.getElementById("students-list").innerHTML =
+            `<div style="color:var(--accent-red);padding:20px;">⚠️ ${e.message}</div>`;
+        }
+      }
 
       // ── TEACHER REVIEW REQUESTS ─────────────────────────────────────
       async function teacherReviewRequests() {
