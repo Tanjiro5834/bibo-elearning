@@ -20,7 +20,7 @@ public class LessonController {
     private final LessonService lessonService;
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER')")
     public ResponseEntity<LessonDetailResponse> createLesson(
             @Valid @RequestBody CreateLessonRequest request
     ) {
@@ -53,7 +53,7 @@ public class LessonController {
     }
 
     @GetMapping("/admin/{lessonId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER')")
     public ResponseEntity<LessonDetailResponse> getLessonById(
             @PathVariable Long lessonId
     ) {
@@ -61,7 +61,7 @@ public class LessonController {
     }
 
     @PutMapping("/{lessonId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER')")
     public ResponseEntity<LessonDetailResponse> updateLesson(
             @PathVariable Long lessonId,
             @RequestBody UpdateLessonRequest request
@@ -70,21 +70,21 @@ public class LessonController {
     }
 
     @PatchMapping("/{lessonId}/publish")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER')")
     public ResponseEntity<Void> publishLesson(@PathVariable Long lessonId) {
         lessonService.publishLesson(lessonId);
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{lessonId}/unpublish")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER')")
     public ResponseEntity<Void> unpublishLesson(@PathVariable Long lessonId) {
         lessonService.unpublishLesson(lessonId);
         return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{lessonId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER')")
     public ResponseEntity<Void> deleteLesson(@PathVariable Long lessonId) {
         lessonService.deleteLesson(lessonId);
         return ResponseEntity.noContent().build();
