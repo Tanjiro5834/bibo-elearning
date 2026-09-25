@@ -1,0 +1,1904 @@
+const API = "http://localhost:8080/api";
+let token = localStorage.getItem("bibo_admin_token") || null;
+let currentUser = JSON.parse(localStorage.getItem("bibo_admin_user") || "null");
+let userRole = "";
+
+if (!token || !currentUser) {
+  window.location.href = "admin_login.html";
+}
+
+// ── Determine Role ───────────────────────────────────────────
+userRole = String(
+  currentUser?.role?.name || currentUser?.roleName || currentUser?.role || "",
+).toUpperCase();
+const isAdmin = userRole === "ADMIN";
+const isTeacher = userRole === "TEACHER";
+
+if (!isAdmin && !isTeacher) {
+  alert(
+    "Access denied. Only ADMIN or TEACHER accounts can access this portal.",
+  );
+  window.location.href = "admin_login.html";
+}
+
+// ── Setup Sidebar ────────────────────────────────────────────
+const username = currentUser?.username || currentUser?.name || "—";
+document.getElementById("sidebar-username").textContent = username;
+
+const ADMIN_NAV = [
+  {
+    id: "admin-dashboard",
+    label: "Dashboard",
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
+    section: "Main",
+  },
+  {
+    id: "manage-accounts",
+    label: "Manage Accounts",
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+    section: "Operations",
+  },
+  {
+    id: "reports",
+    label: "Reports",
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
+    section: "Operations",
+  },
+  {
+    id: "analytics",
+    label: "Analytics",
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>',
+    section: "Operations",
+  },
+  {
+    id: "review-requests",
+    label: "Review Requests",
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
+    section: "Operations",
+  },
+  {
+    id: "admin-settings",
+    label: "Settings",
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+    section: "System",
+  },
+];
+
+const TEACHER_NAV = [
+  {
+    id: "teacher-dashboard",
+    label: "Dashboard",
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
+    section: "Main",
+  },
+  {
+    id: "subjects",
+    label: "Subjects",
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
+    section: "Content",
+  },
+  {
+    id: "lessons",
+    label: "Lessons",
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
+    section: "Content",
+  },
+  {
+    id: "sections",
+    label: "Sections",
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>',
+    section: "Content",
+  },
+  {
+    id: "quizzes",
+    label: "Quizzes",
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
+    section: "Content",
+  },
+  {
+    id: "students",
+    label: "Students",
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+    section: "Users",
+  },
+  {
+    id: "teacher-review-requests",
+    label: "Review Requests",
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
+    section: "Users",
+  },
+];
+
+const navItems = isAdmin ? ADMIN_NAV : TEACHER_NAV;
+
+// Render sidebar
+let lastSection = "";
+const navEl = document.getElementById("sidebar-nav-items");
+navItems.forEach((item) => {
+  if (item.section !== lastSection) {
+    const label = document.createElement("div");
+    label.className = "sidebar-section-label";
+    if (lastSection !== "") label.style.marginTop = "8px";
+    label.textContent = item.section;
+    navEl.appendChild(label);
+    lastSection = item.section;
+  }
+  const btn = document.createElement("button");
+  btn.className = "nav-item";
+  btn.dataset.page = item.id;
+  btn.innerHTML = `${item.icon}<span>${item.label}</span>`;
+  btn.onclick = () => navigate(item.id);
+  navEl.appendChild(btn);
+});
+
+document.getElementById("sidebar-role-label").textContent = isAdmin
+  ? "Admin Portal"
+  : "Teacher Portal";
+document.getElementById("sidebar-role-display").textContent = isAdmin
+  ? "🛡️ Administrator"
+  : "👩‍🏫 Teacher";
+
+// ── Data Maps ────────────────────────────────────────────────
+window._subjectMap = {};
+window._lessonMap = {};
+
+// ── API ─────────────────────────────────────────────────────
+async function apiFetch(method, path, body = null) {
+  const headers = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = "Bearer " + token;
+  const res = await fetch(API + path, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : null,
+  });
+  if (res.status === 401) {
+    logout();
+    return;
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok)
+    throw new Error(data.message || data.error || `HTTP ${res.status}`);
+  return data;
+}
+
+// ── Router ───────────────────────────────────────────────────
+const PAGE_MAP = {
+  // Admin pages
+  "admin-dashboard": adminDashboard,
+  "manage-accounts": manageAccounts,
+  reports: reports,
+  analytics: analytics,
+  "review-requests": reviewRequests,
+  "admin-settings": adminSettings,
+  // Teacher pages
+  "teacher-dashboard": teacherDashboard,
+  subjects: subjects,
+  lessons: lessons,
+  sections: sections,
+  quizzes: quizzes,
+  students: students,
+  "teacher-review-requests": teacherReviewRequests,
+};
+
+function navigate(page) {
+  document
+    .querySelectorAll(".nav-item")
+    .forEach((el) => el.classList.toggle("active", el.dataset.page === page));
+  if (PAGE_MAP[page]) PAGE_MAP[page]();
+  const s = document.getElementById("sidebar");
+  if (s.classList.contains("open")) toggleSidebar();
+  window.scrollTo(0, 0);
+}
+
+function toggleSidebar() {
+  document.getElementById("sidebar").classList.toggle("open");
+  document.getElementById("sidebar-overlay").classList.toggle("open");
+}
+
+function logout() {
+  localStorage.removeItem("bibo_admin_token");
+  localStorage.removeItem("bibo_admin_user");
+  window.location.href = "admin_login.html";
+}
+
+function showToast(msg, emoji = "✅") {
+  const t = document.getElementById("toast");
+  t.textContent = `${emoji} ${msg}`;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2800);
+}
+
+function Loading() {
+  return `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:16px;"><div class="spinner"></div><p style="color:var(--text-400);font-size:13px;font-weight:600;">Loading...</p></div>`;
+}
+function Empty(emoji, title, sub) {
+  return `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:12px;text-align:center;"><div style="font-size:44px;">${emoji}</div><h3>${title}</h3><p style="color:var(--text-400);font-size:13px;">${sub}</p></div>`;
+}
+function PageHeader(title, sub, btnLabel, btnFn) {
+  return `<div class="flex-between mb-32"><div><h1 style="font-size:26px;margin-bottom:4px;">${title}</h1><p style="color:var(--text-400);font-size:14px;">${sub}</p></div>${btnLabel ? `<button class="btn btn-primary" onclick="${btnFn}">${btnLabel}</button>` : ""}</div>`;
+}
+function openModal(html) {
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  overlay.id = "active-modal";
+  overlay.innerHTML = `<div class="modal">${html}</div>`;
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) closeModal();
+  });
+  document.body.appendChild(overlay);
+}
+function closeModal() {
+  document.getElementById("active-modal")?.remove();
+}
+
+const SUBJECT_STYLES = {
+  Math: { color: "#3B3FC4", pale: "#EEF0FF", icon: "🔢" },
+  Science: { color: "#0D9488", pale: "#CCFBF1", icon: "🔬" },
+  English: { color: "#3B3FC4", pale: "#EEF0FF", icon: "📘" },
+  Filipino: { color: "#EF4444", pale: "#FEE2E2", icon: "🇵🇭" },
+  Arts: { color: "#EC4899", pale: "#FCE7F3", icon: "🎨" },
+  Values: { color: "#10B981", pale: "#D1FAE5", icon: "🌟" },
+  default: { color: "#3B3FC4", pale: "#EEF0FF", icon: "📚" },
+};
+const getSubjectStyle = (n) => SUBJECT_STYLES[n] || SUBJECT_STYLES["default"];
+
+// ═══════════════════════════════════════════════════════════════
+// ADMIN PAGES
+// ═══════════════════════════════════════════════════════════════
+
+async function adminDashboard() {
+  document.getElementById("page-container").innerHTML = `<div class="page">
+    <div class="hero-banner" style="background:linear-gradient(135deg,#1E2A78 0%,#3B3FC4 60%,#5B60E0 100%);">
+      <div style="position:relative;z-index:1;">
+        <p style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;opacity:0.7;margin-bottom:8px;">🛡️ Admin Control Panel</p>
+        <h1 style="color:white;font-size:30px;font-weight:900;margin-bottom:8px;">Welcome back, ${username}!</h1>
+        <p style="color:rgba(255,255,255,0.75);font-size:14px;margin-bottom:22px;">Manage BIBO accounts, monitor platform health, and review reports.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn" style="background:rgba(255,255,255,0.15);color:white;padding:10px 18px;font-size:13px;border:1px solid rgba(255,255,255,0.2);" onclick="navigate('manage-accounts')">👥 Manage Accounts</button>
+          <button class="btn" style="background:rgba(255,255,255,0.15);color:white;padding:10px 18px;font-size:13px;border:1px solid rgba(255,255,255,0.2);" onclick="navigate('analytics')">📊 View Analytics</button>
+          <button class="btn" style="background:rgba(255,255,255,0.15);color:white;padding:10px 18px;font-size:13px;border:1px solid rgba(255,255,255,0.2);" onclick="navigate('review-requests')">📋 Review Requests</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-4 mb-32" id="admin-stats">
+      ${[1, 2, 3, 4].map(() => `<div class="card stat-card"><div class="spinner" style="margin:8px 0;"></div></div>`).join("")}
+    </div>
+
+    <div class="section-header"><span class="section-title">Quick Actions</span></div>
+    <div class="grid-3 mb-32">
+      ${[
+        {
+          icon: "👥",
+          label: "Manage Accounts",
+          sub: "Create, update, or deactivate user accounts",
+          page: "manage-accounts",
+          color: "#EEF0FF",
+        },
+        {
+          icon: "📊",
+          label: "Analytics",
+          sub: "Platform-wide usage stats and learning metrics",
+          page: "analytics",
+          color: "#D1FAE5",
+        },
+        {
+          icon: "📋",
+          label: "Review Requests",
+          sub: "Teacher review requests from parents",
+          page: "review-requests",
+          color: "#FEF3C7",
+        },
+        {
+          icon: "📄",
+          label: "Reports",
+          sub: "Generate and export system reports",
+          page: "reports",
+          color: "#FCE7F3",
+        },
+        {
+          icon: "⚙️",
+          label: "Settings",
+          sub: "System configuration and preferences",
+          page: "admin-settings",
+          color: "#CCFBF1",
+        },
+      ]
+        .map(
+          (a) => `
+        <div class="card card-interactive" style="padding:24px;" onclick="navigate('${a.page}')">
+          <div style="width:52px;height:52px;border-radius:14px;background:${a.color};display:flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:14px;">${a.icon}</div>
+          <h3 style="font-size:16px;margin-bottom:6px;">${a.label}</h3>
+          <p style="font-size:13px;color:var(--text-400);">${a.sub}</p>
+        </div>`,
+        )
+        .join("")}
+    </div>
+  </div>`;
+
+  try {
+    const users = await apiFetch("GET", "/admin/users").catch(() => []);
+    const students = (users || []).filter(
+      (u) => String(u.role?.name || u.role || "").toUpperCase() === "STUDENT",
+    );
+    const teachers = (users || []).filter(
+      (u) => String(u.role?.name || u.role || "").toUpperCase() === "TEACHER",
+    );
+    const parents = (users || []).filter(
+      (u) => String(u.role?.name || u.role || "").toUpperCase() === "PARENT",
+    );
+
+    document.getElementById("admin-stats").innerHTML = [
+      {
+        label: "Total Users",
+        value: users?.length ?? "—",
+        icon: "👥",
+        color: "var(--primary)",
+      },
+      {
+        label: "Students",
+        value: students.length,
+        icon: "🎒",
+        color: "var(--accent-green)",
+      },
+      {
+        label: "Parents",
+        value: parents.length,
+        icon: "👨‍👩‍👧",
+        color: "var(--accent-orange)",
+      },
+      {
+        label: "Teachers",
+        value: teachers.length,
+        icon: "👩‍🏫",
+        color: "var(--primary-mid)",
+      },
+    ]
+      .map(
+        (s) => `
+      <div class="card stat-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <span class="stat-label">${s.label}</span><span style="font-size:22px;">${s.icon}</span>
+        </div>
+        <div class="stat-value" style="color:${s.color};">${s.value}</div>
+      </div>`,
+      )
+      .join("");
+  } catch (e) {
+    document.getElementById("admin-stats").innerHTML =
+      `<div style="color:var(--accent-red);padding:16px;grid-column:1/-1;">⚠️ Could not load stats: ${e.message}</div>`;
+  }
+}
+
+// ── MANAGE ACCOUNTS ──────────────────────────────────────────
+async function manageAccounts() {
+  document.getElementById("page-container").innerHTML = `<div class="page">
+    ${PageHeader("Manage Accounts", "Create, update, and deactivate user accounts", "+ New Account", "openCreateAccount()")}
+
+    <!-- Role Filter -->
+    <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;" id="role-filters">
+      ${["All", "Student", "Parent", "Teacher", "Admin"]
+        .map(
+          (r, i) => `
+        <button onclick="filterAccounts('${r.toUpperCase()}')" id="rf-${r}" class="btn btn-sm" style="background:${i === 0 ? "var(--primary)" : "var(--bg)"};color:${i === 0 ? "white" : "var(--text-500)"};">${r}</button>
+      `,
+        )
+        .join("")}
+    </div>
+
+    <div id="accounts-list">${Loading()}</div>
+  </div>`;
+  await loadAccounts();
+}
+
+let _allAccounts = [];
+
+async function loadAccounts(roleFilter = "ALL") {
+  try {
+    _allAccounts = (await apiFetch("GET", "/admin/users")) || [];
+    filterAccounts(roleFilter);
+  } catch (e) {
+    document.getElementById("accounts-list").innerHTML =
+      `<div style="color:var(--accent-red);padding:20px;">⚠️ ${e.message}</div>`;
+  }
+}
+
+function filterAccounts(role) {
+  document.querySelectorAll('[id^="rf-"]').forEach((btn) => {
+    const isActive =
+      btn.id === `rf-${role.charAt(0) + role.slice(1).toLowerCase()}` ||
+      (role === "ALL" && btn.id === "rf-All");
+    btn.style.background = isActive ? "var(--primary)" : "var(--bg)";
+    btn.style.color = isActive ? "white" : "var(--text-500)";
+  });
+
+  const filtered =
+    role === "ALL"
+      ? _allAccounts
+      : _allAccounts.filter(
+          (u) => String(u.role?.name || u.role || "").toUpperCase() === role,
+        );
+
+  if (!filtered.length) {
+    document.getElementById("accounts-list").innerHTML = Empty(
+      "👥",
+      "No accounts found",
+      "No accounts match this filter.",
+    );
+    return;
+  }
+
+  document.getElementById("accounts-list").innerHTML = `
+    <div class="card" style="overflow:hidden;">
+      <table class="data-table">
+        <thead><tr>
+          <th>User</th><th>Username</th><th>Email</th><th>Role</th><th>Status</th><th style="text-align:right;">Actions</th>
+        </tr></thead>
+        <tbody>
+          ${filtered
+            .map((u) => {
+              const role = String(u.role?.name || u.role || "").toUpperCase();
+              const roleBadge =
+                {
+                  ADMIN: "badge-purple",
+                  TEACHER: "badge-blue",
+                  STUDENT: "badge-green",
+                  PARENT: "badge-orange",
+                }[role] || "badge-gray";
+              const initial = (u.firstName ||
+                u.username ||
+                "?")[0].toUpperCase();
+              const isEnabled = u.enabled !== false;
+              return `<tr>
+              <td>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div style="width:36px;height:36px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--primary);font-size:14px;">${initial}</div>
+                  <div>
+                    <div style="font-weight:700;color:var(--text-900);">${u.firstName || ""} ${u.lastName || ""}</div>
+                    <div style="font-size:12px;color:var(--text-400);">ID: ${u.id}</div>
+                  </div>
+                </div>
+              </td>
+              <td style="color:var(--text-400);">@${u.username || "—"}</td>
+              <td style="font-size:13px;color:var(--text-500);">${u.email || "—"}</td>
+              <td><span class="badge ${roleBadge}">${role}</span></td>
+              <td><span class="badge ${isEnabled ? "badge-green" : "badge-red"}">${isEnabled ? "Active" : "Inactive"}</span></td>
+              <td style="text-align:right;">
+                <div style="display:flex;gap:6px;justify-content:flex-end;">
+                  <button class="btn btn-sm btn-ghost" onclick="openEditAccount(${u.id})">Edit</button>
+                  ${
+                    isEnabled
+                      ? `<button class="btn btn-sm btn-danger" onclick="deactivateAccount(${u.id})">Deactivate</button>`
+                      : `<button class="btn btn-sm" style="background:#ECFDF5;color:#047857;" onclick="activateAccount(${u.id})">Activate</button>`
+                  }
+                </div>
+              </td>
+            </tr>`;
+            })
+            .join("")}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function openCreateAccount() {
+  openModal(`
+        <div class="modal-header">
+          <div class="modal-title">👥 New Account</div>
+          <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <div id="acc-err" style="display:none;background:#FEE2E2;color:#991B1B;font-size:13px;font-weight:700;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:14px;"></div>
+
+        <p style="font-size:12px;font-weight:700;color:var(--text-400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">Parent Account</p>
+        <div class="field-row">
+          <div class="field"><label>First Name</label><input id="acc-fname" class="bibo-input" placeholder="Maria" /></div>
+          <div class="field"><label>Last Name</label><input id="acc-lname" class="bibo-input" placeholder="Santos" /></div>
+        </div>
+        <div class="field"><label>Username</label><input id="acc-username" class="bibo-input" placeholder="mariasantos" /></div>
+        <div class="field"><label>Email</label><input id="acc-email" class="bibo-input" type="email" placeholder="maria@email.com" /></div>
+        <div class="field"><label>Password</label><input id="acc-password" class="bibo-input" type="password" placeholder="Minimum 8 characters" /></div>
+        <div class="field"><label>Role</label>
+          <select id="acc-role" class="bibo-input" onchange="toggleChildForm(this.value)">
+            <option value="TEACHER">Teacher</option>
+            <option value="PARENT">Parent</option>
+            <option value="ADMIN">Admin</option>
+          </select>
+        </div>
+
+        <div id="child-section" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <p style="font-size:12px;font-weight:700;color:var(--text-400);text-transform:uppercase;letter-spacing:0.5px;">Children</p>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <label style="font-size:12px;font-weight:700;color:var(--text-500);">How many?</label>
+              <input id="child-count-select" class="bibo-input" type="number" min="1" max="10" value="1"
+                style="width:80px;padding:6px 10px;"
+                oninput="renderChildForms(this.value)" />
+            </div>
+          </div>
+          <div id="child-forms-container"></div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:18px;">
+          <button class="btn btn-ghost" style="flex:1;" onclick="closeModal()">Cancel</button>
+          <button class="btn btn-primary" style="flex:1;" id="acc-btn" onclick="submitCreateAccount()">Create Account</button>
+        </div>
+      `);
+}
+
+function toggleChildForm(role) {
+  const section = document.getElementById("child-section");
+  if (role === "PARENT") {
+    section.style.display = "";
+    renderChildForms(1);
+  } else {
+    section.style.display = "none";
+  }
+}
+
+function renderChildForms(count) {
+  const container = document.getElementById("child-forms-container");
+  container.innerHTML = "";
+  for (let i = 1; i <= parseInt(count); i++) {
+    container.innerHTML += `
+          <div style="background:var(--bg);border-radius:var(--radius-md);padding:16px;margin-bottom:12px;">
+            <p style="font-size:12px;font-weight:700;color:var(--text-500);margin-bottom:10px;">Child ${i}</p>
+            <div class="field-row">
+              <div class="field"><label>First Name</label><input id="child-fname-${i}" class="bibo-input" placeholder="Juan" /></div>
+              <div class="field"><label>Last Name</label><input id="child-lname-${i}" class="bibo-input" placeholder="Santos" /></div>
+            </div>
+            <div class="field"><label>Username</label><input id="child-username-${i}" class="bibo-input" placeholder="juansantos${i}" /></div>
+            <div class="field"><label>Email</label><input id="child-email-${i}" class="bibo-input" type="email" placeholder="juan${i}@email.com" /></div>
+            <div class="field"><label>Password</label><input id="child-password-${i}" class="bibo-input" type="password" placeholder="Minimum 8 characters" /></div>
+            <div class="field-row">
+              <div class="field"><label>Age</label><input id="child-age-${i}" class="bibo-input" type="number" placeholder="8" /></div>
+              <div class="field"><label>Grade</label><input id="child-grade-${i}" class="bibo-input" placeholder="Grade 3" /></div>
+            </div>
+            <div class="field"><label>School</label><input id="child-school-${i}" class="bibo-input" placeholder="BIBO Elementary" /></div>
+          </div>
+        `;
+  }
+}
+
+async function submitCreateAccount() {
+  const role = document.getElementById("acc-role").value;
+  const errEl = document.getElementById("acc-err");
+  const btn = document.getElementById("acc-btn");
+
+  const body = {
+    firstName: document.getElementById("acc-fname").value.trim(),
+    lastName: document.getElementById("acc-lname").value.trim(),
+    username: document.getElementById("acc-username").value.trim(),
+    email: document.getElementById("acc-email").value.trim(),
+    password: document.getElementById("acc-password").value.trim(),
+    role,
+  };
+
+  if (!body.username || !body.email || !body.password) {
+    errEl.textContent = "Username, email and password are required.";
+    errEl.style.display = "";
+    return;
+  }
+
+  if (role === "PARENT") {
+    const count = parseInt(document.getElementById("child-count-select").value);
+    const children = [];
+
+    for (let i = 1; i <= count; i++) {
+      const child = {
+        firstName: document.getElementById(`child-fname-${i}`).value.trim(),
+        lastName: document.getElementById(`child-lname-${i}`).value.trim(),
+        username: document.getElementById(`child-username-${i}`).value.trim(),
+        email: document.getElementById(`child-email-${i}`).value.trim(),
+        password: document.getElementById(`child-password-${i}`).value.trim(),
+        age: parseInt(document.getElementById(`child-age-${i}`).value) || null,
+        grade: document.getElementById(`child-grade-${i}`).value.trim(),
+        school: document.getElementById(`child-school-${i}`).value.trim(),
+      };
+
+      if (!child.username || !child.email || !child.password) {
+        errEl.textContent = `Child ${i}: username, email and password are required.`;
+        errEl.style.display = "";
+        return;
+      }
+
+      children.push(child);
+    }
+
+    body.children = children;
+  }
+
+  btn.disabled = true;
+  btn.textContent = "Creating...";
+
+  try {
+    await apiFetch("POST", "/admin/users", body);
+    closeModal();
+    showToast("Account created!", "👥");
+    await loadAccounts();
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.style.display = "";
+    btn.disabled = false;
+    btn.textContent = "Create Account";
+  }
+}
+
+function openEditAccount(id) {
+  const u = _allAccounts.find((a) => a.id === id);
+  if (!u) return;
+  openModal(`
+    <div class="modal-header"><div class="modal-title">✏️ Edit Account</div><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div id="eacc-err" style="display:none;background:#FEE2E2;color:#991B1B;font-size:13px;font-weight:700;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:14px;"></div>
+    <div class="field-row">
+      <div class="field"><label>First Name</label><input id="eacc-fname" class="bibo-input" value="${u.firstName || ""}" /></div>
+      <div class="field"><label>Last Name</label><input id="eacc-lname" class="bibo-input" value="${u.lastName || ""}" /></div>
+    </div>
+    <div class="field"><label>Email</label><input id="eacc-email" class="bibo-input" type="email" value="${u.email || ""}" /></div>
+    <div style="display:flex;gap:10px;margin-top:8px;">
+      <button class="btn btn-ghost" style="flex:1;" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" style="flex:1;" id="eacc-btn" onclick="submitEditAccount(${id})">Save Changes</button>
+    </div>`);
+}
+
+async function submitEditAccount(id) {
+  const firstName = document.getElementById("eacc-fname").value.trim();
+  const lastName = document.getElementById("eacc-lname").value.trim();
+  const email = document.getElementById("eacc-email").value.trim();
+  const errEl = document.getElementById("eacc-err");
+  const btn = document.getElementById("eacc-btn");
+  btn.disabled = true;
+  btn.textContent = "Saving...";
+  try {
+    await apiFetch("PUT", `/admin/users/${id}`, {
+      firstName,
+      lastName,
+      email,
+    });
+    closeModal();
+    showToast("Account updated!", "✏️");
+    await loadAccounts();
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.style.display = "";
+    btn.disabled = false;
+    btn.textContent = "Save Changes";
+  }
+}
+
+async function deactivateAccount(id) {
+  if (!confirm("Deactivate this account?")) return;
+  try {
+    await apiFetch("PATCH", `/admin/users/${id}/deactivate`);
+    showToast("Account deactivated.", "🛑");
+    await loadAccounts();
+  } catch (e) {
+    showToast(e.message, "⚠️");
+  }
+}
+async function activateAccount(id) {
+  if (!confirm("Activate this account?")) return;
+  try {
+    await apiFetch("PATCH", `/admin/users/${id}/activate`);
+    showToast("Account activated.", "✅");
+    await loadAccounts();
+  } catch (e) {
+    showToast(e.message, "⚠️");
+  }
+}
+
+// ── REPORTS ─────────────────────────────────────────────────
+async function reports() {
+  document.getElementById("page-container").innerHTML = `<div class="page">
+    ${PageHeader("Reports", "Generate and export platform reports", "", "")}
+    <div class="grid-2 mb-24">
+      ${[
+        {
+          icon: "👥",
+          title: "User Report",
+          sub: "All registered users by role and status",
+          endpoint: "/admin/reports/users",
+          color: "#EEF0FF",
+        },
+        {
+          icon: "📚",
+          title: "Content Report",
+          sub: "Subjects, lessons, and sections summary",
+          endpoint: "/admin/reports/content",
+          color: "#D1FAE5",
+        },
+        {
+          icon: "📊",
+          title: "Progress Report",
+          sub: "Student progress across all subjects",
+          endpoint: "/admin/reports/progress",
+          color: "#FEF3C7",
+        },
+        {
+          icon: "✅",
+          title: "Quiz Report",
+          sub: "Quiz attempts, scores, and pass rates",
+          endpoint: "/admin/reports/quizzes",
+          color: "#FCE7F3",
+        },
+      ]
+        .map(
+          (r) => `
+        <div class="card" style="padding:24px;">
+          <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
+            <div style="width:48px;height:48px;border-radius:14px;background:${r.color};display:flex;align-items:center;justify-content:center;font-size:24px;">${r.icon}</div>
+            <div>
+              <p style="font-weight:800;font-size:15px;color:var(--text-900);">${r.title}</p>
+              <p style="font-size:12px;color:var(--text-400);">${r.sub}</p>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="showToast('Generating report...','📄');setTimeout(()=>showToast('Report ready! (connect backend)','✅'),1500)">Preview</button>
+            <button class="btn btn-primary btn-sm" style="flex:1;" onclick="showToast('Export coming soon!','📥')">Export CSV</button>
+          </div>
+        </div>`,
+        )
+        .join("")}
+    </div>
+    <div class="card" style="padding:24px;">
+      <p style="font-weight:800;font-size:15px;color:var(--text-900);margin-bottom:4px;">📅 Scheduled Reports</p>
+      <p style="font-size:13px;color:var(--text-400);margin-bottom:16px;">Set up automatic weekly or monthly report emails.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <select class="bibo-input" style="width:auto;flex:1;min-width:160px;"><option>Weekly</option><option>Monthly</option></select>
+        <input class="bibo-input" type="email" placeholder="Send to email..." style="flex:2;min-width:200px;" />
+        <button class="btn btn-primary" onclick="showToast('Scheduled report saved!','📅')">Schedule</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── ANALYTICS ────────────────────────────────────────────────
+async function analytics() {
+  document.getElementById("page-container").innerHTML = `<div class="page">
+    ${PageHeader("Analytics", "Platform-wide learning and usage metrics", "", "")}
+    <div class="grid-4 mb-24" id="analytics-stats">
+      ${[1, 2, 3, 4].map(() => `<div class="card stat-card"><div class="spinner"></div></div>`).join("")}
+    </div>
+
+    <div class="grid-2 mb-24">
+      <!-- Lessons Completed Per Subject -->
+      <div class="card" style="padding:24px;">
+        <p style="font-weight:800;font-size:15px;color:var(--text-900);margin-bottom:4px;">Lessons Completed by Subject</p>
+        <p style="font-size:12px;color:var(--text-400);margin-bottom:20px;">Across all students</p>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          ${[
+            { label: "Filipino", pct: 78, color: "#ef4444", icon: "🇵🇭" },
+            { label: "Math", pct: 62, color: "#3b3fc4", icon: "🔢" },
+            { label: "English", pct: 85, color: "#f59e0b", icon: "📘" },
+            { label: "Science", pct: 54, color: "#0d9488", icon: "🔬" },
+          ]
+            .map(
+              (s) => `
+            <div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                <span style="font-size:13px;font-weight:600;">${s.icon} ${s.label}</span>
+                <span style="font-size:13px;font-weight:800;color:${s.color};">${s.pct}%</span>
+              </div>
+              <div class="progress-track"><div class="progress-fill" style="width:${s.pct}%;background:${s.color};"></div></div>
+            </div>`,
+            )
+            .join("")}
+        </div>
+      </div>
+
+      <!-- Weekly Active Users -->
+      <div class="card" style="padding:24px;">
+        <p style="font-weight:800;font-size:15px;color:var(--text-900);margin-bottom:4px;">Weekly Active Users</p>
+        <p style="font-size:12px;color:var(--text-400);margin-bottom:20px;">Logins per day this week</p>
+        <div style="display:flex;gap:8px;align-items:flex-end;height:100px;">
+          ${[
+            { d: "Mon", v: 42 },
+            { d: "Tue", v: 58 },
+            { d: "Wed", v: 35 },
+            { d: "Thu", v: 71 },
+            { d: "Fri", v: 49 },
+            { d: "Sat", v: 22 },
+            { d: "Sun", v: 18 },
+          ]
+            .map((d) => {
+              const h = Math.round((d.v / 71) * 80) + 10;
+              return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+              <span style="font-size:10px;font-weight:700;color:var(--text-700);">${d.v}</span>
+              <div style="width:100%;height:${h}px;background:var(--primary);border-radius:6px 6px 3px 3px;opacity:0.85;"></div>
+              <span style="font-size:10px;color:var(--text-400);">${d.d}</span>
+            </div>`;
+            })
+            .join("")}
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Performing Students -->
+    <div class="card" style="padding:24px;">
+      <p style="font-weight:800;font-size:15px;color:var(--text-900);margin-bottom:16px;">🏆 Top Performing Students</p>
+      <div id="top-students">${Loading()}</div>
+    </div>
+  </div>`;
+
+  try {
+    const users = await apiFetch("GET", "/admin/users").catch(() => []);
+    const students = (users || []).filter(
+      (u) => String(u.role?.name || u.role || "").toUpperCase() === "STUDENT",
+    );
+    document.getElementById("analytics-stats").innerHTML = [
+      {
+        label: "Active Students",
+        value: students.length,
+        icon: "🎒",
+        color: "var(--primary)",
+      },
+      {
+        label: "Avg. Progress",
+        value: "68%",
+        icon: "📊",
+        color: "var(--accent-green)",
+      },
+      {
+        label: "Quizzes Taken",
+        value: "—",
+        icon: "✅",
+        color: "var(--accent-orange)",
+      },
+      {
+        label: "Lessons Done",
+        value: "—",
+        icon: "📚",
+        color: "var(--primary-mid)",
+      },
+    ]
+      .map(
+        (s) =>
+          `<div class="card stat-card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><span class="stat-label">${s.label}</span><span style="font-size:22px;">${s.icon}</span></div><div class="stat-value" style="color:${s.color};">${s.value}</div></div>`,
+      )
+      .join("");
+
+    document.getElementById("top-students").innerHTML = students.length
+      ? `
+      <table class="data-table">
+        <thead><tr><th>#</th><th>Student</th><th>Username</th><th>Progress</th></tr></thead>
+        <tbody>
+          ${students
+            .slice(0, 5)
+            .map(
+              (s, i) => `<tr>
+            <td><span style="font-weight:800;color:var(--primary);">${i + 1}</span></td>
+            <td><div style="display:flex;align-items:center;gap:8px;">
+              <div style="width:30px;height:30px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--primary);font-size:12px;">${(s.firstName || s.username || "?")[0].toUpperCase()}</div>
+              <span style="font-weight:600;">${s.firstName || ""} ${s.lastName || ""}</span>
+            </div></td>
+            <td style="color:var(--text-400);">@${s.username || "—"}</td>
+            <td><span class="badge badge-green">—%</span></td>
+          </tr>`,
+            )
+            .join("")}
+        </tbody>
+      </table>`
+      : Empty("🏆", "No students yet", "Students appear here once registered.");
+  } catch (e) {}
+}
+
+// ── REVIEW REQUESTS ──────────────────────────────────────────
+async function reviewRequests() {
+  document.getElementById("page-container").innerHTML = `<div class="page">
+    ${PageHeader("Review Requests", "Teacher review requests submitted by parents", "", "")}
+    <div id="review-list">${Loading()}</div>
+  </div>`;
+
+  try {
+    const data = await apiFetch("GET", "/admin/review-requests").catch(
+      () => [],
+    );
+    if (!data?.length) {
+      document.getElementById("review-list").innerHTML = Empty(
+        "📋",
+        "No requests yet",
+        "Parent review requests will appear here.",
+      );
+      return;
+    }
+    document.getElementById("review-list").innerHTML = `
+      <div class="card" style="overflow:hidden;">
+        <table class="data-table">
+          <thead><tr><th>Parent</th><th>Child</th><th>Requested</th><th>Status</th><th style="text-align:right;">Actions</th></tr></thead>
+          <tbody>
+            ${data
+              .map(
+                (r) => `<tr>
+              <td style="font-weight:600;">@${r.parentUsername || r.parent?.username || "—"}</td>
+              <td style="font-weight:600;">@${r.childUsername || r.child?.username || "—"}</td>
+              <td style="font-size:13px;color:var(--text-400);">${r.requestedAt ? new Date(r.requestedAt).toLocaleDateString() : "—"}</td>
+              <td><span class="badge ${{ PENDING: "badge-orange", IN_REVIEW: "badge-blue", DONE: "badge-green" }[r.status] || "badge-gray"}">${r.status || "PENDING"}</span></td>
+              <td style="text-align:right;">
+                <div style="display:flex;gap:6px;justify-content:flex-end;">
+                  ${r.status === "PENDING" ? `<button class="btn btn-sm btn-ghost" onclick="updateReviewStatus(${r.id},'IN_REVIEW')">Start Review</button>` : ""}
+                  ${r.status === "IN_REVIEW" ? `<button class="btn btn-sm" style="background:#ECFDF5;color:#047857;" onclick="updateReviewStatus(${r.id},'DONE')">Mark Done</button>` : ""}
+                </div>
+              </td>
+            </tr>`,
+              )
+              .join("")}
+          </tbody>
+        </table>
+      </div>`;
+  } catch (e) {
+    document.getElementById("review-list").innerHTML =
+      `<div style="color:var(--accent-red);padding:20px;">⚠️ ${e.message}</div>`;
+  }
+}
+
+async function updateReviewStatus(id, status) {
+  try {
+    await apiFetch("PATCH", `/admin/review-requests/${id}/status`, {
+      status,
+    });
+    showToast(`Status updated to ${status}`, "✅");
+    await reviewRequests();
+  } catch (e) {
+    showToast(e.message, "⚠️");
+  }
+}
+
+// ── ADMIN SETTINGS ───────────────────────────────────────────
+function adminSettings() {
+  document.getElementById("page-container").innerHTML = `<div class="page">
+    ${PageHeader("Settings", "System configuration and preferences", "", "")}
+    <div style="display:flex;flex-direction:column;gap:16px;max-width:640px;">
+      <div class="card" style="padding:24px;">
+        <p style="font-weight:800;font-size:15px;color:var(--text-900);margin-bottom:4px;">🔐 Change Password</p>
+        <p style="font-size:13px;color:var(--text-400);margin-bottom:16px;">Update your admin account password.</p>
+        <div class="field"><label>Current Password</label><input class="bibo-input" type="password" placeholder="Enter current password" /></div>
+        <div class="field"><label>New Password</label><input class="bibo-input" type="password" placeholder="Enter new password" /></div>
+        <div class="field"><label>Confirm Password</label><input class="bibo-input" type="password" placeholder="Repeat new password" /></div>
+        <button class="btn btn-primary" onclick="showToast('Password updated!','🔐')">Update Password</button>
+      </div>
+      <div class="card" style="padding:24px;">
+        <p style="font-weight:800;font-size:15px;color:var(--text-900);margin-bottom:4px;">🌐 API Configuration</p>
+        <p style="font-size:13px;color:var(--text-400);margin-bottom:16px;">Backend API base URL used by this portal.</p>
+        <div class="field"><label>API Base URL</label><input class="bibo-input" value="${API}" /></div>
+        <button class="btn btn-primary" onclick="showToast('Settings saved!','⚙️')">Save</button>
+      </div>
+      <div class="card" style="padding:24px;border:1.5px solid #FEE2E2;">
+        <p style="font-weight:800;font-size:15px;color:var(--accent-red);margin-bottom:4px;">⚠️ Danger Zone</p>
+        <p style="font-size:13px;color:var(--text-400);margin-bottom:16px;">These actions are irreversible. Proceed with caution.</p>
+        <button class="btn btn-danger" onclick="showToast('Feature coming soon','⚠️')">Clear All Student Progress</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TEACHER PAGES (moved from original admin dashboard)
+// ═══════════════════════════════════════════════════════════════
+
+// ── TEACHER DASHBOARD ───────────────────────────────────────────
+async function teacherDashboard() {
+  document.getElementById("page-container").innerHTML = `
+          <div class="page">
+            <div class="hero-banner" style="background:linear-gradient(135deg,#065f46 0%,#10b981 60%,#34d399 100%);">
+              <div style="position:relative;z-index:1;">
+                <p style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;opacity:0.7;margin-bottom:8px;">👩‍🏫 TEACHER PORTAL</p>
+                <h1 style="color:white;font-size:30px;font-weight:900;margin-bottom:8px;">Welcome back, ${username}!</h1>
+                <p style="color:rgba(255,255,255,0.85);font-size:14px;">Manage your classes and respond to parent requests.</p>
+              </div>
+            </div>
+
+            <div class="grid-4 mb-32" id="teacher-stats">
+              ${[1, 2, 3, 4].map(() => `<div class="card stat-card"><div class="spinner"></div></div>`).join("")}
+            </div>
+
+            <div class="section-header"><span class="section-title">Quick Actions</span></div>
+            <div class="grid-3 mb-32">
+              ${[
+                { icon: "📚", label: "Subjects", page: "subjects" },
+                { icon: "📝", label: "Lessons", page: "lessons" },
+                { icon: "✅", label: "Quizzes", page: "quizzes" },
+                { icon: "👥", label: "My Students", page: "students" },
+                {
+                  icon: "📋",
+                  label: "Review Requests",
+                  page: "teacher-review-requests",
+                },
+              ]
+                .map(
+                  (a) => `
+                <div class="card card-interactive" style="padding:24px;" onclick="navigate('${a.page}')">
+                  <div style="width:52px;height:52px;border-radius:14px;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:14px;">${a.icon}</div>
+                  <h3 style="font-size:16px;margin-bottom:6px;">${a.label}</h3>
+                </div>
+              `,
+                )
+                .join("")}
+            </div>
+          </div>`;
+
+  try {
+    console.log("🔄 Loading teacher dashboard stats...");
+
+    let studentCount = 0;
+    try {
+      const studentsData = await apiFetch("GET", "/teacher/students");
+      const reviewRequests = await apiFetch("GET", "/teacher/review-requests");
+      //document.getElementById("total-students-stat").textContent = Array.isArray(studentsData) ? studentsData.length : 0;
+
+      if (Array.isArray(studentsData)) {
+        studentCount = studentsData.length;
+      } else if (studentsData && typeof studentsData === "object") {
+        // Check for paginated response
+        if (Array.isArray(studentsData.content)) {
+          studentCount = studentsData.content.length;
+        } else if (Array.isArray(studentsData.students)) {
+          studentCount = studentsData.students.length;
+        } else if (Array.isArray(studentsData.data)) {
+          studentCount = studentsData.data.length;
+        } else if (studentsData.totalElements !== undefined) {
+          studentCount = studentsData.totalElements;
+        } else {
+          // If it's a single object but not empty
+          studentCount = Object.keys(studentsData).length > 0 ? 1 : 0;
+        }
+      }
+
+      console.log("✅ Final student count:", studentCount);
+    } catch (e) {
+      console.error("❌ Students API failed:", e.message);
+    }
+
+    // Subjects
+    let subjectCount = 0;
+    try {
+      const subjects = await apiFetch("GET", "/subjects");
+      subjectCount = Array.isArray(subjects) ? subjects.length : 0;
+    } catch (e) {}
+
+    let lessonCount = 0;
+    try {
+      const subjects = await apiFetch("GET", "/subjects");
+      if (Array.isArray(subjects) && subjects.length > 0) {
+        for (const sub of subjects) {
+          try {
+            const lessons = await apiFetch("GET", `/lessons/subject/${sub.id}`);
+            lessonCount += Array.isArray(lessons) ? lessons.length : 0;
+          } catch (e) {}
+        }
+      }
+    } catch (e) {
+      console.warn("⚠️ Lessons count failed:", e.message);
+    }
+
+    let reviewCount = 0;
+    try {
+      const reviews = await apiFetch("GET", "/teacher/review-requests");
+      reviewCount = Array.isArray(reviews) ? reviews.length : 0;
+    } catch (e) {}
+
+    document.getElementById("teacher-stats").innerHTML = `
+            <div class="card stat-card">
+              <div class="stat-label">MY STUDENTS</div>
+              <div class="stat-value" style="color:var(--accent-green);">${studentCount}</div>
+            </div>
+            <div class="card stat-card">
+              <div class="stat-label">REVIEW REQUESTS</div>
+              <div class="stat-value" style="color:var(--accent-orange);">${reviewCount}</div>
+            </div>
+            <div class="card stat-card">
+              <div class="stat-label">SUBJECTS</div>
+              <div class="stat-value" style="color:var(--primary);">${subjectCount}</div>
+            </div>
+            <div class="card stat-card">
+              <div class="stat-label">ACTIVE LESSONS</div>
+              <div class="stat-value" style="color:var(--accent-green);">${lessonCount}</div>
+            </div>
+          `;
+  } catch (e) {
+    console.error("Dashboard error:", e);
+    document.getElementById("teacher-stats").innerHTML = `
+            <div style="grid-column:1/-1; padding:30px; text-align:center; color:var(--accent-red);">
+              ⚠️ Could not load some statistics
+            </div>`;
+  }
+}
+
+// ── STUDENTS ─────────────────────────────────────────────────────
+async function students() {
+  document.getElementById("page-container").innerHTML = `
+    <div class="page">
+      ${PageHeader("My Students", "Students under your supervision", "", "")}
+      <div id="students-list">${Loading()}</div>
+    </div>`;
+
+  try {
+    const data = await apiFetch("GET", "/teacher/students");
+    console.log("API Response:", data); // Debug log
+
+    // Handle different response formats
+    let studentsList = [];
+    if (Array.isArray(data)) {
+      studentsList = data;
+    } else if (data && typeof data === "object") {
+      // Try common response structures
+      if (Array.isArray(data.content)) studentsList = data.content;
+      else if (Array.isData(data.students)) studentsList = data.students;
+      else if (Array.isArray(data.data)) studentsList = data.data;
+      else if (data.totalElements !== undefined && data.content)
+        studentsList = data.content;
+    }
+
+    if (!studentsList || studentsList.length === 0) {
+      document.getElementById("students-list").innerHTML = Empty(
+        "👥",
+        "No students yet",
+        "Students will appear here once assigned.",
+      );
+      return;
+    }
+
+    document.getElementById("students-list").innerHTML = `
+      <div class="card" style="overflow:hidden;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Username</th>
+              <th>Level</th>
+              <th>Joined</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${studentsList
+              .map((s) => {
+                const name =
+                  s.fullName ||
+                  s.name ||
+                  s.firstName + " " + s.lastName ||
+                  s.username ||
+                  "—";
+                const level = s.learningLevel || s.level || "BEGINNER";
+                return `
+                <tr>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                      <div style="width:36px;height:36px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--primary);font-size:14px;">
+                        ${(name[0] || "?").toUpperCase()}
+                      </div>
+                      <span style="font-weight:600;">${name}</span>
+                    </div>
+                  </td>
+                  <td style="color:var(--text-400);">@${s.username || "—"}</td>
+                  <td><span class="badge badge-blue">${level}</span></td>
+                  <td style="font-size:13px;color:var(--text-400);">${s.createdAt ? new Date(s.createdAt).toLocaleDateString() : "—"}</td>
+                </tr>
+              `;
+              })
+              .join("")}
+          </tbody>
+        </table>
+      </div>`;
+  } catch (e) {
+    console.error("Students API error:", e);
+    document.getElementById("students-list").innerHTML =
+      `<div style="color:var(--accent-red);padding:20px;">⚠️ ${e.message}</div>`;
+  }
+}
+
+// ── TEACHER REVIEW REQUESTS ─────────────────────────────────────
+async function teacherReviewRequests() {
+  document.getElementById("page-container").innerHTML = `
+    <div class="page">
+      ${PageHeader("Review Requests", "Parent requests for progress review", "", "")}
+      <div id="teacher-review-list">${Loading()}</div>
+    </div>`;
+
+  try {
+    const data = await apiFetch("GET", "/teacher/review-requests");
+    if (!data?.length) {
+      document.getElementById("teacher-review-list").innerHTML = Empty(
+        "📋",
+        "No review requests",
+        "Parent requests will appear here.",
+      );
+      return;
+    }
+
+    document.getElementById("teacher-review-list").innerHTML = `
+      <div class="card" style="overflow:hidden;">
+        <table class="data-table">
+          <thead><tr><th>Parent</th><th>Child</th><th>Requested</th><th>Status</th><th style="text-align:right;">Actions</th></tr></thead>
+          <tbody>
+            ${data
+              .map(
+                (r) => `
+              <tr>
+                <td style="font-weight:600;">${r.parentName || "@" + (r.parentUsername || "—")}</td>
+                <td style="font-weight:600;">${r.childName || "@" + (r.childUsername || "—")}</td>
+                <td style="font-size:13px;color:var(--text-400);">${r.requestedAt ? new Date(r.requestedAt).toLocaleDateString() : "—"}</td>
+                <td><span class="badge ${r.status === "PENDING" ? "badge-orange" : r.status === "IN_REVIEW" ? "badge-blue" : "badge-green"}">${r.status}</span></td>
+                <td style="text-align:right;">
+                  ${
+                    r.status === "PENDING"
+                      ? `<button class="btn btn-sm" style="background:#ECFDF5;color:#047857;" onclick="updateTeacherReviewStatus(${r.id}, 'IN_REVIEW')">Start Review</button>`
+                      : ""
+                  }
+                  ${
+                    r.status === "IN_REVIEW"
+                      ? `<button class="btn btn-sm btn-primary" onclick="updateTeacherReviewStatus(${r.id}, 'DONE')">Mark Done</button>`
+                      : ""
+                  }
+                </td>
+              </tr>
+            `,
+              )
+              .join("")}
+          </tbody>
+        </table>
+      </div>`;
+  } catch (e) {
+    document.getElementById("teacher-review-list").innerHTML =
+      `<div style="color:var(--accent-red);padding:20px;">⚠️ ${e.message}</div>`;
+  }
+}
+
+async function updateTeacherReviewStatus(id, status) {
+  if (!confirm(`Mark this request as ${status}?`)) return;
+  try {
+    await apiFetch(
+      "PATCH",
+      `/teacher/review-requests/${id}/status?status=${status}`,
+    );
+    showToast(`Request updated to ${status}`, "✅");
+    await teacherReviewRequests();
+  } catch (e) {
+    showToast(e.message, "⚠️");
+  }
+}
+
+// ── SUBJECTS ──────────────────────────────────────────────────
+async function subjects() {
+  document.getElementById("page-container").innerHTML =
+    `<div class="page">${PageHeader("Subjects", "Manage all curriculum subjects", "+ New Subject", "openCreateSubject()")}<div id="subjects-list">${Loading()}</div></div>`;
+  await loadSubjects();
+}
+function openSubjectLessons(subjectId) {
+  const s = window._subjectMap[subjectId];
+  lessons(subjectId, s?.name || "Subject");
+}
+
+async function loadSubjects() {
+  try {
+    const data = await apiFetch("GET", "/subjects");
+    if (!data?.length) {
+      document.getElementById("subjects-list").innerHTML = Empty(
+        "📚",
+        "No subjects yet",
+        'Click "+ New Subject" to add one.',
+      );
+      return;
+    }
+    window._subjectMap = {};
+    data.forEach((s) => {
+      window._subjectMap[s.id] = s;
+    });
+    document.getElementById("subjects-list").innerHTML =
+      `<div class="card" style="overflow:hidden;"><table class="data-table"><thead><tr><th>Subject</th><th>Description</th><th>Status</th><th style="text-align:right;">Actions</th></tr></thead><tbody>
+      ${data
+        .map((subject) => {
+          const style = getSubjectStyle(subject.name);
+          const isActive = subject.active !== false;
+          return `<tr><td><div style="display:flex;align-items:center;gap:10px;"><div style="width:36px;height:36px;border-radius:10px;background:${style.pale};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">${style.icon}</div><div><div style="font-weight:700;color:var(--text-900);">${subject.name}</div><div style="font-size:12px;color:${style.color};font-weight:600;">ID: ${subject.id}</div></div></div></td>
+          <td style="color:var(--text-400);max-width:260px;" class="truncate">${subject.description || "—"}</td>
+          <td><span class="badge ${isActive ? "badge-green" : "badge-gray"}">${isActive ? "Active" : "Inactive"}</span></td>
+          <td style="text-align:right;"><div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
+            <button class="btn btn-ghost btn-sm" onclick="openSubjectLessons(${subject.id})">Lessons</button>
+            <button class="btn btn-sm" style="background:var(--bg);color:var(--text-500);" onclick="openEditSubject(${subject.id})">Edit</button>
+            ${isActive ? `<button class="btn btn-sm btn-danger" onclick="deactivateSubject(${subject.id})">Deactivate</button>` : `<button class="btn btn-sm" style="background:#ECFDF5;color:#047857;" onclick="activateSubject(${subject.id})">Activate</button>`}
+          </div></td></tr>`;
+        })
+        .join("")}
+    </tbody></table></div>`;
+  } catch (e) {
+    document.getElementById("subjects-list").innerHTML =
+      `<div style="color:var(--accent-red);padding:20px;">⚠️ ${e.message}</div>`;
+  }
+}
+
+function openCreateSubject() {
+  openModal(`<div class="modal-header"><div class="modal-title">📚 New Subject</div><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div id="sub-err" style="display:none;background:#FEE2E2;color:#991B1B;font-size:13px;font-weight:700;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:14px;"></div>
+    <div class="field"><label>Subject Name</label><input id="sub-name" class="bibo-input" placeholder="e.g. Mathematics" /></div>
+    <div class="field"><label>Description</label><textarea id="sub-desc" class="bibo-input" placeholder="Short description"></textarea></div>
+    <div style="display:flex;gap:10px;margin-top:8px;"><button class="btn btn-ghost" style="flex:1;" onclick="closeModal()">Cancel</button><button class="btn btn-primary" style="flex:1;" id="sub-btn" onclick="submitCreateSubject()">Create Subject</button></div>`);
+}
+async function submitCreateSubject() {
+  const name = document.getElementById("sub-name").value.trim(),
+    description = document.getElementById("sub-desc").value.trim(),
+    errEl = document.getElementById("sub-err"),
+    btn = document.getElementById("sub-btn");
+  if (!name) {
+    errEl.textContent = "Subject name is required.";
+    errEl.style.display = "";
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = "Creating...";
+  try {
+    await apiFetch("POST", "/subjects", { name, description });
+    closeModal();
+    showToast("Subject created!", "📚");
+    await loadSubjects();
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.style.display = "";
+    btn.disabled = false;
+    btn.textContent = "Create Subject";
+  }
+}
+function openEditSubject(subjectId) {
+  const subject = window._subjectMap[subjectId];
+  if (!subject) {
+    showToast("Subject not found.", "⚠️");
+    return;
+  }
+  const safeName = (subject.name || "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;");
+  const safeDesc = (subject.description || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;");
+  openModal(`<div class="modal-header"><div class="modal-title">✏️ Edit Subject</div><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div id="esub-err" style="display:none;background:#FEE2E2;color:#991B1B;font-size:13px;font-weight:700;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:14px;"></div>
+    <div class="field"><label>Subject Name</label><input id="esub-name" class="bibo-input" value="${safeName}" /></div>
+    <div class="field"><label>Description</label><textarea id="esub-desc" class="bibo-input">${safeDesc}</textarea></div>
+    <div style="display:flex;gap:10px;margin-top:8px;"><button class="btn btn-ghost" style="flex:1;" onclick="closeModal()">Cancel</button><button class="btn btn-primary" style="flex:1;" id="esub-btn" onclick="submitEditSubject(${subject.id})">Save Changes</button></div>`);
+}
+async function submitEditSubject(id) {
+  const name = document.getElementById("esub-name").value.trim(),
+    description = document.getElementById("esub-desc").value.trim(),
+    errEl = document.getElementById("esub-err"),
+    btn = document.getElementById("esub-btn");
+  if (!name) {
+    errEl.textContent = "Subject name is required.";
+    errEl.style.display = "";
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = "Saving...";
+  try {
+    await apiFetch("PUT", `/subjects/${id}`, { name, description });
+    closeModal();
+    showToast("Subject updated!", "✏️");
+    await loadSubjects();
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.style.display = "";
+    btn.disabled = false;
+    btn.textContent = "Save Changes";
+  }
+}
+async function deactivateSubject(id) {
+  if (!confirm("Deactivate this subject?")) return;
+  try {
+    await apiFetch("PATCH", `/subjects/${id}/deactivate`);
+    showToast("Subject deactivated.", "🛑");
+    await loadSubjects();
+  } catch (e) {
+    showToast(e.message, "⚠️");
+  }
+}
+async function activateSubject(id) {
+  if (!confirm("Activate this subject?")) return;
+  try {
+    await apiFetch("PATCH", `/subjects/${id}/activate`);
+    showToast("Subject activated.", "✅");
+    await loadSubjects();
+  } catch (e) {
+    showToast(e.message, "⚠️");
+  }
+}
+
+// ── LESSONS ───────────────────────────────────────────────────
+async function lessons(subjectId = null, subjectName = null) {
+  document.getElementById("page-container").innerHTML =
+    `<div class="page">${PageHeader(subjectName ? `Lessons • ${subjectName}` : "Lessons", subjectName ? `Manage lessons for ${subjectName}` : "Create and manage all lessons", "+ New Lesson", "openCreateLesson()")}<div id="lessons-list">${Loading()}</div></div>`;
+  await loadLessons(subjectId, subjectName);
+}
+async function loadLessons(subjectId = null, subjectName = null) {
+  try {
+    let all = [];
+    if (subjectId) {
+      const ls = await apiFetch("GET", `/lessons/subject/${subjectId}`);
+      all = (ls || []).map((l) => ({
+        ...l,
+        subjectName: subjectName || l.subjectName || "—",
+      }));
+    } else {
+      const subs = await apiFetch("GET", "/subjects");
+      if (!subs?.length) {
+        document.getElementById("lessons-list").innerHTML = Empty(
+          "📝",
+          "No subjects yet",
+          "Create a subject first.",
+        );
+        return;
+      }
+      await Promise.all(
+        subs.map(async (s) => {
+          try {
+            const ls = await apiFetch("GET", `/lessons/subject/${s.id}`);
+            if (ls?.length)
+              all.push(...ls.map((l) => ({ ...l, subjectName: s.name })));
+          } catch (e) {}
+        }),
+      );
+    }
+    if (!all.length) {
+      document.getElementById("lessons-list").innerHTML = Empty(
+        "📝",
+        "No lessons yet",
+        'Click "+ New Lesson" to add one.',
+      );
+      return;
+    }
+    window._lessonMap = {};
+    all.forEach((l) => {
+      window._lessonMap[l.id] = l;
+    });
+    const diffClass = {
+      EASY: "badge-green",
+      MEDIUM: "badge-orange",
+      HARD: "badge-red",
+    };
+    document.getElementById("lessons-list").innerHTML =
+      `<div class="card" style="overflow:hidden;"><table class="data-table"><thead><tr><th>Lesson</th><th>Subject</th><th>Difficulty</th><th>Duration</th><th>Status</th><th style="text-align:right;">Actions</th></tr></thead><tbody>
+      ${all
+        .map((l) => {
+          const st = getSubjectStyle(l.subjectName);
+          const difficulty = l.learningLevel || l.difficultyLevel || "Beginner";
+          const diffKey = difficulty.toUpperCase();
+          return `<tr><td><div style="font-weight:700;color:var(--text-900);">${l.title}</div><div style="font-size:12px;color:var(--text-400);margin-top:2px;">${l.description || "—"}</div></td>
+          <td><span style="display:inline-flex;align-items:center;gap:6px;"><span style="font-size:15px;">${st.icon}</span><span style="font-size:13px;font-weight:600;color:${st.color};">${l.subjectName}</span></span></td>
+          <td><span class="badge ${diffClass[diffKey] || "badge-gray"}">${difficulty}</span></td>
+          <td style="font-size:13px;color:var(--text-400);">${l.estimatedMinutes ? l.estimatedMinutes + " min" : "—"}</td>
+          <td><span class="badge ${l.published ? "badge-green" : "badge-orange"}">${l.published ? "Published" : "Draft"}</span></td>
+          <td style="text-align:right;"><div style="display:flex;gap:8px;justify-content:flex-end;"><button class="btn btn-ghost btn-sm" onclick="navigate('sections')">Sections</button><button class="btn btn-sm" style="background:var(--bg);color:var(--text-500);" onclick="openEditLesson(${l.id})">Edit</button></div></td></tr>`;
+        })
+        .join("")}
+    </tbody></table></div>`;
+  } catch (e) {
+    document.getElementById("lessons-list").innerHTML =
+      `<div style="color:var(--accent-red);padding:20px;">⚠️ ${e.message}</div>`;
+  }
+}
+async function openCreateLesson() {
+  let opts = '<option value="">Select subject...</option>';
+  try {
+    const subs = await apiFetch("GET", "/subjects");
+    opts += (subs || [])
+      .map((s) => `<option value="${s.id}">${s.name}</option>`)
+      .join("");
+  } catch (e) {}
+  openModal(`<div class="modal-header"><div class="modal-title">📝 New Lesson</div><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div id="les-err" style="display:none;background:#FEE2E2;color:#991B1B;font-size:13px;font-weight:700;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:14px;"></div>
+    <div class="field"><label>Subject</label><select id="les-subject" class="bibo-input">${opts}</select></div>
+    <div class="field"><label>Lesson Title</label><input id="les-title" class="bibo-input" placeholder="e.g. Introduction to Fractions" /></div>
+    <div class="field"><label>Description</label><textarea id="les-desc" class="bibo-input" placeholder="What will students learn?"></textarea></div>
+    <div class="field-row"><div class="field" style="margin-bottom:0;"><label>Minutes</label><input id="les-minutes" class="bibo-input" type="number" placeholder="30" /></div><div class="field" style="margin-bottom:0;"><label>Difficulty</label><select id="les-diff" class="bibo-input"><option value="EASY">Easy</option><option value="MEDIUM">Medium</option><option value="HARD">Hard</option></select></div></div>
+    <div style="display:flex;gap:10px;margin-top:18px;"><button class="btn btn-ghost" style="flex:1;" onclick="closeModal()">Cancel</button><button class="btn btn-primary" style="flex:1;" id="les-btn" onclick="submitLesson()">Create Lesson</button></div>`);
+}
+async function submitLesson() {
+  const subjectId = document.getElementById("les-subject").value,
+    title = document.getElementById("les-title").value.trim(),
+    desc = document.getElementById("les-desc").value.trim(),
+    minutes = parseInt(document.getElementById("les-minutes").value) || null,
+    diff = document.getElementById("les-diff").value,
+    errEl = document.getElementById("les-err");
+  if (!subjectId) {
+    errEl.textContent = "Select a subject.";
+    errEl.style.display = "";
+    return;
+  }
+  if (!title) {
+    errEl.textContent = "Lesson title required.";
+    errEl.style.display = "";
+    return;
+  }
+  const btn = document.getElementById("les-btn");
+  btn.disabled = true;
+  btn.textContent = "Creating...";
+  try {
+    await apiFetch("POST", "/lessons", {
+      subjectId: parseInt(subjectId),
+      title,
+      description: desc,
+      estimatedMinutes: minutes,
+      difficultyLevel: diff,
+      published: true,
+    });
+    closeModal();
+    showToast("Lesson created!", "📝");
+    await loadLessons();
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.style.display = "";
+    btn.disabled = false;
+    btn.textContent = "Create Lesson";
+  }
+}
+function openEditLesson(lessonId) {
+  const l = window._lessonMap[lessonId];
+  if (!l) {
+    showToast("Lesson not found.", "⚠️");
+    return;
+  }
+  const safeTitle = (l.title || "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;");
+  const safeDesc = (l.description || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;");
+  openModal(`<div class="modal-header"><div class="modal-title">✏️ Edit Lesson</div><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div id="eles-err" style="display:none;background:#FEE2E2;color:#991B1B;font-size:13px;font-weight:700;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:14px;"></div>
+    <div class="field"><label>Lesson Title</label><input id="eles-title" class="bibo-input" value="${safeTitle}" /></div>
+    <div class="field"><label>Description</label><textarea id="eles-desc" class="bibo-input">${safeDesc}</textarea></div>
+    <div class="field-row"><div class="field" style="margin-bottom:0;"><label>Minutes</label><input id="eles-minutes" class="bibo-input" type="number" value="${l.estimatedMinutes || ""}" /></div><div class="field" style="margin-bottom:0;"><label>Difficulty</label><select id="eles-diff" class="bibo-input">${["EASY", "MEDIUM", "HARD"].map((d) => `<option value="${d}"${l.difficultyLevel === d ? " selected" : ""}>${d}</option>`).join("")}</select></div></div>
+    <div style="display:flex;gap:10px;margin-top:18px;"><button class="btn btn-ghost" style="flex:1;" onclick="closeModal()">Cancel</button><button class="btn btn-primary" style="flex:1;" id="eles-btn" onclick="submitEditLesson(${l.id})">Save Changes</button></div>`);
+}
+async function submitEditLesson(id) {
+  const title = document.getElementById("eles-title").value.trim(),
+    desc = document.getElementById("eles-desc").value.trim(),
+    minutes = parseInt(document.getElementById("eles-minutes").value) || null,
+    diff = document.getElementById("eles-diff").value,
+    errEl = document.getElementById("eles-err");
+  if (!title) {
+    errEl.textContent = "Title required.";
+    errEl.style.display = "";
+    return;
+  }
+  const btn = document.getElementById("eles-btn");
+  btn.disabled = true;
+  btn.textContent = "Saving...";
+  try {
+    await apiFetch("PUT", `/lessons/${id}`, {
+      title,
+      description: desc,
+      estimatedMinutes: minutes,
+      difficultyLevel: diff,
+    });
+    closeModal();
+    showToast("Lesson updated!", "✏️");
+    await loadLessons();
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.style.display = "";
+    btn.disabled = false;
+    btn.textContent = "Save Changes";
+  }
+}
+
+// ── SECTIONS ──────────────────────────────────────────────────
+async function sections() {
+  document.getElementById("page-container").innerHTML =
+    `<div class="page">${PageHeader("Lesson Sections", "Add content blocks to lessons", "+ New Section", "openCreateSection()")}
+    <div class="card" style="padding:20px;background:var(--primary-light);border-color:#dde2ff;margin-bottom:24px;"><div style="display:flex;align-items:flex-start;gap:12px;"><span style="font-size:22px;">💡</span><div><p style="font-weight:700;color:var(--primary);margin-bottom:4px;">How Sections Work</p><p style="font-size:13px;color:var(--text-500);">Each section is a content block inside a lesson. Add sections in order — they appear sequentially to students.</p></div></div></div>
+    <div class="field" style="margin-bottom:18px;"><label>Select Lesson</label><select id="sections-lesson-filter" class="bibo-input"><option value="">Select lesson</option></select></div>
+    <div id="sections-content">${Empty("📄", "Select a lesson", "Choose a lesson to view its sections.")}</div>
+  </div>`;
+  const select = document.getElementById("sections-lesson-filter");
+  let options = '<option value="">Select lesson</option>';
+  try {
+    const subs = await apiFetch("GET", "/subjects");
+    for (const s of subs || []) {
+      try {
+        const ls = await apiFetch("GET", `/lessons/subject/${s.id}`);
+        if (ls?.length) {
+          options += `<optgroup label="${s.name}">`;
+          options += ls
+            .map((l) => `<option value="${l.id}">${l.title}</option>`)
+            .join("");
+          options += `</optgroup>`;
+        }
+      } catch (e) {}
+    }
+    select.innerHTML = options;
+    select.addEventListener("change", async function () {
+      const lessonId = parseInt(this.value);
+      if (!lessonId) {
+        document.getElementById("sections-content").innerHTML = Empty(
+          "📄",
+          "Select a lesson",
+          "Choose a lesson to view its sections.",
+        );
+        return;
+      }
+      await loadSections(lessonId);
+    });
+  } catch (e) {
+    document.getElementById("sections-content").innerHTML =
+      `<div style="color:var(--accent-red);padding:16px;">⚠️ ${e.message}</div>`;
+  }
+}
+async function openCreateSection() {
+  let opts = '<option value="">Select lesson...</option>';
+  try {
+    const subs = await apiFetch("GET", "/subjects");
+    for (const s of subs || []) {
+      try {
+        const ls = await apiFetch("GET", `/lessons/subject/${s.id}`);
+        if (ls?.length) {
+          opts += `<optgroup label="${s.name}">`;
+          opts += ls
+            .map((l) => `<option value="${l.id}">${l.title}</option>`)
+            .join("");
+          opts += `</optgroup>`;
+        }
+      } catch (e) {}
+    }
+  } catch (e) {}
+  openModal(`<div class="modal-header"><div class="modal-title">📄 New Section</div><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div id="sec-err" style="display:none;background:#FEE2E2;color:#991B1B;font-size:13px;font-weight:700;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:14px;"></div>
+    <div class="field"><label>Lesson</label><select id="sec-lesson" class="bibo-input">${opts}</select></div>
+    <div class="field"><label>Section Title</label><input id="sec-title" class="bibo-input" placeholder="e.g. What are Fractions?" /></div>
+    <div class="field"><label>Content</label><textarea id="sec-content" class="bibo-input" placeholder="Write lesson content here..." style="min-height:120px;"></textarea></div>
+    <div class="field-row"><div class="field" style="margin-bottom:0;"><label>Content Type</label><select id="sec-type" class="bibo-input"><option value="TEXT">Text</option><option value="IMAGE">Image</option><option value="VIDEO">Video</option><option value="ACTIVITY">Activity</option></select></div><div class="field" style="margin-bottom:0;"><label>Order</label><input id="sec-order" class="bibo-input" type="number" placeholder="1" min="1" /></div></div>
+    <div style="display:flex;gap:10px;margin-top:18px;"><button class="btn btn-ghost" style="flex:1;" onclick="closeModal()">Cancel</button><button class="btn btn-primary" style="flex:1;" id="sec-btn" onclick="submitSection()">Add Section</button></div>`);
+}
+async function submitSection() {
+  const lessonId = parseInt(document.getElementById("sec-lesson").value),
+    title = document.getElementById("sec-title").value.trim(),
+    content = document.getElementById("sec-content").value.trim(),
+    type = document.getElementById("sec-type").value,
+    order = parseInt(document.getElementById("sec-order").value) || 1,
+    errEl = document.getElementById("sec-err"),
+    btn = document.getElementById("sec-btn");
+  errEl.style.display = "none";
+  if (!lessonId) {
+    errEl.textContent = "Select a lesson.";
+    errEl.style.display = "";
+    return;
+  }
+  if (!title) {
+    errEl.textContent = "Section title required.";
+    errEl.style.display = "";
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = "Adding...";
+  try {
+    await apiFetch("POST", "/lesson-sections", {
+      lessonId,
+      title,
+      content,
+      contentType: type,
+      contentOrder: order,
+    });
+    closeModal();
+    showToast("Section added!", "📄");
+    await loadSections(lessonId);
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.style.display = "";
+    btn.disabled = false;
+    btn.textContent = "Add Section";
+  }
+}
+async function loadSections(lessonId) {
+  const container = document.getElementById("sections-content");
+  if (!container || !lessonId) return;
+  container.innerHTML = Loading();
+  try {
+    const sections = await apiFetch(
+      "GET",
+      `/lesson-sections/lesson/${lessonId}`,
+    );
+    if (!sections || sections.length === 0) {
+      container.innerHTML = Empty(
+        "📄",
+        "No sections yet",
+        "Add the first section for this lesson.",
+      );
+      return;
+    }
+    container.innerHTML = `<div class="card" style="overflow:hidden;"><table class="data-table"><thead><tr><th>Order</th><th>Title</th><th>Type</th><th>Content</th></tr></thead><tbody>
+      ${sections.map((s) => `<tr><td>${s.contentOrder ?? "—"}</td><td>${s.title ?? "—"}</td><td>${s.contentType ?? "—"}</td><td>${s.content ?? "—"}</td></tr>`).join("")}
+    </tbody></table></div>`;
+  } catch (e) {
+    container.innerHTML = `<div style="color:var(--accent-red);padding:16px;">⚠️ ${e.message}</div>`;
+  }
+}
+
+// ── QUIZZES ───────────────────────────────────────────────────
+async function quizzes() {
+  document.getElementById("page-container").innerHTML =
+    `<div class="page">${PageHeader("Quizzes", "Create and manage lesson quizzes", "+ New Quiz", "openCreateQuiz()")}
+    <div class="card" style="padding:20px;background:var(--primary-light);border-color:#dde2ff;margin-bottom:24px;"><div style="display:flex;align-items:flex-start;gap:12px;"><span style="font-size:22px;">💡</span><div><p style="font-weight:700;color:var(--primary);margin-bottom:4px;">Quiz Module</p><p style="font-size:13px;color:var(--text-500);">Quizzes are linked to lessons. Add multiple-choice questions with 4 choices each.</p></div></div></div>
+    <div id="quizzes-list">${Loading()}</div>
+  </div>`;
+  try {
+    const subs = await apiFetch("GET", "/subjects");
+    let all = [];
+    for (const s of subs || []) {
+      try {
+        const ls = await apiFetch("GET", `/lessons/subject/${s.id}`);
+        for (const l of ls || []) {
+          try {
+            const qs = await apiFetch("GET", `/quiz/lesson/${l.id}`);
+            if (qs?.length)
+              all.push(
+                ...qs.map((q) => ({
+                  ...q,
+                  lessonTitle: l.title,
+                  subjectName: s.name,
+                })),
+              );
+          } catch (e) {}
+        }
+      } catch (e) {}
+    }
+    if (!all.length) {
+      document.getElementById("quizzes-list").innerHTML = Empty(
+        "✅",
+        "No quizzes yet",
+        'Click "+ New Quiz" to create your first quiz.',
+      );
+      return;
+    }
+    document.getElementById("quizzes-list").innerHTML =
+      `<div class="card" style="overflow:hidden;"><table class="data-table"><thead><tr><th>Quiz Title</th><th>Lesson</th><th>Subject</th><th>Passing Score</th><th>Questions</th></tr></thead><tbody>
+      ${all
+        .map((q) => {
+          const st = getSubjectStyle(q.subjectName);
+          return `<tr><td><div style="font-weight:700;color:var(--text-900);">${q.title}</div><div style="font-size:12px;color:var(--text-400);">${q.description || "—"}</div></td><td style="font-size:13px;">${q.lessonTitle}</td><td><span style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:${st.color};">${st.icon} ${q.subjectName}</span></td><td><span class="badge badge-blue">${q.passingScore}%</span></td><td style="font-size:13px;color:var(--text-500);">${q.questions?.length || 0} questions</td></tr>`;
+        })
+        .join("")}
+    </tbody></table></div>`;
+  } catch (e) {
+    document.getElementById("quizzes-list").innerHTML =
+      `<div style="color:var(--accent-red);padding:20px;">⚠️ ${e.message}</div>`;
+  }
+}
+
+let _qCount = 0;
+async function openCreateQuiz() {
+  _qCount = 0;
+  let opts = '<option value="">Select lesson...</option>';
+  try {
+    const subs = await apiFetch("GET", "/subjects");
+    for (const s of subs || []) {
+      try {
+        const ls = await apiFetch("GET", `/lessons/subject/${s.id}`);
+        if (ls?.length) {
+          opts += `<optgroup label="${s.name}">`;
+          opts += ls
+            .map((l) => `<option value="${l.id}">${l.title}</option>`)
+            .join("");
+          opts += `</optgroup>`;
+        }
+      } catch (e) {}
+    }
+  } catch (e) {}
+  openModal(`<div class="modal-header"><div class="modal-title">✅ New Quiz</div><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div id="qz-err" style="display:none;background:#FEE2E2;color:#991B1B;font-size:13px;font-weight:700;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:14px;"></div>
+    <div class="field"><label>Lesson</label><select id="qz-lesson" class="bibo-input">${opts}</select></div>
+    <div class="field"><label>Quiz Title</label><input id="qz-title" class="bibo-input" placeholder="e.g. Fractions Quiz" /></div>
+    <div class="field"><label>Description</label><input id="qz-desc" class="bibo-input" placeholder="Optional" /></div>
+    <div class="field"><label>Passing Score (%)</label><input id="qz-passing" class="bibo-input" type="number" value="75" min="0" max="100" /></div>
+    <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:16px;"><p style="font-size:13px;font-weight:700;color:var(--text-900);margin-bottom:4px;">Questions</p><p style="font-size:12px;color:var(--text-400);margin-bottom:14px;">Mark the correct answer with the radio button.</p><div id="qz-questions"></div><button class="btn btn-ghost btn-sm" onclick="addQuestion()" style="width:100%;margin-top:8px;">+ Add Question</button></div>
+    <div style="display:flex;gap:10px;margin-top:8px;"><button class="btn btn-ghost" style="flex:1;" onclick="closeModal()">Cancel</button><button class="btn btn-primary" style="flex:1;" id="qz-btn" onclick="submitQuiz()">Create Quiz</button></div>`);
+  addQuestion();
+}
+function addQuestion() {
+  _qCount++;
+  const n = _qCount;
+  const el = document.createElement("div");
+  el.id = `qb-${n}`;
+  el.style.cssText =
+    "background:var(--bg);border-radius:var(--radius-md);padding:16px;margin-bottom:12px;";
+  el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><span style="font-size:13px;font-weight:700;color:var(--text-700);">Question ${n}</span>${n > 1 ? `<button style="background:none;border:none;cursor:pointer;color:var(--accent-red);font-size:12px;font-weight:700;" onclick="document.getElementById('qb-${n}').remove()">Remove</button>` : ""}</div>
+    <input class="bibo-input" id="qt-${n}" placeholder="Enter question text..." style="margin-bottom:8px;" />
+    ${["A", "B", "C", "D"].map((k, i) => `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><input type="radio" name="cr-${n}" value="${i}" id="r-${n}-${i}" style="accent-color:var(--primary);width:16px;height:16px;flex-shrink:0;" /><label for="r-${n}-${i}" style="font-size:12px;font-weight:700;color:var(--text-400);width:16px;">${k}</label><input class="bibo-input" id="ch-${n}-${i}" placeholder="Choice ${k}..." style="flex:1;padding:9px 12px;" /></div>`).join("")}
+    <p style="font-size:11px;color:var(--text-400);margin-top:4px;">Select the radio next to the correct answer.</p>`;
+  document.getElementById("qz-questions").appendChild(el);
+}
+async function submitQuiz() {
+  const lessonId = document.getElementById("qz-lesson").value,
+    title = document.getElementById("qz-title").value.trim(),
+    desc = document.getElementById("qz-desc").value.trim(),
+    passingScore = parseInt(document.getElementById("qz-passing").value) || 75,
+    errEl = document.getElementById("qz-err");
+  if (!lessonId) {
+    errEl.textContent = "Select a lesson.";
+    errEl.style.display = "";
+    return;
+  }
+  if (!title) {
+    errEl.textContent = "Quiz title required.";
+    errEl.style.display = "";
+    return;
+  }
+  const questions = [];
+  const blocks = document.querySelectorAll('[id^="qb-"]');
+  for (const block of blocks) {
+    const n = block.id.replace("qb-", "");
+    const qt = document.getElementById(`qt-${n}`)?.value.trim();
+    if (!qt) {
+      errEl.textContent = `Question ${n} text required.`;
+      errEl.style.display = "";
+      return;
+    }
+    const correct = block.querySelector(`input[name="cr-${n}"]:checked`);
+    if (!correct) {
+      errEl.textContent = `Mark correct answer for Question ${n}.`;
+      errEl.style.display = "";
+      return;
+    }
+    const correctIdx = parseInt(correct.value);
+    const choices = [0, 1, 2, 3].map((i) => {
+      const t = document.getElementById(`ch-${n}-${i}`)?.value.trim();
+      if (!t) return null;
+      return { choiceText: t, correct: i === correctIdx };
+    });
+    if (choices.some((c) => !c)) {
+      errEl.textContent = `All 4 choices required for Question ${n}.`;
+      errEl.style.display = "";
+      return;
+    }
+    questions.push({ questionText: qt, choices });
+  }
+  if (!questions.length) {
+    errEl.textContent = "Add at least one question.";
+    errEl.style.display = "";
+    return;
+  }
+  const btn = document.getElementById("qz-btn");
+  btn.disabled = true;
+  btn.textContent = "Creating...";
+  try {
+    await apiFetch("POST", "/quiz/create", {
+      lessonId: parseInt(lessonId),
+      title,
+      description: desc,
+      passingScore,
+      questions,
+    });
+    closeModal();
+    showToast("Quiz created!", "✅");
+    await quizzes();
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.style.display = "";
+    btn.disabled = false;
+    btn.textContent = "Create Quiz";
+  }
+}
+
+// ── STUDENTS ──────────────────────────────────────────────────
+async function students() {
+  document.getElementById("page-container").innerHTML =
+    `<div class="page">${PageHeader("Students", "View registered student accounts", "", "")}
+    <div class="card" style="padding:20px;background:var(--primary-light);border-color:#dde2ff;margin-bottom:24px;"><div style="display:flex;align-items:flex-start;gap:12px;"><span style="font-size:22px;">ℹ️</span><div><p style="font-weight:700;color:var(--primary);margin-bottom:4px;">Student Accounts</p><p style="font-size:13px;color:var(--text-500);">Students register through the main BIBO app. Their accounts appear here once registered.</p></div></div></div>
+    <div id="students-list">${Loading()}</div>
+  </div>`;
+  try {
+    const data = await apiFetch("GET", "/student/all");
+    if (!Array.isArray(data) || data.length === 0) {
+      document.getElementById("students-list").innerHTML = Empty(
+        "👥",
+        "No students yet",
+        "Students appear here after registering through the BIBO app.",
+      );
+      return;
+    }
+    document.getElementById("students-list").innerHTML =
+      `<div class="card" style="overflow:hidden;"><table class="data-table"><thead><tr><th>Student</th><th>Username</th><th>Level</th><th>Joined</th></tr></thead><tbody>
+      ${data.map((s) => `<tr><td><div style="display:flex;align-items:center;gap:10px;"><div style="width:36px;height:36px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--primary);font-size:14px;">${((s.fullName || s.username || "?").trim()[0] || "?").toUpperCase()}</div><span style="font-weight:600;">${s.fullName || s.name || "—"}</span></div></td><td style="color:var(--text-400);">@${s.username || "—"}</td><td><span class="badge badge-blue">${s.learningLevel || s.level || "BEGINNER"}</span></td><td style="font-size:13px;color:var(--text-400);">${s.createdAt ? new Date(s.createdAt).toLocaleDateString() : "—"}</td></tr>`).join("")}
+    </tbody></table></div>`;
+  } catch (e) {
+    document.getElementById("students-list").innerHTML =
+      `<div class="card" style="padding:16px;color:var(--accent-red);">⚠️ Failed to load students: ${e.message}</div>`;
+  }
+}
+
+// ── Init ─────────────────────────────────────────────────────
+navigate(isAdmin ? "admin-dashboard" : "teacher-dashboard");
