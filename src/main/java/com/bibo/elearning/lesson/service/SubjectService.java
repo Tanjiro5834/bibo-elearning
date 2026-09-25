@@ -41,12 +41,20 @@ public class SubjectService {
     }
 
     public List<SubjectResponse> getAllActiveSubjects() {
-        StudentProfile student = getCurrentStudentProfile();
+        try{
+            StudentProfile student = getCurrentStudentProfile();
 
-        return subjectRepository.findByActiveTrue()
+            return subjectRepository.findByActiveTrue()
+                    .stream()
+                    .map(subject -> mapToResponse(subject, student))
+                    .toList();
+        }catch(RuntimeException e){
+            // PARENT or user with no student profile → return subjects without progress
+            return subjectRepository.findByActiveTrue()
                 .stream()
-                .map(subject -> mapToResponse(subject, student))
+                .map(this::mapToResponse)
                 .toList();
+        }
     }
 
     public List<SubjectResponse> getAllSubjects() {
@@ -142,7 +150,7 @@ public class SubjectService {
     private StudentProfile getCurrentStudentProfile() {
         User user = getCurrentUser();
 
-        return studentProfileRepository.findByUser(user)
-                .orElseThrow(() -> new RuntimeException("Student profile not found"));
+        return studentProfileRepository.findByUserId(user.getId())
+        .orElseThrow(() -> new RuntimeException("Student profile not found"));
     }
 }

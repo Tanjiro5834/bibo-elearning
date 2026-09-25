@@ -54,8 +54,8 @@ public class StudentService {
     public StudentProfileResponse getMyProfile() {
         User user = getCurrentUser();
 
-        StudentProfile profile = studentProfileRepository.findByUser(user)
-                .orElseThrow(() -> new IllegalStateException("Profile not found"));
+        StudentProfile profile = studentProfileRepository.findByUserId(user.getId())
+        .orElseThrow(() -> new IllegalStateException("Profile not found"));
 
         return mapToResponse(profile);
     }

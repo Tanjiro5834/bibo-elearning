@@ -10,11 +10,13 @@ import com.bibo.elearning.auth.user.repository.RoleRepository;
 import com.bibo.elearning.auth.user.repository.UserRepository;
 import com.bibo.elearning.parent.entity.ParentChildLink;
 import com.bibo.elearning.parent.repository.ParentChildLinkRepository;
+import com.bibo.elearning.student.model.StudentProfile;
+import com.bibo.elearning.student.repository.StudentProfileRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -24,6 +26,7 @@ public class AdminUserService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final ParentChildLinkRepository parentChildLinkRepository;
+    private final StudentProfileRepository studentProfileRepository;
     private final PasswordEncoder passwordEncoder;
 
     public List<UserResponse> getAllUsers() {
@@ -81,6 +84,7 @@ public class AdminUserService {
                         .build();
 
                 User savedChild = userRepository.save(child);
+                createStudentProfile(savedChild, c.getAge());
 
                 ParentChildLink link = new ParentChildLink();
                 link.setParent(parent);
@@ -89,8 +93,10 @@ public class AdminUserService {
             }
             return new UserResponse(parent);
         }
-
-        return new UserResponse(userRepository.save(user));
+        
+        User saved = userRepository.save(user);
+        if(req.getRole() == RoleName.STUDENT) createStudentProfile(saved, null);
+        return new UserResponse(saved);
     }
 
     @Transactional
@@ -112,4 +118,16 @@ public class AdminUserService {
         user.setEnabled(enabled);
         userRepository.save(user);
     }
+
+    private void createStudentProfile(User user, Integer age) {
+        studentProfileRepository.save(StudentProfile.builder()
+                .user(user)
+                .fullName((nz(user.getFirstName()) + " " + nz(user.getLastName())).trim())
+                .age(age != null ? age : 0)          // column is NOT NULL
+                .learningLevel("BEGINNER")
+                .createdAt(LocalDateTime.now())      // NOT NULL; drop if entity uses @CreationTimestamp/@PrePersist
+                .build());
+    }
+
+    private static String nz(String s) { return s == null ? "" : s; }
 }

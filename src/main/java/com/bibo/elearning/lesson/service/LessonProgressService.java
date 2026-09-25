@@ -21,7 +21,7 @@ import com.bibo.elearning.lesson.repository.LessonRepository;
 import com.bibo.elearning.lesson.repository.LessonSectionRepository;
 import com.bibo.elearning.student.model.StudentProfile;
 import com.bibo.elearning.student.repository.StudentProfileRepository;
-
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -34,6 +34,7 @@ public class LessonProgressService {
     private final LessonProgressMapper lessonProgressMapper;
     private final StudentProfileRepository studentProfileRepository;
 
+    @Transactional
     public LessonProgressResponse startLesson(Long lessonId) {
         StudentProfile student = getCurrentStudentProfile();
 
@@ -186,7 +187,7 @@ public class LessonProgressService {
     private StudentProfile getCurrentStudentProfile() {
         User user = getCurrentUser();
 
-        return studentProfileRepository.findByUser(user)
-                .orElseThrow(() -> new RuntimeException("Student profile not found"));
+        return studentProfileRepository.findByUserId(user.getId())
+        .orElseThrow(() -> new RuntimeException("Student profile not found"));
     }
 }

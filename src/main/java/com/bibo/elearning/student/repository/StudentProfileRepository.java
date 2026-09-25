@@ -8,4 +8,6 @@ import java.util.List;
 public interface StudentProfileRepository extends JpaRepository<StudentProfile, Long> {
     Optional<StudentProfile> findByUser(User user);
     List<StudentProfile> findByUserRoleNameOrderByCreatedAtDesc(RoleName roleName);
+    // StudentProfileRepository.java — add this method:
+    Optional<StudentProfile> findByUserId(Long userId);
 }

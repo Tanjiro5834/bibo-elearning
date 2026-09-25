@@ -2028,7 +2028,13 @@
           const user = await api.getMe();
           setState({ user });
           saveAuth(state.token, user);
-        } catch (e) {}
+        } catch (e) {
+          if (e.message?.includes("403")) {
+              clearAuth();
+              render();
+              return;   // ← stop here, token is dead
+          }
+        }
 
         const name =
           state.user?.name ||
@@ -2049,6 +2055,7 @@
         let subjects = [];
         try {
           subjects = await api.getSubjects();
+          _allSubjects = subjects;
         } catch (e) {
           document.getElementById("dash-recent").innerHTML = ErrorState(
             "Could not load lessons",
@@ -2272,6 +2279,10 @@
           _allSubjects.find((x) => x.id === state.selectedSubjectId);
 
         if (!s) {
+          if (state.selectedSubjectId != null) {
+            try { _allSubjects = await api.getSubjects(); } catch {}
+            if (_allSubjects.some((x) => x.id === state.selectedSubjectId)) return render();
+          }
           list.innerHTML = ErrorState("No subject selected");
           return;
         }
@@ -2371,8 +2382,11 @@
   </div>`;
       }
 
+      let _lessonStarting = false; 
       async function bindLessonDetail() {
         const l = state.selectedLesson;
+        if (_lessonStarting) return; 
+        _lessonStarting = true;
         if (!l) {
           navigate("subjects");
           return;
@@ -2406,9 +2420,11 @@
             l.title || "Lesson";
           renderLessonSection();
         } catch (e) {
-          document.getElementById("lesson-body").innerHTML = ErrorState(
-            e.message,
-          );
+          if (!e.message?.includes("409")) {
+              document.getElementById("lesson-body").innerHTML = ErrorState(e.message);
+          }
+        }finally{
+          _lessonStarting = false;
         }
       }
 
