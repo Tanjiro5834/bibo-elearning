@@ -50,21 +50,17 @@ public class ParentController {
     }
 
     @PostMapping("/message-child")
-    public ResponseEntity<?> sendMessage(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @RequestBody SendMessageRequest request) {
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "Message sent successfully");
-        return ResponseEntity.ok(response);
+    public ResponseEntity<?> sendMessage(@AuthenticationPrincipal UserDetails userDetails,
+                                        @RequestBody @Valid SendMessageRequest request) {
+        parentService.sendMessage(userDetails.getUsername(), request);
+        return ResponseEntity.ok(Map.of("message", "Message sent successfully"));
     }
 
     @PostMapping("/set-daily-goal")
-    public ResponseEntity<?> setDailyGoal(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @RequestBody SetDailyGoalRequest request) {
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "Daily goal set successfully");
-        return ResponseEntity.ok(response);
+    public ResponseEntity<?> setDailyGoal(@AuthenticationPrincipal UserDetails userDetails,
+                                        @RequestBody @Valid SetDailyGoalRequest request) {
+        parentService.setDailyGoal(userDetails.getUsername(), request);
+        return ResponseEntity.ok(Map.of("message", "Daily goal set successfully"));
     }
 
     @PostMapping("/request-teacher-review")

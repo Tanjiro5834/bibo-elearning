@@ -31,9 +31,6 @@ public class DailyGoal {
     @JoinColumn(name = "child_id", nullable = false)
     private User child;
 
-    @Column(name = "goal_count", nullable = false)
-    private Integer goalCount;
-
     @Column(name = "goal", nullable = false)
     private Integer goal;
 

@@ -7,6 +7,7 @@ import com.bibo.elearning.lesson.entity.LessonProgress;
 import com.bibo.elearning.auth.user.repository.UserRepository;
 import com.bibo.elearning.exception.UserNotFoundException;
 import com.bibo.elearning.lesson.repository.LessonProgressRepository;
+import com.bibo.elearning.lesson.repository.LessonRepository;
 import com.bibo.elearning.lesson.repository.SubjectRepository;
 import com.bibo.elearning.parent.dto.request.LinkChildRequest;
 import com.bibo.elearning.parent.dto.request.SendMessageRequest;
@@ -39,6 +40,8 @@ public class ParentService {
     private final UserRepository userRepository;
     private final LessonProgressRepository lessonProgressRepository;
     private final StudentProfileRepository studentProfileRepository;
+    private final SubjectRepository subjectRepository;
+    private final LessonRepository lessonRepository;
 
     public void linkChild(String parentUsername, LinkChildRequest request) {
         if (request == null || request.getChildUsername() == null || request.getChildUsername().trim().isEmpty()) {
@@ -87,38 +90,37 @@ public class ParentService {
         verifyParentChildLink(parent, child);
 
         StudentProfile childProfile = studentProfileRepository.findByUser(child)
-            .orElseThrow(() -> new UserNotFoundException("Student profile not found for child: " + childId));
+                .orElseThrow(() -> new UserNotFoundException("Student profile not found for child: " + childId));
 
-        List<LessonProgress> lessonProgressList = lessonProgressRepository.findAllByStudentProfile(childProfile);
-        Map<String, long[]> subjectStats = new LinkedHashMap<>();
-        for (LessonProgress lp : lessonProgressList) {
-            String subjectName = lp.getLesson().getSubject().getName(); // adjust to your Subject field
-            subjectStats.putIfAbsent(subjectName, new long[]{0, 0}); // [completed, total]
-            subjectStats.get(subjectName)[1]++; // total++
-            if (lp.getStatus() == ProgressStatus.COMPLETED) {
-                subjectStats.get(subjectName)[0]++; // completed++
-            }
-        }
+        // numerator: completed lessons per subject (from the child's progress)
+        Map<Long, Long> doneBySubject = lessonProgressRepository.findAllByStudentProfile(childProfile).stream()
+                .filter(lp -> lp.getStatus() == ProgressStatus.COMPLETED)
+                .collect(Collectors.groupingBy(
+                        lp -> lp.getLesson().getSubject().getId(),
+                        Collectors.counting()));
 
-        List<SubjectProgressDto> subjectProgress = subjectStats.entrySet().stream()
-                .map(entry -> SubjectProgressDto.builder()
-                        .subjectName(entry.getKey())
-                        .completed((int) entry.getValue()[0])
-                        .total((int) entry.getValue()[1])
-                        .progressPercent(entry.getValue()[1] > 0
-                                ? (int) Math.round((entry.getValue()[0] * 100.0) / entry.getValue()[1])
-                                : 0)
-                        .build())
-                .collect(Collectors.toList());
-
+        // denominator: all lessons per subject (from the catalog)
+        List<SubjectProgressDto> subjectProgress = subjectRepository.findAll().stream()
+                .map(s -> {
+                    long total = lessonRepository.countBySubjectId(s.getId());
+                    long done = doneBySubject.getOrDefault(s.getId(), 0L);
+                    return SubjectProgressDto.builder()
+                            .subjectName(s.getName())
+                            .completed((int) done)
+                            .total((int) total)
+                            .progressPercent(total > 0 ? (int) Math.round(done * 100.0 / total) : 0)
+                            .build();
+                })
+                .filter(dto -> dto.getTotal() > 0)
+                .toList();
 
         return ChildResponse.builder()
-            .childId(child.getId())
-            .firstName(child.getFirstName())
-            .lastName(child.getLastName())
-            .username(child.getUsername())
-            .subjectProgress(subjectProgress)
-            .build();
+                .childId(child.getId())
+                .firstName(child.getFirstName())
+                .lastName(child.getLastName())
+                .username(child.getUsername())
+                .subjectProgress(subjectProgress)
+                .build();
     }
 
     public void sendMessage(String parentUsername, SendMessageRequest request) {

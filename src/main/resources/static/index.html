@@ -1111,6 +1111,12 @@
 
         submitQuiz: (data) =>
           api.request("POST", "/quiz/submit", data, state.token),
+
+        getChildren: () =>
+          api.request("GET", "/parent/children", null, state.token),
+
+        getChildProgress: (childId) =>
+          api.request("GET", `/parent/child/${childId}/progress`, null, state.token),
       };
 
       // ── State (unchanged) ──────────────────────────────────────
@@ -3525,12 +3531,9 @@
               </div>
             </div>
             <div style="display:flex;gap:8px;">
-              ${["⭐ Great job!", "💪 Keep going!", "🎉 I'm proud of you!"]
-                .map(
-                  (m) =>
-                    `<button onclick="showToast('Message sent: ${m}')" style="flex:1;padding:7px 4px;font-size:11px;font-weight:700;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:white;cursor:pointer;color:var(--text-700);transition:all 0.18s;" onmouseover="this.style.borderColor='var(--primary)';this.style.color='var(--primary)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-700)'">${m}</button>`,
-                )
-                .join("")}
+              ${ENCOURAGEMENTS.map((m, i) =>
+                `<button onclick="parentAction('message-child', { message: ENCOURAGEMENTS[${i}] }, 'Message sent!')" ...>${m}</button>`
+              ).join("")}
             </div>
           </div>
           <!-- Set Daily Goal -->
@@ -3546,7 +3549,7 @@
               <input type="range" min="1" max="10" value="3" id="daily-goal-slider" oninput="document.getElementById('goal-val').textContent=this.value" style="flex:1;accent-color:var(--primary);" />
               <div style="width:40px;height:40px;border-radius:10px;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;color:var(--primary);font-family:var(--font-display);" id="goal-val">3</div>
             </div>
-            <button onclick="showToast('Daily goal set to '+document.getElementById('daily-goal-slider').value+' lessons!')" style="width:100%;margin-top:10px;padding:9px;border-radius:var(--radius-sm);background:var(--primary);color:white;border:none;font-weight:700;font-size:13px;cursor:pointer;">Save Goal</button>
+            <button onclick="parentAction('set-daily-goal', { goal: +document.getElementById('daily-goal-slider').value }, 'Daily goal saved!')" style="...">Save Goal</button>
           </div>
           <!-- Request Teacher Review -->
           <div class="card" style="padding:16px;display:flex;align-items:center;gap:12px;">
@@ -3554,7 +3557,7 @@
             <div style="flex:1;">
               <p style="font-size:13px;font-weight:700;color:var(--text-900);">Request Teacher Review</p>
               <p style="font-size:11px;color:var(--text-400);margin-bottom:8px;">Ask a teacher to check your child's progress</p>
-              <button onclick="showToast('Review request sent to teacher!')" style="padding:8px 16px;border-radius:var(--radius-sm);background:var(--primary-light);color:var(--primary);border:1.5px solid var(--primary);font-weight:700;font-size:12px;cursor:pointer;">Send Request</button>
+              <button onclick="parentAction('request-teacher-review', {}, 'Review request sent to teacher!')" style="...">Send Request</button>
             </div>
           </div>
         </div>
@@ -3754,7 +3757,7 @@
                 "Unknown Child";
 
               return `
-                  <div class="card" style="padding:16px;display:flex;align-items:center;gap:14px;">
+                  <div class="card" onclick="selectChild(${child.childId})" style="cursor:pointer;padding:16px;display:flex;align-items:center;gap:14px;">
                       <div style="width:48px;height:48px;border-radius:12px;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:24px;">🦁</div>
                       <div style="flex:1;min-width:0;">
                           <p style="font-weight:700;font-size:15px;">${fullName}</p>
@@ -3770,6 +3773,12 @@
           console.error(e);
           container.innerHTML = `<p style="color:var(--accent-red);text-align:center;padding:40px;">Failed to load linked children</p>`;
         }
+      }
+
+      function selectChild(id) {
+        state.selectedChildId = id;
+        closeLinkedChildrenModal();
+        bindParent();
       }
 
       function showLinkChildModal() {
@@ -3864,99 +3873,85 @@
       });
 
       async function bindParent() {
+        const $ = (id) => document.getElementById(id);
         try {
-          const user = state.user;
-          const name =
-            user?.name || user?.firstName || user?.username || "Your Child";
-
-          document.getElementById("parent-child-name").textContent = name;
-          document.getElementById("parent-child-grade").textContent =
-            `Grade ${user?.grade || "?"} · ${user?.school || "BIBO Learner"}`;
-
-          // Get subjects safely
-          let subjects = [];
-          try {
-            subjects = await api.getSubjects();
-          } catch (e) {
-            console.warn("Subjects not available for parent:", e.message);
-            // Don't crash the whole dashboard
+          const children = await api.getChildren();
+          if (!children.length) {
+            $("parent-child-name").textContent = "No child linked";
+            $("parent-child-grade").textContent = "Tap ➕ to link your child";
+            $("parent-stats").innerHTML = $("parent-subjects").innerHTML = $("parent-weak").innerHTML = "";
+            return;
           }
 
-          const total = subjects.reduce((a, s) => a + (s.lessonCount || 0), 0);
-          const completed = subjects.reduce(
-            (a, s) => a + (s.completedCount || 0),
-            0,
-          );
-          const pct = total ? Math.round((completed / total) * 100) : 0;
+          const child = children.find((c) => c.childId === state.selectedChildId) || children[0];
+          state.selectedChildId = child.childId;
 
-          document.getElementById("parent-stats").innerHTML = `
-            ${[
-              ["Lessons Done", completed, "var(--accent-green)"],
-              ["Remaining", total - completed, "var(--primary)"],
-              ["Progress", pct + "%", "var(--primary-mid)"],
-              ["Subjects", subjects.length || "—", "var(--accent-orange)"],
-            ]
-              .map(
-                ([l, v, c]) => `
-              <div class="card" style="padding:18px;text-align:center;">
-                <div style="font-family:var(--font-display);font-size:26px;font-weight:900;color:${c};">${v}</div>
-                <div style="font-size:11px;font-weight:600;color:var(--text-400);margin-top:4px;">${l}</div>
-              </div>`,
-              )
-              .join("")}`;
+          $("parent-child-name").textContent =
+            `${child.firstName || ""} ${child.lastName || ""}`.trim() || child.username;
+          $("parent-child-grade").textContent =
+            [child.grade, child.school].filter(Boolean).join(" · ") || "Student";
 
-          // Subject Progress
-          if (subjects.length > 0) {
-            document.getElementById("parent-subjects").innerHTML = `
-                    <div style="display:flex;flex-direction:column;gap:10px;">
-                      ${subjects
-                        .map((s) => {
-                          const st = getSubjectStyle(s.name);
-                          const p = s.progress || 0;
-                          return `<div class="card" style="padding:16px;display:flex;align-items:center;gap:12px;">
-                            <span style="font-size:22px;">${st.icon}</span>
-                            <div style="flex:1;">
-                              <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-                                <span style="font-weight:700;font-size:14px;">${s.name}</span>
-                                <span style="font-size:12px;font-weight:800;color:${st.color};">${p}%</span>
-                              </div>
-                              <div class="progress-track" style="height:6px;">
-                                <div class="progress-fill" style="height:6px;width:${p}%;background:${st.color};"></div>
-                              </div>
-                            </div>
-                          </div>`;
-                        })
-                        .join("")}
-                    </div>`;
-          } else {
-            document.getElementById("parent-subjects").innerHTML =
-              `<p style="color:var(--text-400);padding:20px;text-align:center;">No subjects data available yet.</p>`;
-          }
-
-          // Weak areas
-          const weak = subjects.filter((s) => (s.progress || 0) < 50);
-          document.getElementById("parent-weak").innerHTML = weak.length
-            ? `<div style="display:flex;flex-direction:column;gap:14px;">${weak
-                .map((s) => {
-                  const st = getSubjectStyle(s.name);
-                  return `<div style="display:flex;align-items:center;gap:10px;">
-                        <span style="font-size:20px;">${st.icon}</span>
-                        <div><p style="font-weight:700;font-size:13px;">${s.name}</p>
-                        <p style="font-size:12px;color:var(--text-400);">Only ${s.progress || 0}% — needs more practice</p></div>
-                      </div>`;
-                })
-                .join("")}</div>`
-            : `<div style="text-align:center;padding:40px 20px;">
-                      <div style="font-size:48px;margin-bottom:12px;">🌟</div>
-                      <p style="font-weight:700;">No weak areas! Great progress!</p>
-                    </div>`;
+          const { subjectProgress = [] } = await api.getChildProgress(child.childId);
+          renderParentProgress(subjectProgress);
         } catch (e) {
           console.error(e);
-          document.getElementById("parent-stats").innerHTML = ErrorState(
-            "Failed to load dashboard",
-          );
+          $("parent-stats").innerHTML = ErrorState(e.message);
         }
       }
+
+      function renderParentProgress(subjects) {
+        const done = subjects.reduce((a, s) => a + s.completed, 0);
+        const total = subjects.reduce((a, s) => a + s.total, 0);
+        const pct = total ? Math.round((done / total) * 100) : 0;
+
+        document.getElementById("parent-stats").innerHTML = [
+          ["Lessons Done", done, "var(--accent-green)"],
+          ["Remaining", total - done, "var(--primary)"],
+          ["Progress", pct + "%", "var(--primary-mid)"],
+          ["Subjects", subjects.length, "var(--accent-orange)"],
+        ].map(([l, v, c]) => `
+          <div class="card" style="padding:18px;text-align:center;">
+            <div style="font-family:var(--font-display);font-size:26px;font-weight:900;color:${c};">${v}</div>
+            <div style="font-size:11px;font-weight:600;color:var(--text-400);margin-top:4px;">${l}</div>
+          </div>`).join("");
+
+        document.getElementById("parent-subjects").innerHTML = subjects.length
+          ? subjects.map((s) => {
+              const st = getSubjectStyle(s.subjectName);
+              return `<div class="card" style="padding:16px;display:flex;align-items:center;gap:12px;">
+                <span style="font-size:22px;">${st.icon}</span>
+                <div style="flex:1;">
+                  <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                    <span style="font-weight:700;font-size:14px;">${s.subjectName}</span>
+                    <span style="font-size:12px;font-weight:800;color:${st.color};">${s.progressPercent}%</span>
+                  </div>
+                  <div class="progress-track" style="height:6px;">
+                    <div class="progress-fill" style="height:6px;width:${s.progressPercent}%;background:${st.color};"></div>
+                  </div>
+                </div>
+              </div>`;
+            }).join("")
+          : `<p style="color:var(--text-400);padding:20px;text-align:center;">No lessons started yet.</p>`;
+
+        const weak = subjects.filter((s) => s.progressPercent < 50);
+        document.getElementById("parent-weak").innerHTML = weak.length
+          ? weak.map((s) => `<p style="font-weight:700;font-size:13px;margin-bottom:10px;">
+              ${getSubjectStyle(s.subjectName).icon} ${s.subjectName}
+              <span style="font-weight:400;color:var(--text-400);">— ${s.progressPercent}%, needs practice</span></p>`).join("")
+          : `<p style="text-align:center;padding:30px;font-weight:700;">🌟 No weak areas!</p>`;
+      }
+
+      async function parentAction(path, body, okMsg) {
+        if (!state.selectedChildId) return showToast("Link a child first", "⚠️");
+        try {
+          await api.request("POST", `/parent/${path}`, { childId: state.selectedChildId, ...body }, state.token);
+          showToast(okMsg);
+        } catch (e) {
+          showToast(e.message, "❌");
+        }
+      }
+
+      const ENCOURAGEMENTS = ["⭐ Great job!", "💪 Keep going!", "🎉 I'm proud of you!"];
 
       /* ============================================================
    PLACEHOLDER PAGES (navigated from sidebar)

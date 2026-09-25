@@ -13,4 +13,5 @@ public interface LessonRepository extends JpaRepository<Lesson, Long> {
     List<Lesson> findByPublishedTrue();
     Optional<Lesson> findByIdAndPublishedTrue(Long lessonId);
     boolean existsByTitleIgnoreCaseAndSubjectId(String title, Long subjectId);
+    long countBySubjectId(Long subjectId);
 }
