@@ -1,5 +1,6 @@
 package com.bibo.elearning.parent.service;
 
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import com.bibo.elearning.auth.common.enums.ProgressStatus;
 import com.bibo.elearning.auth.user.entity.User;
@@ -20,6 +21,8 @@ import com.bibo.elearning.parent.repository.DailyGoalRepository;
 import com.bibo.elearning.parent.repository.EncouragementMessageRepository;
 import com.bibo.elearning.parent.repository.ParentChildLinkRepository;
 import com.bibo.elearning.parent.repository.TeacherReviewRequestRepository;
+import com.bibo.elearning.quiz.dto.response.QuizResultDto;
+import com.bibo.elearning.quiz.repository.QuizAttemptRepository;
 import com.bibo.elearning.student.model.StudentProfile;
 import com.bibo.elearning.student.repository.StudentProfileRepository;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +45,7 @@ public class ParentService {
     private final StudentProfileRepository studentProfileRepository;
     private final SubjectRepository subjectRepository;
     private final LessonRepository lessonRepository;
+    private final QuizAttemptRepository quizAttemptRepository;
 
     public void linkChild(String parentUsername, LinkChildRequest request) {
         if (request == null || request.getChildUsername() == null || request.getChildUsername().trim().isEmpty()) {
@@ -175,6 +179,27 @@ public class ParentService {
                 .status(TeacherReviewRequest.ReviewStatus.PENDING)
                 .build()
         );
+    }
+
+    public List<QuizResultDto> getChildQuizResults(String parentUsername, Long childId, int limit){
+        User parent = userRepository.findByUsername(parentUsername)
+            .orElseThrow(() -> new UserNotFoundException("Parent not found: " + parentUsername));
+        User child = userRepository.findById(childId)
+                .orElseThrow(() -> new UserNotFoundException("Child not found: " + childId));
+        verifyParentChildLink(parent, child);
+
+        StudentProfile profile = studentProfileRepository.findByUser(child)
+                .orElseThrow(() -> new UserNotFoundException("Student profile not found for child: " + childId));
+
+        int size = Math.min(Math.max(limit, 1), 20);
+        return quizAttemptRepository.findRecentWithQuiz(profile, PageRequest.of(0, size)).stream()
+        .map(a -> {
+                var lesson = a.getQuiz().getLesson();
+                String subject = (lesson != null && lesson.getSubject() != null) ? lesson.getSubject().getName() : null;
+                int percent = a.getTotalItems() > 0 ? (int) Math.round(a.getScore() * 100.0 / a.getTotalItems()) : 0;
+                return new QuizResultDto(a.getQuiz().getTitle(), subject,
+                        a.getScore(), a.getTotalItems(), percent, a.isPassed(), a.getAttemptedAt());
+        }).toList();
     }
 
     private void verifyParentChildLink(User parent, User child) {

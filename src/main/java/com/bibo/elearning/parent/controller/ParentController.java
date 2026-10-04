@@ -7,6 +7,7 @@ import com.bibo.elearning.parent.dto.request.SetDailyGoalRequest;
 import com.bibo.elearning.parent.dto.request.TeacherReviewRequestDto;
 import com.bibo.elearning.parent.dto.response.ChildResponse;
 import com.bibo.elearning.parent.service.ParentService;
+import com.bibo.elearning.quiz.dto.response.QuizResultDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import java.util.HashMap;
@@ -71,5 +72,13 @@ public class ParentController {
         Map<String, String> response = new HashMap<>();
         response.put("message", "Teacher review requested successfully");
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/child/{childId}/quiz-results")
+    public ResponseEntity<List<QuizResultDto>> getChildQuizResults(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long childId,
+            @RequestParam(defaultValue = "5") int limit) {
+        return ResponseEntity.ok(parentService.getChildQuizResults(userDetails.getUsername(), childId, limit));
     }
 }

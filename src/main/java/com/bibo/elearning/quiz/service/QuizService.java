@@ -11,8 +11,12 @@ import com.bibo.elearning.quiz.dto.request.CreateQuizRequest;
 import com.bibo.elearning.quiz.dto.request.SubmitQuizRequest;
 import com.bibo.elearning.quiz.dto.response.QuizResponse;
 import com.bibo.elearning.quiz.dto.response.QuizResultResponse;
+import com.bibo.elearning.auth.user.entity.User;
+import com.bibo.elearning.auth.user.repository.UserRepository;
 import com.bibo.elearning.lesson.entity.Lesson;
 import com.bibo.elearning.quiz.repository.QuizRepository;
+import com.bibo.elearning.student.model.StudentProfile;
+import com.bibo.elearning.student.repository.StudentProfileRepository;
 import com.bibo.elearning.quiz.repository.QuizAttemptRepository;
 import com.bibo.elearning.lesson.repository.LessonRepository;
 import com.bibo.elearning.quiz.mapper.QuizMapper;
@@ -24,6 +28,8 @@ public class QuizService {
     private final QuizRepository quizRepository;
     private final QuizAttemptRepository quizAttemptRepository;
     private final LessonRepository lessonRepository;
+    private final UserRepository userRepository;
+    private final StudentProfileRepository studentProfileRepository;
     private final QuizMapper quizMapper;
     
     public QuizResponse createQuiz(CreateQuizRequest request) {
@@ -53,7 +59,13 @@ public class QuizService {
         return quizMapper.toResponse(quizRepository.save(quiz));
     }
 
-    public QuizResultResponse submitQuiz(SubmitQuizRequest request){
+    public QuizResultResponse submitQuiz(String username, SubmitQuizRequest request){
+        User user = userRepository.findByUsername(username)
+            .orElseThrow(() -> new RuntimeException("User not found."));
+
+        StudentProfile student = studentProfileRepository.findByUserId(user.getId())
+        .orElseThrow(() -> new RuntimeException("Student profile not found."));
+
         Quiz quiz = quizRepository.findById(request.getQuizId())
         .orElseThrow(() -> new RuntimeException("Quiz not found."));
 
@@ -78,6 +90,7 @@ public class QuizService {
         boolean passed = scorePercent >= quiz.getPassingScore();
 
         QuizAttempt attempt = new QuizAttempt();
+        attempt.setStudent(student);
         attempt.setQuiz(quiz);
         attempt.setScore(scorePercent);
         attempt.setTotalItems(total);

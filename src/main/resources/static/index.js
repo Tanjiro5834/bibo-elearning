@@ -96,6 +96,9 @@ const api = {
 
   getChildProgress: (childId) =>
     api.request("GET", `/parent/child/${childId}/progress`, null, state.token),
+
+  getChildQuizResults: (childId) =>
+    api.request("GET", `/parent/child/${childId}/quiz-results`, null, state.token),
 };
 
 // ── State (unchanged) ──────────────────────────────────────
@@ -2268,7 +2271,7 @@ function SettingsPage() {
    PAGE: PARENT VIEW
    ============================================================ */
 function ParentViewPage() {
-  return `<div class="page">
+        return `<div class="page">
 
     <!-- ── Header ── -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px;">
@@ -2379,74 +2382,7 @@ function ParentViewPage() {
       <!-- Quiz Results -->
       <div>
         <h3 style="font-size:15px;font-weight:800;color:var(--text-900);margin-bottom:14px;">Recent Quiz Results 📝</h3>
-        <div style="display:flex;flex-direction:column;gap:10px;">
-          ${[
-            {
-              subject: "Filipino",
-              quiz: "Quiz 3 – Pantig",
-              score: 90,
-              total: 100,
-              date: "May 18",
-              icon: "🇵🇭",
-              color: "#ef4444",
-              bg: "#fee2e2",
-            },
-            {
-              subject: "Math",
-              quiz: "Quiz 2 – Addition",
-              score: 60,
-              total: 100,
-              date: "May 16",
-              icon: "➕",
-              color: "#3b3fc4",
-              bg: "#eef0ff",
-            },
-            {
-              subject: "English",
-              quiz: "Quiz 4 – Vowels",
-              score: 75,
-              total: 100,
-              date: "May 14",
-              icon: "📖",
-              color: "#f59e0b",
-              bg: "#fef3c7",
-            },
-            {
-              subject: "Science",
-              quiz: "Quiz 1 – Plants",
-              score: 85,
-              total: 100,
-              date: "May 12",
-              icon: "🔬",
-              color: "#0d9488",
-              bg: "#ccfbf1",
-            },
-          ]
-            .map((q) => {
-              const pct = Math.round((q.score / q.total) * 100);
-              const grade =
-                pct >= 85
-                  ? { label: "Excellent", c: "#065f46", bg: "#d1fae5" }
-                  : pct >= 70
-                    ? { label: "Good", c: "#92400e", bg: "#fef3c7" }
-                    : { label: "Needs Work", c: "#991b1b", bg: "#fee2e2" };
-              return `<div class="card" style="padding:14px 16px;">
-              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-                <div style="width:34px;height:34px;border-radius:10px;background:${q.bg};display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">${q.icon}</div>
-                <div style="flex:1;min-width:0;">
-                  <p style="font-size:13px;font-weight:700;color:var(--text-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${q.quiz}</p>
-                  <p style="font-size:11px;color:var(--text-400);">${q.subject} · ${q.date}</p>
-                </div>
-                <div style="text-align:right;flex-shrink:0;">
-                  <p style="font-size:15px;font-weight:900;color:${q.color};font-family:var(--font-display);">${pct}%</p>
-                  <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:${grade.bg};color:${grade.c};">${grade.label}</span>
-                </div>
-              </div>
-              <div class="progress-track" style="height:5px;"><div class="progress-fill" style="height:5px;width:${pct}%;background:${q.color};"></div></div>
-            </div>`;
-            })
-            .join("")}
-        </div>
+        <div id="parent-quizzes" style="display:flex;flex-direction:column;gap:10px;">${Loading()}</div>
       </div>
     </div>
 
@@ -2471,10 +2407,9 @@ function ParentViewPage() {
                 <p style="font-size:11px;color:var(--text-400);">Send a motivational message to your child</p>
               </div>
             </div>
-            <div style="display:flex;gap:8px;">
-              ${ENCOURAGEMENTS.map(
-                (m, i) =>
-                  `<button onclick="parentAction('message-child', { message: ENCOURAGEMENTS[${i}] }, 'Message sent!')" ...>${m}</button>`,
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+              ${ENCOURAGEMENTS.map((m, i) =>
+                `<button onclick="parentAction('message-child', { message: ENCOURAGEMENTS[${i}] }, 'Message sent!')" class="btn btn-ghost btn-sm" style="flex:1 1 auto;white-space:nowrap;">${m}</button>`
               ).join("")}
             </div>
           </div>
@@ -2491,7 +2426,7 @@ function ParentViewPage() {
               <input type="range" min="1" max="10" value="3" id="daily-goal-slider" oninput="document.getElementById('goal-val').textContent=this.value" style="flex:1;accent-color:var(--primary);" />
               <div style="width:40px;height:40px;border-radius:10px;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;color:var(--primary);font-family:var(--font-display);" id="goal-val">3</div>
             </div>
-            <button onclick="parentAction('set-daily-goal', { goal: +document.getElementById('daily-goal-slider').value }, 'Daily goal saved!')" style="...">Save Goal</button>
+            <button onclick="parentAction('set-daily-goal', { goal: +document.getElementById('daily-goal-slider').value }, 'Daily goal saved!')" class="btn btn-primary btn-sm" style="width:100%;margin-top:12px;">Save Goal</button>
           </div>
           <!-- Request Teacher Review -->
           <div class="card" style="padding:16px;display:flex;align-items:center;gap:12px;">
@@ -2499,7 +2434,7 @@ function ParentViewPage() {
             <div style="flex:1;">
               <p style="font-size:13px;font-weight:700;color:var(--text-900);">Request Teacher Review</p>
               <p style="font-size:11px;color:var(--text-400);margin-bottom:8px;">Ask a teacher to check your child's progress</p>
-              <button onclick="parentAction('request-teacher-review', {}, 'Review request sent to teacher!')" style="...">Send Request</button>
+              <button onclick="parentAction('request-teacher-review', {}, 'Review request sent to teacher!')" class="btn btn-primary btn-sm">Send Request</button>
             </div>
           </div>
         </div>
@@ -2614,7 +2549,7 @@ function ParentViewPage() {
     </div>
 
   </div>`;
-}
+                   }
 
 async function linkChild() {
   const input = document.getElementById("child-username-input");
@@ -2896,6 +2831,39 @@ function renderParentProgress(subjects) {
         )
         .join("")
     : `<p style="text-align:center;padding:30px;font-weight:700;">🌟 No weak areas!</p>`;
+}
+
+function renderParentQuizzes(quizzes) {
+  const el = document.getElementById("parent-quizzes");
+  if (!quizzes.length) {
+    el.innerHTML = `<p style="color:var(--text-400);padding:20px;text-align:center;">No quizzes taken yet.</p>`;
+    return;
+  }
+  el.innerHTML = quizzes.map((q) => {
+    const st = getSubjectStyle(q.subjectName);
+    const pct = q.percent;
+    const grade =
+      pct >= 85 ? { label: "Excellent", c: "#065f46", bg: "#d1fae5" }
+      : pct >= 70 ? { label: "Good", c: "#92400e", bg: "#fef3c7" }
+      : { label: "Needs Work", c: "#991b1b", bg: "#fee2e2" };
+    const date = q.attemptedAt
+      ? new Date(q.attemptedAt).toLocaleDateString("en-PH", { month: "short", day: "numeric" })
+      : "";
+    return `<div class="card" style="padding:14px 16px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <div style="width:34px;height:34px;border-radius:10px;background:${st.pale};display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">${st.icon}</div>
+        <div style="flex:1;min-width:0;">
+          <p style="font-size:13px;font-weight:700;color:var(--text-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(q.quizTitle || "Quiz")}</p>
+          <p style="font-size:11px;color:var(--text-400);">${escapeHtml(q.subjectName || "—")}${date ? " · " + date : ""}</p>
+        </div>
+        <div style="text-align:right;flex-shrink:0;">
+          <p style="font-size:15px;font-weight:900;color:${st.color};font-family:var(--font-display);">${pct}%</p>
+          <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:${grade.bg};color:${grade.c};">${grade.label}</span>
+        </div>
+      </div>
+      <div class="progress-track" style="height:5px;"><div class="progress-fill" style="height:5px;width:${pct}%;background:${st.color};"></div></div>
+    </div>`;
+  }).join("");
 }
 
 async function parentAction(path, body, okMsg) {

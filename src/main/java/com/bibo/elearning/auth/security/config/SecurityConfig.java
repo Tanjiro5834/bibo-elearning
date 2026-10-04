@@ -30,6 +30,12 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/",
                     "/index.html",
+                    "/index.css",
+                    "/index.js",
+                    "/admin_login.css",
+                    "/admin_login.js",
+                    "/admin_dashboard.css",
+                    "/admin_dashboard.js",
                     "/admin_login.html",
                     "/admin_dashboard.html",
                     "/error",

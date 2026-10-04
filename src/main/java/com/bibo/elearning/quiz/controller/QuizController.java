@@ -2,6 +2,9 @@ package com.bibo.elearning.quiz.controller;
 
 import java.util.List;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -12,7 +15,6 @@ import com.bibo.elearning.quiz.dto.request.CreateQuizRequest;
 import com.bibo.elearning.quiz.dto.request.SubmitQuizRequest;
 import com.bibo.elearning.quiz.dto.response.QuizResponse;
 import com.bibo.elearning.quiz.dto.response.QuizResultResponse;
-import com.bibo.elearning.quiz.entity.Quiz;
 import com.bibo.elearning.quiz.service.QuizService;
 import lombok.RequiredArgsConstructor;
 
@@ -24,8 +26,11 @@ public class QuizController {
     private final QuizService quizService;
 
     @PostMapping("/submit")
-    public ResponseEntity<QuizResultResponse> submitQuiz(@RequestBody SubmitQuizRequest request) {
-        return ResponseEntity.ok(quizService.submitQuiz(request));
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<QuizResultResponse> submitQuiz(
+        @AuthenticationPrincipal UserDetails userDetails,
+        @RequestBody SubmitQuizRequest request) {
+        return ResponseEntity.ok(quizService.submitQuiz(userDetails.getUsername(), request));
     }
 
     @PostMapping("/create")
