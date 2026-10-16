@@ -23,7 +23,7 @@ public class StudentProfile {
     private Integer age;
 
     @Column(nullable = false, length = 50)
-    private String learningLevel; // e.g. Beginner, Grade 3, etc.
+    private String learningLevel; 
 
     @Column(length = 100)
     private String fullName;

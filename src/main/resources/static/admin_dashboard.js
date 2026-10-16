@@ -232,10 +232,14 @@ function closeModal() {
 }
 
 const SUBJECT_STYLES = {
-  Math: { color: "#3B3FC4", pale: "#EEF0FF", icon: "🔢" },
+  Mathematics: { color: "#3B3FC4", pale: "#EEF0FF", icon: "🔢" },
   Science: { color: "#0D9488", pale: "#CCFBF1", icon: "🔬" },
   English: { color: "#3B3FC4", pale: "#EEF0FF", icon: "📘" },
-  Filipino: { color: "#EF4444", pale: "#FEE2E2", icon: "🇵🇭" },
+  Filipino: {
+    color: "#EF4444",
+    pale: "#FEE2E2",
+    icon: `<svg viewBox="0 0 30 15" width="1.25em" height="0.625em" style="vertical-align:-0.05em;border-radius:2px;"><rect width="30" height="7.5" fill="#0038A8"/><rect y="7.5" width="30" height="7.5" fill="#CE1126"/><path d="M0 0L13 7.5L0 15Z" fill="#fff"/><circle cx="4.5" cy="7.5" r="1.6" fill="#FCD116"/><circle cx="1.6" cy="2.2" r="0.6" fill="#FCD116"/><circle cx="1.6" cy="12.8" r="0.6" fill="#FCD116"/><circle cx="10.6" cy="7.5" r="0.6" fill="#FCD116"/></svg>`,
+  },
   Arts: { color: "#EC4899", pale: "#FCE7F3", icon: "🎨" },
   Values: { color: "#10B981", pale: "#D1FAE5", icon: "🌟" },
   default: { color: "#3B3FC4", pale: "#EEF0FF", icon: "📚" },
@@ -454,7 +458,7 @@ function filterAccounts(role) {
                 <div style="display:flex;align-items:center;gap:10px;">
                   <div style="width:36px;height:36px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--primary);font-size:14px;">${initial}</div>
                   <div>
-                    <div style="font-weight:700;color:var(--text-900);">${u.firstName || ""} ${u.lastName || ""}</div>
+                    <div style="font-weight:700;color:var(--text-900);">${`${u.firstName || ""} ${u.lastName || ""}`.trim() || u.username}</div>
                     <div style="font-size:12px;color:var(--text-400);">ID: ${u.id}</div>
                   </div>
                 </div>
@@ -758,61 +762,18 @@ async function analytics() {
     <div class="grid-4 mb-24" id="analytics-stats">
       ${[1, 2, 3, 4].map(() => `<div class="card stat-card"><div class="spinner"></div></div>`).join("")}
     </div>
-
     <div class="grid-2 mb-24">
-      <!-- Lessons Completed Per Subject -->
       <div class="card" style="padding:24px;">
-        <p style="font-weight:800;font-size:15px;color:var(--text-900);margin-bottom:4px;">Lessons Completed by Subject</p>
-        <p style="font-size:12px;color:var(--text-400);margin-bottom:20px;">Across all students</p>
-        <div style="display:flex;flex-direction:column;gap:12px;">
-          ${[
-            { label: "Filipino", pct: 78, color: "#ef4444", icon: "🇵🇭" },
-            { label: "Math", pct: 62, color: "#3b3fc4", icon: "🔢" },
-            { label: "English", pct: 85, color: "#f59e0b", icon: "📘" },
-            { label: "Science", pct: 54, color: "#0d9488", icon: "🔬" },
-          ]
-            .map(
-              (s) => `
-            <div>
-              <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-                <span style="font-size:13px;font-weight:600;">${s.icon} ${s.label}</span>
-                <span style="font-size:13px;font-weight:800;color:${s.color};">${s.pct}%</span>
-              </div>
-              <div class="progress-track"><div class="progress-fill" style="width:${s.pct}%;background:${s.color};"></div></div>
-            </div>`,
-            )
-            .join("")}
-        </div>
+        <p style="font-weight:800;font-size:15px;color:var(--text-900);margin-bottom:4px;">Lesson Completion by Subject</p>
+        <p style="font-size:12px;color:var(--text-400);margin-bottom:20px;">Completed lessons ÷ (active students × published lessons)</p>
+        <div id="an-subjects">${Loading()}</div>
       </div>
-
-      <!-- Weekly Active Users -->
       <div class="card" style="padding:24px;">
-        <p style="font-weight:800;font-size:15px;color:var(--text-900);margin-bottom:4px;">Weekly Active Users</p>
-        <p style="font-size:12px;color:var(--text-400);margin-bottom:20px;">Logins per day this week</p>
-        <div style="display:flex;gap:8px;align-items:flex-end;height:100px;">
-          ${[
-            { d: "Mon", v: 42 },
-            { d: "Tue", v: 58 },
-            { d: "Wed", v: 35 },
-            { d: "Thu", v: 71 },
-            { d: "Fri", v: 49 },
-            { d: "Sat", v: 22 },
-            { d: "Sun", v: 18 },
-          ]
-            .map((d) => {
-              const h = Math.round((d.v / 71) * 80) + 10;
-              return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
-              <span style="font-size:10px;font-weight:700;color:var(--text-700);">${d.v}</span>
-              <div style="width:100%;height:${h}px;background:var(--primary);border-radius:6px 6px 3px 3px;opacity:0.85;"></div>
-              <span style="font-size:10px;color:var(--text-400);">${d.d}</span>
-            </div>`;
-            })
-            .join("")}
-        </div>
+        <p style="font-weight:800;font-size:15px;color:var(--text-900);margin-bottom:4px;">Daily Active Learners</p>
+        <p style="font-size:12px;color:var(--text-400);margin-bottom:20px;">Students who opened a lesson or took a quiz, last 7 days</p>
+        <div id="an-weekly">${Loading()}</div>
       </div>
     </div>
-
-    <!-- Top Performing Students -->
     <div class="card" style="padding:24px;">
       <p style="font-weight:800;font-size:15px;color:var(--text-900);margin-bottom:16px;">🏆 Top Performing Students</p>
       <div id="top-students">${Loading()}</div>
@@ -820,65 +781,57 @@ async function analytics() {
   </div>`;
 
   try {
-    const users = await apiFetch("GET", "/admin/users").catch(() => []);
-    const students = (users || []).filter(
-      (u) => String(u.role?.name || u.role || "").toUpperCase() === "STUDENT",
-    );
-    document.getElementById("analytics-stats").innerHTML = [
-      {
-        label: "Active Students",
-        value: students.length,
-        icon: "🎒",
-        color: "var(--primary)",
-      },
-      {
-        label: "Avg. Progress",
-        value: "68%",
-        icon: "📊",
-        color: "var(--accent-green)",
-      },
-      {
-        label: "Quizzes Taken",
-        value: "—",
-        icon: "✅",
-        color: "var(--accent-orange)",
-      },
-      {
-        label: "Lessons Done",
-        value: "—",
-        icon: "📚",
-        color: "var(--primary-mid)",
-      },
-    ]
-      .map(
-        (s) =>
-          `<div class="card stat-card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><span class="stat-label">${s.label}</span><span style="font-size:22px;">${s.icon}</span></div><div class="stat-value" style="color:${s.color};">${s.value}</div></div>`,
-      )
-      .join("");
+    const a = await apiFetch("GET", "/admin/analytics");
 
-    document.getElementById("top-students").innerHTML = students.length
-      ? `
-      <table class="data-table">
-        <thead><tr><th>#</th><th>Student</th><th>Username</th><th>Progress</th></tr></thead>
-        <tbody>
-          ${students
-            .slice(0, 5)
-            .map(
-              (s, i) => `<tr>
+    document.getElementById("analytics-stats").innerHTML = [
+      { label: "Active Students", value: a.activeStudents, icon: "🎒", color: "var(--primary)" },
+      { label: "Avg. Progress", value: `${a.avgProgress}%`, icon: "📊", color: "var(--accent-green)" },
+      { label: "Quizzes Taken", value: a.quizzesTaken, icon: "✅", color: "var(--accent-orange)" },
+      { label: "Lessons Done", value: a.lessonsCompleted, icon: "📚", color: "var(--primary-mid)" },
+    ].map((s) => `<div class="card stat-card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><span class="stat-label">${s.label}</span><span style="font-size:22px;">${s.icon}</span></div><div class="stat-value" style="color:${s.color};">${s.value}</div></div>`).join("");
+
+    document.getElementById("an-subjects").innerHTML = a.completionBySubject.length
+      ? `<div style="display:flex;flex-direction:column;gap:12px;">${a.completionBySubject.map((s) => {
+          const st = getSubjectStyle(s.subject);
+          return `<div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+              <span style="font-size:13px;font-weight:600;">${st.icon} ${s.subject}</span>
+              <span style="font-size:13px;font-weight:800;color:${st.color};">${s.pct}%</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width:${s.pct}%;background:${st.color};"></div></div>
+          </div>`;
+        }).join("")}</div>`
+      : Empty("📚", "No published lessons", "Publish lessons in an active subject to see completion.");
+
+    const max = Math.max(1, ...a.weeklyActive.map((d) => d.count));
+    document.getElementById("an-weekly").innerHTML = `<div style="display:flex;gap:8px;align-items:flex-end;height:100px;">${a.weeklyActive.map((d) => {
+      const h = Math.round((d.count / max) * 80) + 10;
+      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+        <span style="font-size:10px;font-weight:700;color:var(--text-700);">${d.count}</span>
+        <div style="width:100%;height:${h}px;background:var(--primary);border-radius:6px 6px 3px 3px;opacity:0.85;"></div>
+        <span style="font-size:10px;color:var(--text-400);">${d.day}</span>
+      </div>`;
+    }).join("")}</div>`;
+
+    document.getElementById("top-students").innerHTML = a.topStudents.length
+      ? `<table class="data-table">
+          <thead><tr><th>#</th><th>Student</th><th>Username</th><th>Progress</th></tr></thead>
+          <tbody>${a.topStudents.map((s, i) => `<tr>
             <td><span style="font-weight:800;color:var(--primary);">${i + 1}</span></td>
             <td><div style="display:flex;align-items:center;gap:8px;">
               <div style="width:30px;height:30px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--primary);font-size:12px;">${(s.firstName || s.username || "?")[0].toUpperCase()}</div>
-              <span style="font-weight:600;">${s.firstName || ""} ${s.lastName || ""}</span>
+              <span style="font-weight:600;">${`${s.firstName || ""} ${s.lastName || ""}`.trim() || s.username}</span>
             </div></td>
             <td style="color:var(--text-400);">@${s.username || "—"}</td>
-            <td><span class="badge badge-green">—%</span></td>
-          </tr>`,
-            )
-            .join("")}
-        </tbody>
-      </table>`
-      : Empty("🏆", "No students yet", "Students appear here once registered.");
-  } catch (e) {}
+            <td><span class="badge badge-green">${s.progress}%</span></td>
+          </tr>`).join("")}</tbody>
+        </table>`
+      : Empty("🏆", "No completions yet", "Students appear here after completing a lesson.");
+  } catch (e) {
+    document.getElementById("analytics-stats").innerHTML =
+      `<div style="color:var(--accent-red);padding:16px;grid-column:1/-1;">⚠️ Could not load analytics: ${e.message}</div>`;
+    ["an-subjects", "an-weekly", "top-students"].forEach((id) => (document.getElementById(id).innerHTML = ""));
+  }
 }
 
 // ── REVIEW REQUESTS ──────────────────────────────────────────
@@ -1404,6 +1357,7 @@ async function lessons(subjectId = null, subjectName = null) {
     `<div class="page">${PageHeader(subjectName ? `Lessons • ${subjectName}` : "Lessons", subjectName ? `Manage lessons for ${subjectName}` : "Create and manage all lessons", "+ New Lesson", "openCreateLesson()")}<div id="lessons-list">${Loading()}</div></div>`;
   await loadLessons(subjectId, subjectName);
 }
+
 async function loadLessons(subjectId = null, subjectName = null) {
   try {
     let all = [];
@@ -1462,7 +1416,11 @@ async function loadLessons(subjectId = null, subjectName = null) {
           <td><span class="badge ${diffClass[diffKey] || "badge-gray"}">${difficulty}</span></td>
           <td style="font-size:13px;color:var(--text-400);">${l.estimatedMinutes ? l.estimatedMinutes + " min" : "—"}</td>
           <td><span class="badge ${l.published ? "badge-green" : "badge-orange"}">${l.published ? "Published" : "Draft"}</span></td>
-          <td style="text-align:right;"><div style="display:flex;gap:8px;justify-content:flex-end;"><button class="btn btn-ghost btn-sm" onclick="navigate('sections')">Sections</button><button class="btn btn-sm" style="background:var(--bg);color:var(--text-500);" onclick="openEditLesson(${l.id})">Edit</button></div></td></tr>`;
+          <td style="text-align:right;"><div style="display:flex;gap:8px;justify-content:flex-end;">
+            <button class="btn btn-sm" style="background:${l.published ? "#FEF3C7" : "#ECFDF5"};color:${l.published ? "#92400E" : "#047857"};" onclick="togglePublish(${l.id}, ${!l.published})">${l.published ? "Unpublish" : "Publish"}</button>
+            <button class="btn btn-ghost btn-sm" onclick="navigate('sections')">Sections</button>
+            <button class="btn btn-sm" style="background:var(--bg);color:var(--text-500);" onclick="openEditLesson(${l.id})">Edit</button>
+          </div></td></tr>`;
         })
         .join("")}
     </tbody></table></div>`;
@@ -1471,6 +1429,17 @@ async function loadLessons(subjectId = null, subjectName = null) {
       `<div style="color:var(--accent-red);padding:20px;">⚠️ ${e.message}</div>`;
   }
 }
+
+async function togglePublish(id, publish) {
+  try {
+    await apiFetch("PATCH", `/lessons/${id}/${publish ? "publish" : "unpublish"}`);
+    showToast(publish ? "Lesson published!" : "Lesson unpublished.", publish ? "🚀" : "📝");
+    await loadLessons();
+  } catch (e) {
+    showToast(e.message, "⚠️");
+  }
+}
+
 async function openCreateLesson() {
   let opts = '<option value="">Select subject...</option>';
   try {
@@ -1487,6 +1456,7 @@ async function openCreateLesson() {
     <div class="field-row"><div class="field" style="margin-bottom:0;"><label>Minutes</label><input id="les-minutes" class="bibo-input" type="number" placeholder="30" /></div><div class="field" style="margin-bottom:0;"><label>Difficulty</label><select id="les-diff" class="bibo-input"><option value="EASY">Easy</option><option value="MEDIUM">Medium</option><option value="HARD">Hard</option></select></div></div>
     <div style="display:flex;gap:10px;margin-top:18px;"><button class="btn btn-ghost" style="flex:1;" onclick="closeModal()">Cancel</button><button class="btn btn-primary" style="flex:1;" id="les-btn" onclick="submitLesson()">Create Lesson</button></div>`);
 }
+
 async function submitLesson() {
   const subjectId = document.getElementById("les-subject").value,
     title = document.getElementById("les-title").value.trim(),
@@ -1513,7 +1483,7 @@ async function submitLesson() {
       title,
       description: desc,
       estimatedMinutes: minutes,
-      difficultyLevel: diff,
+      learningLevel: diff,
       published: true,
     });
     closeModal();
@@ -1526,6 +1496,7 @@ async function submitLesson() {
     btn.textContent = "Create Lesson";
   }
 }
+
 function openEditLesson(lessonId) {
   const l = window._lessonMap[lessonId];
   if (!l) {
@@ -1542,9 +1513,10 @@ function openEditLesson(lessonId) {
     <div id="eles-err" style="display:none;background:#FEE2E2;color:#991B1B;font-size:13px;font-weight:700;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:14px;"></div>
     <div class="field"><label>Lesson Title</label><input id="eles-title" class="bibo-input" value="${safeTitle}" /></div>
     <div class="field"><label>Description</label><textarea id="eles-desc" class="bibo-input">${safeDesc}</textarea></div>
-    <div class="field-row"><div class="field" style="margin-bottom:0;"><label>Minutes</label><input id="eles-minutes" class="bibo-input" type="number" value="${l.estimatedMinutes || ""}" /></div><div class="field" style="margin-bottom:0;"><label>Difficulty</label><select id="eles-diff" class="bibo-input">${["EASY", "MEDIUM", "HARD"].map((d) => `<option value="${d}"${l.difficultyLevel === d ? " selected" : ""}>${d}</option>`).join("")}</select></div></div>
+    <div class="field-row"><div class="field" style="margin-bottom:0;"><label>Minutes</label><input id="eles-minutes" class="bibo-input" type="number" value="${l.estimatedMinutes || ""}" /></div><div class="field" style="margin-bottom:0;"><label>Difficulty</label><select id="eles-diff" class="bibo-input">${["EASY", "MEDIUM", "HARD"].map((d) => `<option value="${d}"${l.learningLevel === d ? " selected" : ""}>${d}</option>`).join("")}</select></div></div>
     <div style="display:flex;gap:10px;margin-top:18px;"><button class="btn btn-ghost" style="flex:1;" onclick="closeModal()">Cancel</button><button class="btn btn-primary" style="flex:1;" id="eles-btn" onclick="submitEditLesson(${l.id})">Save Changes</button></div>`);
 }
+
 async function submitEditLesson(id) {
   const title = document.getElementById("eles-title").value.trim(),
     desc = document.getElementById("eles-desc").value.trim(),
@@ -1564,7 +1536,7 @@ async function submitEditLesson(id) {
       title,
       description: desc,
       estimatedMinutes: minutes,
-      difficultyLevel: diff,
+      learningLevel: diff,
     });
     closeModal();
     showToast("Lesson updated!", "✏️");
@@ -1619,6 +1591,7 @@ async function sections() {
       `<div style="color:var(--accent-red);padding:16px;">⚠️ ${e.message}</div>`;
   }
 }
+
 async function openCreateSection() {
   let opts = '<option value="">Select lesson...</option>';
   try {
@@ -1644,6 +1617,7 @@ async function openCreateSection() {
     <div class="field-row"><div class="field" style="margin-bottom:0;"><label>Content Type</label><select id="sec-type" class="bibo-input"><option value="TEXT">Text</option><option value="IMAGE">Image</option><option value="VIDEO">Video</option><option value="ACTIVITY">Activity</option></select></div><div class="field" style="margin-bottom:0;"><label>Order</label><input id="sec-order" class="bibo-input" type="number" placeholder="1" min="1" /></div></div>
     <div style="display:flex;gap:10px;margin-top:18px;"><button class="btn btn-ghost" style="flex:1;" onclick="closeModal()">Cancel</button><button class="btn btn-primary" style="flex:1;" id="sec-btn" onclick="submitSection()">Add Section</button></div>`);
 }
+
 async function submitSection() {
   const lessonId = parseInt(document.getElementById("sec-lesson").value),
     title = document.getElementById("sec-title").value.trim(),
@@ -1683,6 +1657,7 @@ async function submitSection() {
     btn.textContent = "Add Section";
   }
 }
+
 async function loadSections(lessonId) {
   const container = document.getElementById("sections-content");
   if (!container || !lessonId) return;

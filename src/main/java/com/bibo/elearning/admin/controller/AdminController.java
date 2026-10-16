@@ -18,16 +18,25 @@ import com.bibo.elearning.admin.dto.response.UserResponse;
 import com.bibo.elearning.admin.service.AdminUserService;
 import lombok.RequiredArgsConstructor;
 
+import com.bibo.elearning.admin.dto.response.AnalyticsResponse;
+import com.bibo.elearning.admin.service.AdminAnalyticsService;
+
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('ADMIN')") 
 public class AdminController {
     private final AdminUserService adminUserService;
+    private final AdminAnalyticsService adminAnalyticsService;
 
     @GetMapping("/dashboard")
-    @PreAuthorize("hasRole('ADMIN')")
     public String adminDashboard() {
         return "Welcome Admin";
+    }
+
+    @GetMapping("/analytics")
+    public AnalyticsResponse getAnalytics() {
+        return adminAnalyticsService.getAnalytics();
     }
 
     @GetMapping("/users")

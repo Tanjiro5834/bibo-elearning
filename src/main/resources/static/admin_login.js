@@ -24,9 +24,6 @@ function setMessage(el, text, type = "") {
   el.textContent = text;
 }
 
-// --- LOGIN ---
-// Calls: POST /api/auth/login
-// Body:  { username, password }
 document
   .getElementById("loginForm")
   .addEventListener("submit", async function (e) {
@@ -49,7 +46,6 @@ document
       const token = result.token || result.accessToken;
       if (!token) throw new Error("No token received from server.");
 
-      // Check role — only allow ADMIN
       const user = result.user || result;
       const roleName = String(
         user?.role?.name || user?.roleName || user?.role || "",

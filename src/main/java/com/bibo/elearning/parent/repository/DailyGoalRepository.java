@@ -10,4 +10,5 @@ import java.util.Optional;
 public interface DailyGoalRepository extends JpaRepository<DailyGoal, Long> {
 
     Optional<DailyGoal> findByParentAndChild(User parent, User child);
+    Optional<DailyGoal> findFirstByChildIdOrderByUpdatedAtDesc(Long childId);
 }

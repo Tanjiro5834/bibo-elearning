@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import com.bibo.elearning.quiz.entity.QuizAttempt;
 import com.bibo.elearning.student.model.StudentProfile;
+import java.time.LocalDateTime;
 
 public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, Long> {
     List<QuizAttempt> findByStudentId(Long studentId);
@@ -19,4 +20,25 @@ public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, Long> 
         ORDER BY qa.attemptedAt DESC
         """)
     List<QuizAttempt> findRecentWithQuiz(@Param("student") StudentProfile student, Pageable pageable);
+
+    @Query("""
+        SELECT qa.student.id, qa.quiz.id, MAX(qa.score),
+            MAX(CASE WHEN qa.passed = true THEN 1 ELSE 0 END)
+        FROM QuizAttempt qa
+        WHERE qa.student IS NOT NULL
+        GROUP BY qa.student.id, qa.quiz.id
+        """)
+    List<Object[]> findBestAttemptPerStudentAndQuiz();
+
+    interface StudentActivity {
+        Long getStudentId();
+        LocalDateTime getOccurredAt();
+    }
+
+    @Query("""
+        SELECT qa.student.id AS studentId, qa.attemptedAt AS occurredAt
+        FROM QuizAttempt qa
+        WHERE qa.attemptedAt >= :since
+        """)
+    List<StudentActivity> findActivitySince(@Param("since") LocalDateTime since);
 }
