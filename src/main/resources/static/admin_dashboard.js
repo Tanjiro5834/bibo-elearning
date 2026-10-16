@@ -376,61 +376,97 @@ async function adminDashboard() {
 
 // ── MANAGE ACCOUNTS ──────────────────────────────────────────
 async function manageAccounts() {
+  _roleFilter = "ALL";
+  _searchQuery = "";
+
   document.getElementById("page-container").innerHTML = `<div class="page">
     ${PageHeader("Manage Accounts", "Create, update, and deactivate user accounts", "+ New Account", "openCreateAccount()")}
 
-    <!-- Role Filter -->
-    <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;" id="role-filters">
-      ${["All", "Student", "Parent", "Teacher", "Admin"]
-        .map(
-          (r, i) => `
-        <button onclick="filterAccounts('${r.toUpperCase()}')" id="rf-${r}" class="btn btn-sm" style="background:${i === 0 ? "var(--primary)" : "var(--bg)"};color:${i === 0 ? "white" : "var(--text-500)"};">${r}</button>
-      `,
-        )
-        .join("")}
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+      <!-- Role Filter -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;" id="role-filters">
+        ${["All", "Student", "Parent", "Teacher", "Admin"]
+          .map(
+            (r, i) => `<button onclick="filterAccounts('${r.toUpperCase()}')" id="rf-${r}" class="btn btn-sm" style="background:${i === 0 ? "var(--primary)" : "var(--bg)"};color:${i === 0 ? "white" : "var(--text-500)"};">${r}</button>`,
+          )
+          .join("")}
+      </div>
+
+      <!-- Search -->
+      <div style="position:relative;flex:1;max-width:340px;min-width:220px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"
+          style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-400);pointer-events:none;">
+          <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input id="account-search" class="bibo-input" type="search" autocomplete="off"
+          placeholder="Search name, username, email, or ID…  ( / )"
+          style="padding-left:40px;"
+          oninput="onSearchAccounts(this.value)"
+          onkeydown="if(event.key==='Escape'){this.value='';onSearchAccounts('');}" />
+      </div>
     </div>
 
     <div id="accounts-list">${Loading()}</div>
   </div>`;
+
   await loadAccounts();
 }
 
 let _allAccounts = [];
+let _roleFilter = "ALL";
+let _searchQuery = "";
 
-async function loadAccounts(roleFilter = "ALL") {
+const esc = (s) =>
+  String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+
+async function loadAccounts() {
   try {
     _allAccounts = (await apiFetch("GET", "/admin/users")) || [];
-    filterAccounts(roleFilter);
+    filterAccounts(_roleFilter);
   } catch (e) {
     document.getElementById("accounts-list").innerHTML =
-      `<div style="color:var(--accent-red);padding:20px;">⚠️ ${e.message}</div>`;
+      `<div style="color:var(--accent-red);padding:20px;">⚠️ ${esc(e.message)}</div>`;
   }
 }
 
-function filterAccounts(role) {
+function onSearchAccounts(value) {
+  _searchQuery = value.trim().toLowerCase();
+  filterAccounts(_roleFilter);
+}
+
+function filterAccounts(role = _roleFilter) {
+  _roleFilter = role;
+
+  // Active tab styling
   document.querySelectorAll('[id^="rf-"]').forEach((btn) => {
-    const isActive =
-      btn.id === `rf-${role.charAt(0) + role.slice(1).toLowerCase()}` ||
-      (role === "ALL" && btn.id === "rf-All");
+    const isActive = btn.id.toUpperCase() === `RF-${role}`;
     btn.style.background = isActive ? "var(--primary)" : "var(--bg)";
     btn.style.color = isActive ? "white" : "var(--text-500)";
   });
 
-  const filtered =
-    role === "ALL"
-      ? _allAccounts
-      : _allAccounts.filter(
-          (u) => String(u.role?.name || u.role || "").toUpperCase() === role,
-        );
+  // Role + search filter
+  const q = _searchQuery;
+  const filtered = _allAccounts.filter((u) => {
+    const r = String(u.role?.name || u.role || "").toUpperCase();
+    if (role !== "ALL" && r !== role) return false;
+    if (!q) return true;
+    return [u.firstName, u.lastName, `${u.firstName || ""} ${u.lastName || ""}`, u.username, u.email, String(u.id)]
+      .some((v) => String(v || "").toLowerCase().includes(q));
+  });
 
   if (!filtered.length) {
-    document.getElementById("accounts-list").innerHTML = Empty(
-      "👥",
-      "No accounts found",
-      "No accounts match this filter.",
-    );
+    document.getElementById("accounts-list").innerHTML = q
+      ? Empty("🔍", "No matches", `No accounts match "${esc(q)}".`)
+      : Empty("👥", "No accounts found", "No accounts match this filter.");
     return;
   }
+
+  const roleBadges = {
+    ADMIN: "badge-purple",
+    TEACHER: "badge-blue",
+    STUDENT: "badge-green",
+    PARENT: "badge-orange",
+  };
 
   document.getElementById("accounts-list").innerHTML = `
     <div class="card" style="overflow:hidden;">
@@ -442,42 +478,35 @@ function filterAccounts(role) {
           ${filtered
             .map((u) => {
               const role = String(u.role?.name || u.role || "").toUpperCase();
-              const roleBadge =
-                {
-                  ADMIN: "badge-purple",
-                  TEACHER: "badge-blue",
-                  STUDENT: "badge-green",
-                  PARENT: "badge-orange",
-                }[role] || "badge-gray";
-              const initial = (u.firstName ||
-                u.username ||
-                "?")[0].toUpperCase();
+              const fullName = `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.username || "—";
+              const initial = (u.firstName || u.username || "?")[0].toUpperCase();
               const isEnabled = u.enabled !== false;
+              const id = Number(u.id);
               return `<tr>
-              <td>
-                <div style="display:flex;align-items:center;gap:10px;">
-                  <div style="width:36px;height:36px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--primary);font-size:14px;">${initial}</div>
-                  <div>
-                    <div style="font-weight:700;color:var(--text-900);">${`${u.firstName || ""} ${u.lastName || ""}`.trim() || u.username}</div>
-                    <div style="font-size:12px;color:var(--text-400);">ID: ${u.id}</div>
+                <td>
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <div style="width:36px;height:36px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--primary);font-size:14px;">${esc(initial)}</div>
+                    <div>
+                      <div style="font-weight:700;color:var(--text-900);">${esc(fullName)}</div>
+                      <div style="font-size:12px;color:var(--text-400);">ID: ${id}</div>
+                    </div>
                   </div>
-                </div>
-              </td>
-              <td style="color:var(--text-400);">@${u.username || "—"}</td>
-              <td style="font-size:13px;color:var(--text-500);">${u.email || "—"}</td>
-              <td><span class="badge ${roleBadge}">${role}</span></td>
-              <td><span class="badge ${isEnabled ? "badge-green" : "badge-red"}">${isEnabled ? "Active" : "Inactive"}</span></td>
-              <td style="text-align:right;">
-                <div style="display:flex;gap:6px;justify-content:flex-end;">
-                  <button class="btn btn-sm btn-ghost" onclick="openEditAccount(${u.id})">Edit</button>
-                  ${
-                    isEnabled
-                      ? `<button class="btn btn-sm btn-danger" onclick="deactivateAccount(${u.id})">Deactivate</button>`
-                      : `<button class="btn btn-sm" style="background:#ECFDF5;color:#047857;" onclick="activateAccount(${u.id})">Activate</button>`
-                  }
-                </div>
-              </td>
-            </tr>`;
+                </td>
+                <td style="color:var(--text-400);">@${esc(u.username || "—")}</td>
+                <td style="font-size:13px;color:var(--text-500);">${esc(u.email || "—")}</td>
+                <td><span class="badge ${roleBadges[role] || "badge-gray"}">${esc(role)}</span></td>
+                <td><span class="badge ${isEnabled ? "badge-green" : "badge-red"}">${isEnabled ? "Active" : "Inactive"}</span></td>
+                <td style="text-align:right;">
+                  <div style="display:flex;gap:6px;justify-content:flex-end;">
+                    <button class="btn btn-sm btn-ghost" onclick="openEditAccount(${id})">Edit</button>
+                    ${
+                      isEnabled
+                        ? `<button class="btn btn-sm btn-danger" onclick="deactivateAccount(${id})">Deactivate</button>`
+                        : `<button class="btn btn-sm" style="background:#ECFDF5;color:#047857;" onclick="activateAccount(${id})">Activate</button>`
+                    }
+                  </div>
+                </td>
+              </tr>`;
             })
             .join("")}
         </tbody>
@@ -1874,6 +1903,15 @@ async function students() {
       `<div class="card" style="padding:16px;color:var(--accent-red);">⚠️ Failed to load students: ${e.message}</div>`;
   }
 }
+
+// ── Keyboard shortcuts ───────────────────────────────────────
+document.addEventListener("keydown", (e) => {
+  const input = document.getElementById("account-search");
+  if (e.key === "/" && input && document.activeElement !== input && !e.target.closest("input, textarea, select")) {
+    e.preventDefault();
+    input.focus();
+  }
+});
 
 // ── Init ─────────────────────────────────────────────────────
 navigate(isAdmin ? "admin-dashboard" : "teacher-dashboard");
