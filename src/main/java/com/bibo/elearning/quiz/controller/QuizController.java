@@ -11,8 +11,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.bibo.elearning.quiz.dto.request.CheckAnswerRequest;
 import com.bibo.elearning.quiz.dto.request.CreateQuizRequest;
 import com.bibo.elearning.quiz.dto.request.SubmitQuizRequest;
+import com.bibo.elearning.quiz.dto.response.CheckAnswerResponse;
 import com.bibo.elearning.quiz.dto.response.QuizResponse;
 import com.bibo.elearning.quiz.dto.response.QuizResultResponse;
 import com.bibo.elearning.quiz.service.QuizService;
@@ -33,7 +35,14 @@ public class QuizController {
         return ResponseEntity.ok(quizService.submitQuiz(userDetails.getUsername(), request));
     }
 
+    @PostMapping("/check")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<CheckAnswerResponse> checkAnswer(@RequestBody CheckAnswerRequest request) {
+        return ResponseEntity.ok(quizService.checkAnswer(request));
+    }
+
     @PostMapping("/create")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER')")
     public ResponseEntity<QuizResponse> createQuiz(@RequestBody CreateQuizRequest request) {
         return ResponseEntity.ok(quizService.createQuiz(request));
     }

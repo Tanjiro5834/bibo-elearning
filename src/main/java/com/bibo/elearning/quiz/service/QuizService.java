@@ -22,6 +22,11 @@ import com.bibo.elearning.lesson.repository.LessonRepository;
 import com.bibo.elearning.quiz.mapper.QuizMapper;
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.transaction.annotation.Transactional;
+import com.bibo.elearning.quiz.dto.request.CheckAnswerRequest;
+import com.bibo.elearning.quiz.dto.response.CheckAnswerResponse;
+import com.bibo.elearning.quiz.repository.QuestionRepository;
+
 @Service
 @RequiredArgsConstructor
 public class QuizService {
@@ -31,6 +36,7 @@ public class QuizService {
     private final UserRepository userRepository;
     private final StudentProfileRepository studentProfileRepository;
     private final QuizMapper quizMapper;
+    private final QuestionRepository questionRepository;
     
     public QuizResponse createQuiz(CreateQuizRequest request) {
         Lesson lesson = lessonRepository.findById(request.getLessonId())
@@ -99,6 +105,23 @@ public class QuizService {
 
         quizAttemptRepository.save(attempt);
         return quizMapper.toResultResponse(attempt);
+    }
+
+    @Transactional(readOnly = true)
+    public CheckAnswerResponse checkAnswer(CheckAnswerRequest req) {
+        Question question = questionRepository.findById(req.questionId())
+                .orElseThrow(() -> new RuntimeException("Question not found"));
+
+        boolean belongs = question.getChoices().stream()
+                .anyMatch(c -> c.getId().equals(req.choiceId()));
+        if (!belongs) throw new RuntimeException("Choice does not belong to this question");
+
+        Choice correct = question.getChoices().stream()
+                .filter(Choice::isCorrect)
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Question has no correct answer"));
+
+        return new CheckAnswerResponse(correct.getId().equals(req.choiceId()), correct.getId());
     }
 
     public List<QuizResponse> getQuizzesByLesson(Long lessonId) {
