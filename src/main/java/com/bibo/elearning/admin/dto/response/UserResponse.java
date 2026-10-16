@@ -19,7 +19,7 @@ public class UserResponse {
         this.lastName = u.getLastName();
         this.username = u.getUsername();
         this.email = u.getEmail();
-        this.role = u.getRole().getName().name(); // enum → String
+        this.role = u.getRole().getName().name();
         this.enabled = u.isEnabled();
     }
 }

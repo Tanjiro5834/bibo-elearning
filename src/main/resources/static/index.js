@@ -98,8 +98,56 @@ const api = {
     api.request("GET", `/parent/child/${childId}/progress`, null, state.token),
 
   getChildQuizResults: (childId) =>
-    api.request("GET", `/parent/child/${childId}/quiz-results`, null, state.token),
+    api.request(
+      "GET",
+      `/parent/child/${childId}/quiz-results`,
+      null,
+      state.token,
+    ),
+
+  getStats: () => api.request("GET", "/student/stats", null, state.token),
+
+  getLeaderboard: (limit = 5) =>
+    api.request(
+      "GET",
+      `/student/leaderboard?limit=${limit}`,
+      null,
+      state.token,
+    ),
 };
+
+// ── Theme (light / dark) ───────────────────────────────────
+const THEME_KEY = "bibo_theme";
+
+function getTheme() {
+  let saved = null;
+  try {
+    saved = localStorage.getItem(THEME_KEY);
+  } catch {}
+  if (saved === "dark" || saved === "light") return saved;
+  return window.matchMedia?.("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+}
+
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+}
+
+function toggleTheme(isDark) {
+  const theme = isDark ? "dark" : "light";
+  applyTheme(theme);
+  try {
+    localStorage.setItem(THEME_KEY, theme);
+  } catch {}
+  showToast(isDark ? "Dark mode on" : "Light mode on", isDark ? "🌙" : "☀️");
+}
+
+applyTheme(getTheme());
+// enable color transitions only after first paint
+requestAnimationFrame(() =>
+  document.documentElement.classList.add("theme-ready"),
+);
 
 // ── State (unchanged) ──────────────────────────────────────
 const state = {
@@ -136,6 +184,7 @@ function clearAuth() {
   state.user = null;
   localStorage.removeItem("bibo_token");
   localStorage.removeItem("bibo_user");
+  _stats = null; // never show the previous account's numbers
 }
 
 // ── Router ─────────────────────────────────────────────────
@@ -309,7 +358,15 @@ const SUBJECT_STYLES = {
   },
 };
 function getSubjectStyle(name) {
-  return SUBJECT_STYLES[name] || SUBJECT_STYLES["default"];
+  const st = SUBJECT_STYLES[name] || SUBJECT_STYLES["default"];
+  // Base indigo is too dim on dark surfaces → use the lighter tint
+  if (
+    document.documentElement.dataset.theme === "dark" &&
+    st.color === "#3B3FC4"
+  ) {
+    return { ...st, color: "#818CF8" };
+  }
+  return st;
 }
 
 function escapeHtml(str) {
@@ -373,8 +430,7 @@ function SidebarHtml() {
 
   const navItems = isParent ? parentNavItems : studentNavItems;
 
-  const streak = state.user?.streak || 5;
-  const xp = state.user?.xp || 1250;
+  const streak = _stats?.streak ?? "–";
 
   return `<nav id="sidebar">
     <div class="sidebar-logo">
@@ -414,7 +470,7 @@ function SidebarHtml() {
           <span style="font-size:14px;">✦</span>
         </div>
         <div style="display:flex;align-items:baseline;gap:6px;margin:4px 0;">
-          <span class="streak-number">${streak}</span>
+          <span class="streak-number" id="sidebar-streak">${streak}</span>
           <span class="streak-days">Days</span>
         </div>
         <div class="streak-bar"><div class="streak-bar-fill"></div></div>
@@ -616,7 +672,7 @@ function RegisterPage() {
                 (r) => `
               <label class="role-card" data-role="${r.val}" style="cursor:pointer;">
                 <input type="radio" name="reg-role" value="${r.val}" style="display:none;" />
-                <div id="role-card-${r.val}" style="padding:16px;text-align:center;border-radius:var(--radius-md);border:2px solid var(--border);background:white;transition:all 0.18s;cursor:pointer;">
+                <div id="role-card-${r.val}" style="padding:16px;text-align:center;border-radius:var(--radius-md);border:2px solid var(--border);background:var(--card-bg);transition:all 0.18s;cursor:pointer;">
                   <div style="font-size:28px;margin-bottom:6px;">${r.icon}</div>
                   <div style="font-size:13px;font-weight:700;color:var(--text-700);">${r.label}</div>
                 </div>
@@ -917,7 +973,6 @@ function bindRegister() {
    ============================================================ */
 function DashboardPage() {
   return `<div class="page">
-    <!-- Header row -->
     <div class="flex-between mb-32">
       <div>
         <h1 style="font-size:26px;margin-bottom:4px;" id="dash-greeting">Kumusta! 👋</h1>
@@ -926,22 +981,19 @@ function DashboardPage() {
       <div style="display:flex;align-items:center;gap:10px;">
         <div class="stat-chip">
           <span style="color:var(--accent-orange);">${icons.star}</span>
-          <span id="dash-xp">1,250 XP</span>
+          <span id="dash-xp">— XP</span>
         </div>
         <div class="stat-chip">
           <span style="color:var(--primary);">${icons.zap}</span>
-          <span id="dash-streak">5 Day Streak</span>
+          <span id="dash-streak">— Day Streak</span>
         </div>
       </div>
     </div>
 
-    <!-- Hero banner -->
     <div class="hero-banner mb-32">
       <div style="max-width:600px;position:relative;z-index:1;">
-        <h2 style="color:white;font-size:28px;font-weight:900;margin-bottom:12px;line-height:1.25;">You're crushing your weekly goals! 🎉</h2>
-        <p style="color:rgba(255,255,255,0.75);font-size:14px;margin-bottom:24px;line-height:1.6;">
-          You've completed 65% of your path. Finish 2 more lessons to unlock the <span style="color:var(--accent-orange);font-weight:700;">Explorer Badge</span>.
-        </p>
+        <h2 id="dash-hero-title" style="color:white;font-size:28px;font-weight:900;margin-bottom:12px;line-height:1.25;">Loading your progress...</h2>
+        <p id="dash-hero-text" style="color:rgba(255,255,255,0.75);font-size:14px;margin-bottom:24px;line-height:1.6;">&nbsp;</p>
         <button class="btn btn-orange" onclick="navigate('subjects')">Continue Learning</button>
       </div>
       <div class="hero-banner-icon">
@@ -949,9 +1001,7 @@ function DashboardPage() {
       </div>
     </div>
 
-    <!-- 2-col grid: recent lessons + daily progress -->
     <div style="display:grid;grid-template-columns:1fr 340px;gap:24px;align-items:start;" id="dash-grid">
-      <!-- Recent lessons -->
       <div>
         <div class="section-header">
           <span class="section-title">Recent Lessons</span>
@@ -960,26 +1010,23 @@ function DashboardPage() {
         <div id="dash-recent">${Loading("Fetching lessons...")}</div>
       </div>
 
-      <!-- Right column -->
       <div style="display:flex;flex-direction:column;gap:16px;">
-        <!-- Daily progress -->
         <div class="card" style="padding:20px;">
-          <div class="section-title" style="margin-bottom:16px;">Daily Progress</div>
+          <div class="section-title" style="margin-bottom:16px;">Daily Goal</div>
           <div class="flex-between mb-8">
-            <span style="font-size:12px;font-weight:700;color:var(--text-400);text-transform:uppercase;letter-spacing:0.5px;">Today's XP</span>
-            <span style="font-size:14px;font-weight:800;color:var(--primary);">240/400</span>
+            <span style="font-size:12px;font-weight:700;color:var(--text-400);text-transform:uppercase;letter-spacing:0.5px;">Lessons Today</span>
+            <span id="dash-goal-count" style="font-size:14px;font-weight:800;color:var(--primary);">—</span>
           </div>
-          <div class="progress-track" style="height:10px;margin-bottom:8px;"><div class="progress-fill" style="height:10px;width:60%;"></div></div>
-          <p style="font-size:12px;color:var(--text-400);">Earn 160 more XP to hit your daily goal!</p>
+          <div class="progress-track" style="height:10px;margin-bottom:8px;"><div id="dash-goal-bar" class="progress-fill" style="height:10px;width:0%;"></div></div>
+          <p id="dash-goal-text" style="font-size:12px;color:var(--text-400);">&nbsp;</p>
         </div>
 
-        <!-- Milestone -->
         <div class="card" style="padding:20px;">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
             <span style="color:var(--accent-green);width:20px;height:20px;">${icons.check}</span>
-            <span class="section-title" style="font-size:16px;">Next Milestone</span>
+            <span class="section-title" style="font-size:16px;">Up Next</span>
           </div>
-          <p style="font-size:13px;color:var(--text-500);line-height:1.5;">Complete <strong>"Filipino: Pagbasa"</strong> to earn your first certification!</p>
+          <p id="dash-next" style="font-size:13px;color:var(--text-500);line-height:1.5;">&nbsp;</p>
         </div>
       </div>
     </div>
@@ -990,17 +1037,84 @@ function DashboardPage() {
   </div>`;
 }
 
+/* ── Shared stats cache (sidebar, dashboard, achievements) ── */
+let _stats = null;
+let _statsPromise = null;
+
+// Dedupes concurrent calls: sidebar + dashboard on first load share one request
+function loadStats() {
+  if (!_statsPromise) {
+    _statsPromise = api
+      .getStats()
+      .then((st) => {
+        _stats = st;
+        const el = document.getElementById("sidebar-streak");
+        if (el) el.textContent = st.streak;
+        return st;
+      })
+      .finally(() => (_statsPromise = null));
+  }
+  return _statsPromise;
+}
+
+function fmtShortDate(iso) {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function renderDashboardStats(st) {
+  const $ = (id) => document.getElementById(id);
+  if (!$("dash-xp")) return; // user navigated away before the request finished
+
+  $("dash-xp").textContent = `${st.xp.toLocaleString()} XP`;
+  $("dash-streak").textContent = `${st.streak} Day Streak`;
+
+  const goalMet = st.todayCompleted >= st.dailyGoal;
+  $("dash-hero-title").textContent = goalMet
+    ? "You hit today's goal! 🎉"
+    : st.streak > 0
+      ? `Keep your ${st.streak}-day streak going! 🔥`
+      : "Let's start learning today! 🚀";
+
+  const nextBadge = st.badges.find((b) => !b.earned);
+  $("dash-hero-text").innerHTML =
+    `You've completed <strong style="color:white;">${st.completionRate}%</strong> of your path ` +
+    `(${st.lessonsCompleted} of ${st.totalLessons} lessons).` +
+    (nextBadge
+      ? ` Next badge: <span style="color:var(--accent-orange);font-weight:700;">${nextBadge.icon} ${escapeHtml(nextBadge.title)}</span> — ${escapeHtml(nextBadge.description.toLowerCase())}.`
+      : " You've earned every badge! 🏆");
+
+  const pct = Math.min(
+    100,
+    Math.round((st.todayCompleted / st.dailyGoal) * 100),
+  );
+  const left = Math.max(0, st.dailyGoal - st.todayCompleted);
+  $("dash-goal-count").textContent = `${st.todayCompleted}/${st.dailyGoal}`;
+  $("dash-goal-bar").style.width = `${pct}%`;
+  $("dash-goal-text").textContent =
+    (left > 0
+      ? `Complete ${left} more lesson${left === 1 ? "" : "s"} to hit your daily goal!`
+      : "Daily goal reached — great job!") +
+    (st.dailyGoalSetByParent ? " (Goal set by your parent)" : "");
+
+  const n = st.nextLesson;
+  $("dash-next").innerHTML = n
+    ? `${n.inProgress ? "Continue" : "Start"} <strong style="cursor:pointer;color:var(--primary);" onclick="navigate('lessons', { selectedSubjectId: ${n.subjectId} })">"${escapeHtml(n.subjectName)}: ${escapeHtml(n.title)}"</strong>`
+    : "You've finished every lesson! 🎓 Check back for new ones.";
+}
+
 async function bindDashboard() {
   try {
     const user = await api.getMe();
     setState({ user });
     saveAuth(state.token, user);
   } catch (e) {
-    if (e.message?.includes("403")) {
-      clearAuth();
-      render();
-      if (!state.token) return;
-    }
+    // api.request already cleared auth + re-rendered on 401 — stop here
+    if (!state.token) return;
   }
 
   const name =
@@ -1008,36 +1122,35 @@ async function bindDashboard() {
     state.user?.firstName ||
     state.user?.username ||
     "Learner";
-  const firstName = name.split(" ")[0];
-  const xp = state.user?.xp || 1250;
-  const streak = state.user?.streak || 5;
+  const greeting = document.getElementById("dash-greeting");
+  if (greeting) greeting.textContent = `Kumusta, ${name.split(" ")[0]}! 👋`;
 
-  document.getElementById("dash-greeting").textContent =
-    `Kumusta, ${firstName}! 👋`;
-  document.getElementById("dash-xp").textContent = `${xp.toLocaleString()} XP`;
-  document.getElementById("dash-streak").textContent = `${streak} Day Streak`;
+  loadStats()
+    .then(renderDashboardStats)
+    .catch(() => {
+      const t = document.getElementById("dash-hero-title");
+      if (t) t.textContent = "Kumusta! Ready to learn? 🚀";
+    });
 
   let subjects = [];
   try {
     subjects = await api.getSubjects();
     _allSubjects = subjects;
   } catch (e) {
-    document.getElementById("dash-recent").innerHTML = ErrorState(
-      "Could not load lessons",
-    );
+    const el = document.getElementById("dash-recent");
+    if (el) el.innerHTML = ErrorState("Could not load lessons");
     return;
   }
+
+  const recent = document.getElementById("dash-recent");
+  if (!recent) return;
 
   if (subjects.length === 0) {
-    document.getElementById("dash-recent").innerHTML = EmptyState(
-      "📭",
-      "No lessons yet",
-      "Check back soon!",
-    );
+    recent.innerHTML = EmptyState("📭", "No lessons yet", "Check back soon!");
     return;
   }
 
-  document.getElementById("dash-recent").innerHTML = `
+  recent.innerHTML = `
     <div style="display:flex;flex-direction:column;gap:10px;">
       ${subjects
         .slice(0, 4)
@@ -1534,7 +1647,7 @@ function GamesPage() {
     </div>
 
     <!-- Featured hero -->
-    <div style="background:linear-gradient(135deg,#3730A3 0%,#4F46E5 50%,#6366F1 100%);border-radius:var(--radius-xl);padding:36px;margin-bottom:28px;position:relative;overflow:hidden;cursor:pointer;" onclick="showToast('Coming soon! 🚧', '🎮')">
+    <div style="background:linear-gradient(135deg,#3730A3 0%,#4F46E5 50%,#6366F1 100%);border-radius:var(--radius-xl);padding:36px;margin-bottom:28px;position:relative;overflow:hidden;cursor:pointer;" onclick="launchGame('memory')">
       <div style="position:absolute;right:-10px;top:50%;transform:translateY(-50%);opacity:0.15;">
         <svg viewBox="0 0 200 200" width="220" height="220" fill="none" stroke="white" stroke-width="6">
           <rect x="20" y="60" width="160" height="100" rx="30"/>
@@ -1598,7 +1711,7 @@ function QuizPage() {
       <!-- Header -->
       <div class="flex-between mb-16">
         <div style="display:flex;align-items:center;gap:12px;">
-          <span style="font-size:13px;font-weight:700;color:var(--text-900);padding:6px 14px;background:white;border:1px solid var(--border);border-radius:99px;" id="quiz-title">QUIZ</span>
+          <span style="font-size:13px;font-weight:700;color:var(--text-900);padding:6px 14px;background:var(--card-bg);border:1px solid var(--border);border-radius:99px;" id="quiz-title">QUIZ</span>
           <span style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--text-500);" id="quiz-timer">⏱ 5:00</span>
         </div>
         <div style="text-align:right;">
@@ -2030,68 +2143,16 @@ function ResearchPage() {
    PAGE: ACHIEVEMENTS / HALL OF FAME
    ============================================================ */
 function AchievementsPage() {
-  const badges = [
-    {
-      icon: "⚡",
-      title: "Early Bird",
-      desc: "Completed a lesson before 8 AM",
-      earned: "Oct 12",
-      locked: false,
-    },
-    {
-      icon: "🎯",
-      title: "Math Whiz",
-      desc: "Scored 100% in 5 Math Quizzes",
-      earned: "Oct 15",
-      locked: false,
-    },
-    {
-      icon: "📖",
-      title: "Storyteller",
-      desc: "Finished the English Reading Path",
-      earned: null,
-      locked: true,
-    },
-    {
-      icon: "🏆",
-      title: "Bacoor Hero",
-      desc: "Researched 3 local history facts",
-      earned: null,
-      locked: true,
-    },
-  ];
-  const leaderboard = [
-    {
-      rank: 1,
-      initials: "MC",
-      name: "Maria C.",
-      xp: "12,450",
-      isMe: false,
-    },
-    {
-      rank: 2,
-      initials: "JD",
-      name: "Juan D. (You)",
-      xp: "10,200",
-      isMe: true,
-    },
-    {
-      rank: 3,
-      initials: "PS",
-      name: "Pedro S.",
-      xp: "9,800",
-      isMe: false,
-    },
-    {
-      rank: 4,
-      initials: "EG",
-      name: "Elena G.",
-      xp: "8,500",
-      isMe: false,
-    },
-  ];
+  const statCard = (id, icon, label, color) => `
+        <div class="card" style="padding:20px;">
+          <p style="font-size:10px;font-weight:700;color:var(--text-400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">${label}</p>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:22px;">${icon}</span>
+            <span id="${id}" style="font-family:var(--font-display);font-size:22px;font-weight:900;color:${color};">—</span>
+          </div>
+        </div>`;
+
   return `<div class="page">
-    <!-- Header -->
     <div class="flex-between mb-28">
       <div>
         <h1 style="font-size:28px;margin-bottom:4px;">Hall of Fame</h1>
@@ -2099,45 +2160,20 @@ function AchievementsPage() {
       </div>
       <div class="card" style="padding:16px 24px;text-align:center;">
         <div style="display:flex;gap:32px;">
-          <div><p style="font-size:10px;font-weight:700;color:var(--text-400);text-transform:uppercase;margin-bottom:2px;">Total XP</p><p style="font-family:var(--font-display);font-size:22px;font-weight:900;color:var(--primary);">10,200</p></div>
-          <div><p style="font-size:10px;font-weight:700;color:var(--text-400);text-transform:uppercase;margin-bottom:2px;">Global Rank</p><p style="font-family:var(--font-display);font-size:22px;font-weight:900;color:var(--accent-orange);">#2</p></div>
+          <div><p style="font-size:10px;font-weight:700;color:var(--text-400);text-transform:uppercase;margin-bottom:2px;">Total XP</p><p id="ach-xp" style="font-family:var(--font-display);font-size:22px;font-weight:900;color:var(--primary);">—</p></div>
+          <div><p style="font-size:10px;font-weight:700;color:var(--text-400);text-transform:uppercase;margin-bottom:2px;">Rank</p><p id="ach-rank" style="font-family:var(--font-display);font-size:22px;font-weight:900;color:var(--accent-orange);">—</p></div>
         </div>
       </div>
     </div>
 
-    <!-- Stat cards -->
     <div class="grid-4 mb-32">
-      ${[
-        {
-          icon: "🔥",
-          label: "Current Streak",
-          val: "5 Days",
-          color: "#F59E0B",
-        },
-        { icon: "✅", label: "Lessons Finished", val: "24", color: "#10B981" },
-        { icon: "⭐", label: "Perfect Quizzes", val: "12", color: "#F59E0B" },
-        {
-          icon: "📈",
-          label: "Learning Hours",
-          val: "48h",
-          color: "var(--primary)",
-        },
-      ]
-        .map(
-          (s) => `
-        <div class="card" style="padding:20px;">
-          <p style="font-size:10px;font-weight:700;color:var(--text-400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">${s.label}</p>
-          <div style="display:flex;align-items:center;gap:10px;">
-            <span style="font-size:22px;">${s.icon}</span>
-            <span style="font-family:var(--font-display);font-size:22px;font-weight:900;color:${s.color};">${s.val}</span>
-          </div>
-        </div>`,
-        )
-        .join("")}
+      ${statCard("ach-streak", "🔥", "Current Streak", "#F59E0B")}
+      ${statCard("ach-lessons", "✅", "Lessons Finished", "#10B981")}
+      ${statCard("ach-perfect", "⭐", "Perfect Quizzes", "#F59E0B")}
+      ${statCard("ach-passed", "📈", "Quizzes Passed", "var(--primary)")}
     </div>
 
-    <!-- Badges + Leaderboard -->
-    <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:24px;align-items:start;">
+    <div class="ach-grid" style="display:grid;grid-template-columns:1.4fr 1fr;gap:24px;align-items:start;">
       <div>
         <div class="section-header">
           <div style="display:flex;align-items:center;gap:10px;">
@@ -2145,19 +2181,7 @@ function AchievementsPage() {
             <span class="section-title">My Badges</span>
           </div>
         </div>
-        <div class="grid-2">
-          ${badges
-            .map(
-              (b) => `
-            <div class="card" style="padding:20px;${b.locked ? "opacity:0.45;" : ""}">
-              <div style="width:44px;height:44px;border-radius:12px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:12px;">${b.locked ? "🏆" : b.icon}</div>
-              <h3 style="font-size:14px;margin-bottom:4px;">${b.title}</h3>
-              <p style="font-size:12px;color:var(--text-400);margin-bottom:8px;">${b.desc}</p>
-              ${b.earned ? `<p style="font-size:11px;font-weight:700;color:var(--accent-green);text-transform:uppercase;letter-spacing:0.5px;">Earned ${b.earned}</p>` : `<p style="font-size:11px;color:var(--text-400);">🔒 Locked</p>`}
-            </div>`,
-            )
-            .join("")}
-        </div>
+        <div id="ach-badges" class="grid-2">${Loading()}</div>
       </div>
 
       <div class="card" style="padding:20px;">
@@ -2165,25 +2189,108 @@ function AchievementsPage() {
           <span style="font-size:18px;">👥</span>
           <span class="section-title">Top Learners</span>
         </div>
-        ${leaderboard
-          .map(
-            (r) => `
-          <div class="leaderboard-row ${r.isMe ? "me" : ""}">
-            <span style="font-size:13px;font-weight:800;color:${r.rank <= 3 ? "var(--accent-orange)" : "var(--text-400)"};width:24px;">#${r.rank}</span>
-            <div style="width:34px;height:34px;border-radius:50%;background:${r.isMe ? "var(--primary)" : "var(--bg)"};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:${r.isMe ? "white" : "var(--text-500)"};">${r.initials}</div>
-            <span style="flex:1;font-size:13px;font-weight:${r.isMe ? "800" : "600"};color:var(--text-900);">${r.name}</span>
-            <span style="font-size:13px;font-weight:700;color:${r.isMe ? "var(--primary)" : "var(--text-500)"};">${r.xp} XP</span>
-          </div>`,
-          )
-          .join("")}
+        <div id="ach-leaderboard">${Loading()}</div>
         <div style="text-align:center;margin-top:16px;">
-          <span style="font-size:13px;font-weight:700;color:var(--primary);cursor:pointer;">View Full Rankings →</span>
+          <span id="ach-toggle" style="font-size:13px;font-weight:700;color:var(--primary);cursor:pointer;display:none;" onclick="toggleFullRankings()">View Full Rankings →</span>
         </div>
       </div>
     </div>
 
     <style>@media(max-width:768px){.ach-grid{grid-template-columns:1fr !important;}}</style>
   </div>`;
+}
+
+let _showFullRankings = false;
+
+async function bindAchievements() {
+  const $ = (id) => document.getElementById(id);
+  _showFullRankings = false;
+
+  try {
+    const [st, lb] = await Promise.all([loadStats(), api.getLeaderboard(5)]);
+    if (!$("ach-xp")) return; // navigated away
+
+    $("ach-xp").textContent = st.xp.toLocaleString();
+    $("ach-rank").textContent = lb.myRank ? `#${lb.myRank}` : "—";
+    $("ach-streak").textContent =
+      `${st.streak} ${st.streak === 1 ? "Day" : "Days"}`;
+    $("ach-lessons").textContent = st.lessonsCompleted;
+    $("ach-perfect").textContent = st.perfectQuizzes;
+    $("ach-passed").textContent = st.quizzesPassed;
+
+    $("ach-badges").innerHTML = st.badges
+      .map(
+        (b) => `
+      <div class="card" style="padding:20px;${b.earned ? "" : "opacity:0.45;"}">
+        <div style="width:44px;height:44px;border-radius:12px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:12px;">${b.earned ? b.icon : "🔒"}</div>
+        <h3 style="font-size:14px;margin-bottom:4px;">${escapeHtml(b.title)}</h3>
+        <p style="font-size:12px;color:var(--text-400);margin-bottom:8px;">${escapeHtml(b.description)}</p>
+        ${
+          b.earned
+            ? `<p style="font-size:11px;font-weight:700;color:var(--accent-green);text-transform:uppercase;letter-spacing:0.5px;">Earned ${fmtShortDate(b.earnedAt)}</p>`
+            : `<p style="font-size:11px;color:var(--text-400);">🔒 Locked</p>`
+        }
+      </div>`,
+      )
+      .join("");
+
+    renderLeaderboard(lb);
+  } catch (e) {
+    if (!state.token) return;
+    if ($("ach-badges"))
+      $("ach-badges").innerHTML = ErrorState("Could not load achievements");
+    if ($("ach-leaderboard")) $("ach-leaderboard").innerHTML = "";
+  }
+}
+
+function renderLeaderboard(lb) {
+  const box = document.getElementById("ach-leaderboard");
+  if (!box) return;
+
+  box.innerHTML = lb.entries.length
+    ? lb.entries
+        .map(
+          (r) => `
+      <div class="leaderboard-row ${r.me ? "me" : ""}">
+        <span style="font-size:13px;font-weight:800;color:${r.rank <= 3 ? "var(--accent-orange)" : "var(--text-400)"};width:24px;">#${r.rank}</span>
+        <div style="width:34px;height:34px;border-radius:50%;background:${r.me ? "var(--primary)" : "var(--bg)"};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:${r.me ? "white" : "var(--text-500)"};">${escapeHtml(r.initials)}</div>
+        <span style="flex:1;font-size:13px;font-weight:${r.me ? "800" : "600"};color:var(--text-900);">${escapeHtml(r.displayName)}${r.me ? " (You)" : ""}</span>
+        <span style="font-size:13px;font-weight:700;color:${r.me ? "var(--primary)" : "var(--text-500)"};">${r.xp.toLocaleString()} XP</span>
+      </div>`,
+        )
+        .join("")
+    : EmptyState(
+        "👥",
+        "No learners yet",
+        "Complete a lesson to get on the board!",
+      );
+
+  // Caller is outside the visible list → show their own row at the bottom
+  if (lb.myRank && !lb.entries.some((r) => r.me)) {
+    box.innerHTML += `
+      <div class="leaderboard-row me" style="margin-top:8px;">
+        <span style="font-size:13px;font-weight:800;color:var(--text-400);width:24px;">#${lb.myRank}</span>
+        <span style="flex:1;font-size:13px;font-weight:800;color:var(--text-900);">You</span>
+        <span style="font-size:13px;font-weight:700;color:var(--primary);">${lb.myXp.toLocaleString()} XP</span>
+      </div>`;
+  }
+
+  const toggle = document.getElementById("ach-toggle");
+  if (toggle) {
+    toggle.style.display = lb.totalStudents > 5 ? "" : "none";
+    toggle.textContent = _showFullRankings
+      ? "Show Top 5 ↑"
+      : "View Full Rankings →";
+  }
+}
+
+async function toggleFullRankings() {
+  _showFullRankings = !_showFullRankings;
+  try {
+    renderLeaderboard(await api.getLeaderboard(_showFullRankings ? 50 : 5));
+  } catch (e) {
+    showToast("Could not load rankings", "⚠️");
+  }
 }
 
 /* ============================================================
@@ -2231,13 +2338,34 @@ function SettingsPage() {
     <div class="card mb-16" style="padding:24px;">
       <h3 style="font-size:16px;margin-bottom:16px;">Preferences</h3>
       ${[
-        ["🔔", "Push Notifications", "Get reminders for daily learning goals"],
-        ["🔊", "Sound Effects", "Enable sounds for correct/wrong answers"],
-        ["🌙", "Dark Mode", "Switch to a darker interface"],
+        [
+          "🔔",
+          "Push Notifications",
+          "Get reminders for daily learning goals",
+          "pref-notif",
+          false,
+          "",
+        ],
+        [
+          "🔊",
+          "Sound Effects",
+          "Enable sounds for correct/wrong answers",
+          "pref-sound",
+          false,
+          "",
+        ],
+        [
+          "🌙",
+          "Dark Mode",
+          "Switch to a darker interface",
+          "pref-dark",
+          getTheme() === "dark",
+          "toggleTheme(this.checked)",
+        ],
       ]
         .map(
-          ([icon, label, desc]) => `
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);">
+          ([icon, label, desc, id, checked, onchange]) => `
+        <label for="${id}" class="pref-row">
           <div style="display:flex;align-items:center;gap:12px;">
             <span style="font-size:20px;">${icon}</span>
             <div>
@@ -2245,10 +2373,11 @@ function SettingsPage() {
               <p style="font-size:12px;color:var(--text-400);">${desc}</p>
             </div>
           </div>
-          <div style="width:44px;height:24px;border-radius:99px;background:var(--border);cursor:pointer;position:relative;transition:background 0.2s;" onclick="this.style.background=this.style.background==='var(--primary)'?'var(--border)':'var(--primary)'">
-            <div style="width:20px;height:20px;border-radius:50%;background:white;position:absolute;top:2px;left:2px;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div>
-          </div>
-        </div>`,
+          <span class="switch">
+            <input type="checkbox" id="${id}" ${checked ? "checked" : ""} ${onchange ? `onchange="${onchange}"` : ""} />
+            <span class="switch-track"></span>
+          </span>
+        </label>`,
         )
         .join("")}
     </div>
@@ -2271,285 +2400,241 @@ function SettingsPage() {
    PAGE: PARENT VIEW
    ============================================================ */
 function ParentViewPage() {
-        return `<div class="page">
+  const notifs = [
+    {
+      icon: "⚠️",
+      bg: "#fef3c7",
+      title: "Math needs attention",
+      desc: "Progress dropped below 40% this week",
+      time: "2h ago",
+    },
+    {
+      icon: "🏆",
+      bg: "#d1fae5",
+      title: "Quiz completed!",
+      desc: "Scored 90% on Filipino Quiz 3",
+      time: "Yesterday",
+    },
+    {
+      icon: "📚",
+      bg: "#eef0ff",
+      title: "New lesson available",
+      desc: "Science: The Water Cycle is now unlocked",
+      time: "2 days ago",
+    },
+  ];
+
+  const week = [
+    { day: "Mon", val: 4 },
+    { day: "Tue", val: 6 },
+    { day: "Wed", val: 2 },
+    { day: "Thu", val: 5 },
+    { day: "Fri", val: 3 },
+    { day: "Sat", val: 1 },
+    { day: "Sun", val: 0 },
+  ];
+  const weekMax = Math.max(1, ...week.map((d) => d.val));
+  const todayLabel = new Date().toLocaleDateString("en-US", {
+    weekday: "short",
+  });
+
+  const tips = [
+    "Set a fixed study schedule every day, even 20 minutes helps.",
+    "Celebrate small wins — praise boosts motivation for young learners.",
+    "Review quiz results together and ask your child to explain their answers.",
+  ];
+
+  const cardHead = (title, sub = "") => `
+    <div class="pd-card-head">
+      <h3>${title}</h3>
+      ${sub ? `<p>${sub}</p>` : ""}
+    </div>`;
+
+  return `<div class="page pd">
 
     <!-- ── Header ── -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px;">
+    <header class="pd-header">
       <div>
-        <h1 style="font-family:var(--font-display);font-size:26px;font-weight:900;color:var(--text-900);margin-bottom:2px;">Parent Dashboard 👨‍👩‍👧</h1>
-        <p style="font-size:13px;color:var(--text-400);">Monitor your child's learning journey</p>
+        <h1>Parent Dashboard 👨‍👩‍👧</h1>
+        <p class="pd-sub">Monitor your child's learning journey</p>
       </div>
-      <!-- Notification Bell -->
-      <div style="position:relative;cursor:pointer;" onclick="toggleParentNotifs()">
-        <div style="width:44px;height:44px;border-radius:50%;background:white;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:var(--shadow-sm);">🔔</div>
-        <div id="notif-badge" style="position:absolute;top:-3px;right:-3px;width:18px;height:18px;background:var(--accent-red);border-radius:50%;border:2px solid white;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:white;">3</div>
-        <!-- Dropdown -->
-        <div id="notif-dropdown" style="display:none;position:absolute;right:0;top:52px;width:300px;background:white;border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);border:1px solid var(--border);z-index:200;overflow:hidden;">
-          <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
-            <span style="font-weight:800;font-size:14px;color:var(--text-900);">Notifications</span>
-            <span style="font-size:11px;color:var(--primary);font-weight:700;cursor:pointer;" onclick="clearNotifs(event)">Mark all read</span>
+
+      <div class="pd-bell">
+        <button class="pd-bell-btn" onclick="toggleParentNotifs()" aria-label="Notifications">🔔</button>
+        <span id="notif-badge" class="pd-bell-badge">${notifs.length}</span>
+        <div id="notif-dropdown" class="pd-notif" style="display:none;">
+          <div class="pd-notif-head">
+            <span>Notifications</span>
+            <button onclick="clearNotifs(event)">Mark all read</button>
           </div>
-          ${[
-            {
-              icon: "⚠️",
-              color: "#fef3c7",
-              title: "Math needs attention",
-              desc: "Progress dropped below 40% this week",
-              time: "2h ago",
-              unread: true,
-            },
-            {
-              icon: "🏆",
-              color: "#d1fae5",
-              title: "Quiz completed!",
-              desc: "Scored 90% on Filipino Quiz 3",
-              time: "Yesterday",
-              unread: true,
-            },
-            {
-              icon: "📚",
-              color: "#eef0ff",
-              title: "New lesson available",
-              desc: "Science: The Water Cycle is now unlocked",
-              time: "2 days ago",
-              unread: true,
-            },
-          ]
+          ${notifs
             .map(
               (n) => `
-          <div style="padding:12px 16px;display:flex;gap:10px;align-items:flex-start;background:${n.unread ? "#fafbff" : "white"};border-bottom:1px solid var(--border);">
-            <div style="width:36px;height:36px;border-radius:10px;background:${n.color};display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">${n.icon}</div>
-            <div style="flex:1;min-width:0;">
-              <p style="font-size:13px;font-weight:700;color:var(--text-900);margin-bottom:2px;">${n.title}</p>
-              <p style="font-size:12px;color:var(--text-500);margin-bottom:4px;">${n.desc}</p>
-              <p style="font-size:11px;color:var(--text-400);">${n.time}</p>
-            </div>
-            ${n.unread ? '<div style="width:8px;height:8px;border-radius:50%;background:var(--primary);flex-shrink:0;margin-top:4px;"></div>' : ""}
-          </div>`,
+            <div class="pd-notif-item">
+              <div class="pd-icon" style="background:${n.bg};">${n.icon}</div>
+              <div style="flex:1;min-width:0;">
+                <p class="pd-row-title">${n.title}</p>
+                <p class="pd-row-sub">${n.desc}</p>
+                <p class="pd-row-meta">${n.time}</p>
+              </div>
+              <span class="pd-dot"></span>
+            </div>`,
             )
             .join("")}
         </div>
       </div>
-    </div>
+    </header>
 
-    <!-- ── Child Profile Card ── -->
-    <div class="card mb-24" style="padding:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-      <div style="display:flex;align-items:center;gap:14px;">
-        <div style="width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,var(--primary),var(--primary-mid));display:flex;align-items:center;justify-content:center;font-size:28px;">🦁</div>
+    <!-- ── Child profile ── -->
+    <section class="card pd-child">
+      <div class="pd-child-info">
+        <div class="pd-avatar">🦁</div>
         <div>
-          <p style="font-weight:800;font-size:17px;color:var(--text-900);" id="parent-child-name">Loading...</p>
-          <p style="font-size:13px;color:var(--text-400);" id="parent-child-grade">Student</p>
+          <p class="pd-child-name" id="parent-child-name">Loading...</p>
+          <p class="pd-sub" id="parent-child-grade">Student</p>
         </div>
       </div>
-      <!-- Child Switcher -->
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span style="font-size:12px;font-weight:600;color:var(--text-400);">Linked Children</span>
-        <div style="display:flex;gap:6px;">
-          <div onclick="showLinkedChildrenModal()" 
-               style="width:34px;height:34px;border-radius:50%;background:var(--primary);border:2px solid var(--primary);display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;" 
-               title="View linked children">🦁</div>
-          <div onclick="showLinkChildModal()" 
-               style="width:34px;height:34px;border-radius:50%;background:var(--bg);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;opacity:0.9;" 
-               title="Link new child">➕</div>
-        </div>
+      <div class="pd-child-switch">
+        <span>Linked Children</span>
+        <button class="pd-chip pd-chip-active" onclick="showLinkedChildrenModal()" title="View linked children">🦁</button>
+        <button class="pd-chip" onclick="showLinkChildModal()" title="Link new child">➕</button>
       </div>
-    </div>
+    </section>
 
-    <!-- ── Stat Cards ── -->
-    <div id="parent-stats" class="grid-4 mb-24">${Loading()}</div>
+    <!-- ── Stats ── -->
+    <section id="parent-stats" class="grid-4 pd-section">${Loading()}</section>
 
-    <!-- ── ARAL Program Alignment Banner ── -->
-    <div style="background:linear-gradient(135deg,#1e2a78 0%,#3b3fc4 100%);border-radius:var(--radius-lg);padding:20px 24px;margin-bottom:24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-      <div style="font-size:36px;">📋</div>
-      <div style="flex:1;min-width:0;">
-        <p style="font-family:var(--font-display);font-weight:800;font-size:15px;color:white;margin-bottom:4px;">DepEd ARAL Program Alignment</p>
-        <p style="font-size:12px;color:rgba(255,255,255,0.7);">Your child's lessons follow the DepEd ARAL small-group tutorial structure for foundational learning recovery.</p>
+    <!-- ── Main grid ── -->
+    <div class="pd-layout">
+
+      <!-- Left: progress & activity -->
+      <div class="pd-col">
+        <section class="pd-banner">
+          <div class="pd-banner-icon">📋</div>
+          <div style="flex:1;min-width:0;">
+            <p class="pd-banner-title">DepEd ARAL Program Alignment</p>
+            <p class="pd-banner-text">Lessons follow the DepEd ARAL small-group tutorial structure for foundational learning recovery.</p>
+          </div>
+          <div class="pd-banner-phase">
+            <strong>Week 3</strong>
+            <span>Current Phase</span>
+          </div>
+        </section>
+
+        <section class="card pd-card">
+          ${cardHead("Subject Progress", "Completion per subject")}
+          <div id="parent-subjects" class="pd-list">${Loading()}</div>
+        </section>
+
+        <section class="card pd-card">
+          ${cardHead("Recent Quiz Results 📝", "Latest attempts and scores")}
+          <div id="parent-quizzes" class="pd-list">${Loading()}</div>
+        </section>
+
+        <section class="card pd-card">
+          ${cardHead("Weekly Activity 📅", "Lessons completed per day this week")}
+          <div class="pd-chart">
+            ${week
+              .map((d) => {
+                const h = Math.round((d.val / weekMax) * 100);
+                const isToday = d.day === todayLabel;
+                return `<div class="pd-bar-col">
+                <span class="pd-bar-val">${d.val}</span>
+                <div class="pd-bar-track">
+                  <div class="pd-bar ${isToday ? "today" : ""} ${d.val === 0 ? "empty" : ""}" style="height:${Math.max(h, 6)}%;"></div>
+                </div>
+                <span class="pd-bar-day ${isToday ? "today" : ""}">${d.day}</span>
+              </div>`;
+              })
+              .join("")}
+          </div>
+        </section>
       </div>
-      <div style="background:rgba(255,255,255,0.15);border-radius:var(--radius-md);padding:10px 16px;text-align:center;flex-shrink:0;">
-        <p style="font-size:22px;font-weight:900;color:white;font-family:var(--font-display);">Week 3</p>
-        <p style="font-size:10px;color:rgba(255,255,255,0.7);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Current Phase</p>
-      </div>
-    </div>
 
-    <!-- ── Subject Progress + Quiz Results side by side ── -->
-    <div class="grid-2 mb-24">
-      <!-- Subject Progress -->
-      <div>
-        <h3 style="font-size:15px;font-weight:800;color:var(--text-900);margin-bottom:14px;">Subject Progress</h3>
-        <div id="parent-subjects" style="display:flex;flex-direction:column;gap:10px;">${Loading()}</div>
-      </div>
+      <!-- Right: insights & actions -->
+      <aside class="pd-col">
+        <section class="card pd-card pd-streak">
+          <span class="pd-streak-icon">🔥</span>
+          <div>
+            <p class="pd-row-title">Learning Streak</p>
+            <p class="pd-row-sub">Consecutive days of activity</p>
+          </div>
+          <div class="pd-streak-num"><strong>5</strong><span>days</span></div>
+        </section>
 
-      <!-- Quiz Results -->
-      <div>
-        <h3 style="font-size:15px;font-weight:800;color:var(--text-900);margin-bottom:14px;">Recent Quiz Results 📝</h3>
-        <div id="parent-quizzes" style="display:flex;flex-direction:column;gap:10px;">${Loading()}</div>
-      </div>
-    </div>
+        <section class="card pd-card">
+          ${cardHead("Areas to Improve 💪", "Subjects below 50%")}
+          <div id="parent-weak" class="pd-list">${Loading()}</div>
+        </section>
 
-    <!-- ── Areas to Improve + Intervention Panel ── -->
-    <div class="grid-2 mb-24">
-      <!-- Weak Areas -->
-      <div>
-        <h3 style="font-size:15px;font-weight:800;color:var(--text-900);margin-bottom:14px;">Areas to Improve 💪</h3>
-        <div id="parent-weak" class="card" style="padding:20px;">${Loading()}</div>
-      </div>
+        <section class="card pd-card">
+          ${cardHead("Intervention Tools 🛠️", "Support your child directly")}
 
-      <!-- Intervention Tools -->
-      <div>
-        <h3 style="font-size:15px;font-weight:800;color:var(--text-900);margin-bottom:14px;">Intervention Tools 🛠️</h3>
-        <div style="display:flex;flex-direction:column;gap:10px;">
-          <!-- Send Encouragement -->
-          <div class="card" style="padding:16px;">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-              <span style="font-size:20px;">💬</span>
-              <div>
-                <p style="font-size:13px;font-weight:700;color:var(--text-900);">Send Encouragement</p>
-                <p style="font-size:11px;color:var(--text-400);">Send a motivational message to your child</p>
-              </div>
-            </div>
-            <div style="display:flex;flex-wrap:wrap;gap:8px;">
-              ${ENCOURAGEMENTS.map((m, i) =>
-                `<button onclick="parentAction('message-child', { message: ENCOURAGEMENTS[${i}] }, 'Message sent!')" class="btn btn-ghost btn-sm" style="flex:1 1 auto;white-space:nowrap;">${m}</button>`
+          <div class="pd-tool">
+            <p class="pd-tool-title">💬 Send Encouragement</p>
+            <div class="pd-btn-row">
+              ${ENCOURAGEMENTS.map(
+                (m, i) =>
+                  `<button onclick="parentAction('message-child', { message: ENCOURAGEMENTS[${i}] }, 'Message sent!')" class="btn btn-ghost btn-sm">${m}</button>`,
               ).join("")}
             </div>
           </div>
-          <!-- Set Daily Goal -->
-          <div class="card" style="padding:16px;">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-              <span style="font-size:20px;">🎯</span>
-              <div>
-                <p style="font-size:13px;font-weight:700;color:var(--text-900);">Set Daily Goal</p>
-                <p style="font-size:11px;color:var(--text-400);">Assign how many lessons per day</p>
-              </div>
+
+          <div class="pd-tool">
+            <p class="pd-tool-title">🎯 Daily Goal <span class="pd-row-sub">— lessons per day</span></p>
+            <div class="pd-goal">
+              <input type="range" min="1" max="10" value="3" id="daily-goal-slider"
+                oninput="document.getElementById('goal-val').textContent=this.value" />
+              <div class="pd-goal-val" id="goal-val">3</div>
             </div>
-            <div style="display:flex;align-items:center;gap:10px;">
-              <input type="range" min="1" max="10" value="3" id="daily-goal-slider" oninput="document.getElementById('goal-val').textContent=this.value" style="flex:1;accent-color:var(--primary);" />
-              <div style="width:40px;height:40px;border-radius:10px;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;color:var(--primary);font-family:var(--font-display);" id="goal-val">3</div>
-            </div>
-            <button onclick="parentAction('set-daily-goal', { goal: +document.getElementById('daily-goal-slider').value }, 'Daily goal saved!')" class="btn btn-primary btn-sm" style="width:100%;margin-top:12px;">Save Goal</button>
+            <button onclick="parentAction('set-daily-goal', { goal: +document.getElementById('daily-goal-slider').value }, 'Daily goal saved!')"
+              class="btn btn-primary btn-sm pd-full">Save Goal</button>
           </div>
-          <!-- Request Teacher Review -->
-          <div class="card" style="padding:16px;display:flex;align-items:center;gap:12px;">
-            <span style="font-size:24px;">👩‍🏫</span>
-            <div style="flex:1;">
-              <p style="font-size:13px;font-weight:700;color:var(--text-900);">Request Teacher Review</p>
-              <p style="font-size:11px;color:var(--text-400);margin-bottom:8px;">Ask a teacher to check your child's progress</p>
-              <button onclick="parentAction('request-teacher-review', {}, 'Review request sent to teacher!')" class="btn btn-primary btn-sm">Send Request</button>
-            </div>
+
+          <div class="pd-tool">
+            <p class="pd-tool-title">👩‍🏫 Teacher Review</p>
+            <p class="pd-row-sub" style="margin-bottom:10px;">Ask a teacher to check your child's progress</p>
+            <button onclick="parentAction('request-teacher-review', {}, 'Review request sent to teacher!')"
+              class="btn btn-ghost btn-sm pd-full">Send Request</button>
           </div>
-        </div>
-      </div>
+        </section>
+
+        <section class="card pd-card">
+          ${cardHead("💡 Parent Tips")}
+          <ol class="pd-tips">
+            ${tips.map((t) => `<li>${t}</li>`).join("")}
+          </ol>
+        </section>
+      </aside>
     </div>
 
-    <!-- ── Weekly Activity Heatmap ── -->
-    <div class="card mb-24" style="padding:20px;">
-      <h3 style="font-size:15px;font-weight:800;color:var(--text-900);margin-bottom:4px;">Weekly Activity 📅</h3>
-      <p style="font-size:12px;color:var(--text-400);margin-bottom:16px;">Lessons completed per day this week</p>
-      <div style="display:flex;gap:8px;align-items:flex-end;">
-        ${[
-          { day: "Mon", val: 4, max: 6 },
-          { day: "Tue", val: 6, max: 6 },
-          { day: "Wed", val: 2, max: 6 },
-          { day: "Thu", val: 5, max: 6 },
-          { day: "Fri", val: 3, max: 6 },
-          { day: "Sat", val: 1, max: 6 },
-          { day: "Sun", val: 0, max: 6 },
-        ]
-          .map((d) => {
-            const h = d.max ? Math.round((d.val / d.max) * 80) + 20 : 20;
-            const isToday = d.day === "Thu";
-            return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;">
-            <span style="font-size:11px;font-weight:700;color:var(--text-900);">${d.val}</span>
-            <div style="width:100%;height:${h}px;border-radius:8px 8px 4px 4px;background:${d.val === 0 ? "var(--border)" : isToday ? "var(--primary)" : "var(--primary-mid)"};opacity:${d.val === 0 ? 0.4 : 1};transition:all 0.3s;cursor:pointer;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='${d.val === 0 ? 0.4 : 1}'"></div>
-            <span style="font-size:11px;font-weight:600;color:${isToday ? "var(--primary)" : "var(--text-400)"};">${d.day}</span>
-          </div>`;
-          })
-          .join("")}
-      </div>
-    </div>
-
-    <!-- ── Learning Streak & Tips ── -->
-    <div class="grid-2">
-      <div class="card" style="padding:20px;background:linear-gradient(135deg,#fff7ed,#fff);">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-          <span style="font-size:28px;">🔥</span>
-          <div>
-            <p style="font-size:13px;font-weight:700;color:var(--text-900);">Learning Streak</p>
-            <p style="font-size:11px;color:var(--text-400);">Consecutive days of activity</p>
-          </div>
-        </div>
-        <p style="font-family:var(--font-display);font-size:48px;font-weight:900;color:var(--accent-orange);line-height:1;">5</p>
-        <p style="font-size:12px;color:var(--text-400);margin-top:4px;">days in a row 🎉 Keep it up!</p>
-      </div>
-      <div class="card" style="padding:20px;">
-        <p style="font-size:13px;font-weight:800;color:var(--text-900);margin-bottom:12px;">💡 Parent Tips</p>
-        <div style="display:flex;flex-direction:column;gap:10px;">
-          ${[
-            "Set a fixed study schedule every day, even 20 minutes helps.",
-            "Celebrate small wins — praise boosts motivation for young learners.",
-            "Review quiz results together and ask your child to explain their answers.",
-          ]
-            .map(
-              (
-                t,
-                i,
-              ) => `<div style="display:flex;gap:8px;align-items:flex-start;">
-            <div style="width:20px;height:20px;border-radius:50%;background:var(--primary-light);color:var(--primary);font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">${i + 1}</div>
-            <p style="font-size:12px;color:var(--text-700);line-height:1.5;">${t}</p>
-          </div>`,
-            )
-            .join("")}
-        </div>
-      </div>
-    </div>
-
-    <div id="link-child-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center;">
-      <div class="card" style="width:100%;max-width:420px;padding:28px;">
-        <h3 style="font-size:20px;margin-bottom:8px;">🔗 Link a Child</h3>
-        <p style="color:var(--text-400);margin-bottom:20px;">Enter your child's username</p>
-        
-        <input 
-          id="modal-child-username" 
-          type="text" 
-          placeholder="Child username (e.g. juandelacruz123)" 
-          class="bibo-input" 
-          style="margin-bottom:20px;"
-        />
-        
+    <!-- ── Link Child Modal ── -->
+    <div id="link-child-modal" class="pd-modal" style="display:none;">
+      <div class="card pd-modal-box">
+        <h3 style="margin-bottom:6px;">🔗 Link a Child</h3>
+        <p class="pd-sub" style="margin-bottom:20px;">Enter your child's username</p>
+        <input id="modal-child-username" type="text" placeholder="Child username (e.g. juandelacruz123)" class="bibo-input" style="margin-bottom:20px;" />
         <div style="display:flex;gap:12px;">
-          <button onclick="closeLinkChildModal()" 
-                  class="btn btn-ghost" 
-                  style="flex:1;">Cancel</button>
-          <button onclick="linkChildFromModal()" 
-                  id="link-child-confirm-btn"
-                  class="btn btn-primary" 
-                  style="flex:1;">Link Child</button>
+          <button onclick="closeLinkChildModal()" class="btn btn-ghost" style="flex:1;">Cancel</button>
+          <button onclick="linkChildFromModal()" id="link-child-confirm-btn" class="btn btn-primary" style="flex:1;">Link Child</button>
         </div>
       </div>
     </div>
 
-    <!-- View Linked Children Modal -->
-    <div id="linked-children-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:10000;align-items:center;justify-content:center;">
-      <div class="card" style="width:100%;max-width:500px;padding:28px;max-height:80vh;overflow-y:auto;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-          <h3 style="margin:0;">👨‍👩‍👧 Linked Children</h3>
-          <button onclick="closeLinkedChildrenModal()" class="btn btn-ghost" style="padding:8px 16px;">Close</button>
+    <!-- ── Linked Children Modal ── -->
+    <div id="linked-children-modal" class="pd-modal" style="display:none;">
+      <div class="card pd-modal-box" style="max-width:500px;max-height:80vh;overflow-y:auto;">
+        <div class="flex-between" style="margin-bottom:20px;">
+          <h3>👨‍👩‍👧 Linked Children</h3>
+          <button onclick="closeLinkedChildrenModal()" class="btn btn-ghost btn-sm">Close</button>
         </div>
-        
-        <div id="linked-children-list" style="display:flex;flex-direction:column;gap:12px;">
-          <!-- Populated by JS -->
-        </div>
-        
-        <button onclick="showLinkChildModal();closeLinkedChildrenModal()" 
-                class="btn btn-primary" 
-                style="width:100%;margin-top:20px;">
-          + Link Another Child
-        </button>
+        <div id="linked-children-list" style="display:flex;flex-direction:column;gap:12px;"></div>
+        <button onclick="showLinkChildModal();closeLinkedChildrenModal()" class="btn btn-primary pd-full" style="margin-top:20px;">+ Link Another Child</button>
       </div>
     </div>
 
   </div>`;
-                   }
+}
 
 async function linkChild() {
   const input = document.getElementById("child-username-input");
@@ -2730,7 +2815,7 @@ async function linkChildFromModal() {
 
 function toggleParentNotifs() {
   const d = document.getElementById("notif-dropdown");
-  d.style.display = d.style.display === "none" ? "block" : "none";
+  if (d) d.style.display = d.style.display === "none" ? "block" : "none";
 }
 function clearNotifs(e) {
   e.stopPropagation();
@@ -2738,28 +2823,27 @@ function clearNotifs(e) {
   document.getElementById("notif-dropdown").style.display = "none";
   showToast("All notifications marked as read");
 }
+// Close dropdown on any click outside the bell wrapper
 document.addEventListener("click", (e) => {
   const dd = document.getElementById("notif-dropdown");
-  if (
-    dd &&
-    !dd.closest &&
-    !e.target.closest?.('[onclick="toggleParentNotifs()"]')
-  ) {
-    dd.style.display = "none";
-  }
+  if (dd && !e.target.closest(".pd-bell")) dd.style.display = "none";
 });
 
 async function bindParent() {
   const $ = (id) => document.getElementById(id);
   try {
     const children = await api.getChildren();
+    if (!$("parent-stats")) return; // navigated away
+
     if (!children.length) {
       $("parent-child-name").textContent = "No child linked";
       $("parent-child-grade").textContent = "Tap ➕ to link your child";
-      $("parent-stats").innerHTML =
-        $("parent-subjects").innerHTML =
+      const empty = `<p class="pd-empty">Link a child to see data.</p>`;
+      $("parent-stats").innerHTML = "";
+      $("parent-subjects").innerHTML =
+        $("parent-quizzes").innerHTML =
         $("parent-weak").innerHTML =
-          "";
+          empty;
       return;
     }
 
@@ -2773,11 +2857,28 @@ async function bindParent() {
     $("parent-child-grade").textContent =
       [child.grade, child.school].filter(Boolean).join(" · ") || "Student";
 
-    const { subjectProgress = [] } = await api.getChildProgress(child.childId);
-    renderParentProgress(subjectProgress);
+    // Fetch in parallel; a quiz failure must not block progress (and vice versa)
+    const [progress, quizzes] = await Promise.allSettled([
+      api.getChildProgress(child.childId),
+      api.getChildQuizResults(child.childId),
+    ]);
+
+    if (progress.status === "fulfilled") {
+      renderParentProgress(progress.value?.subjectProgress || []);
+    } else {
+      $("parent-stats").innerHTML = ErrorState(progress.reason.message);
+      $("parent-subjects").innerHTML = $("parent-weak").innerHTML = "";
+    }
+
+    if (quizzes.status === "fulfilled") {
+      renderParentQuizzes(quizzes.value || []);
+    } else {
+      $("parent-quizzes").innerHTML =
+        `<p class="pd-empty">Could not load quiz results.</p>`;
+    }
   } catch (e) {
     console.error(e);
-    $("parent-stats").innerHTML = ErrorState(e.message);
+    if ($("parent-stats")) $("parent-stats").innerHTML = ErrorState(e.message);
   }
 }
 
@@ -2787,17 +2888,20 @@ function renderParentProgress(subjects) {
   const pct = total ? Math.round((done / total) * 100) : 0;
 
   document.getElementById("parent-stats").innerHTML = [
-    ["Lessons Done", done, "var(--accent-green)"],
-    ["Remaining", total - done, "var(--primary)"],
-    ["Progress", pct + "%", "var(--primary-mid)"],
-    ["Subjects", subjects.length, "var(--accent-orange)"],
+    ["✅", "Lessons Done", done, "var(--accent-green)", "#d1fae5"],
+    ["📚", "Remaining", total - done, "var(--primary)", "var(--primary-light)"],
+    ["📈", "Progress", pct + "%", "var(--primary-mid)", "#eef0ff"],
+    ["🗂️", "Subjects", subjects.length, "var(--accent-orange)", "#fef3c7"],
   ]
     .map(
-      ([l, v, c]) => `
-          <div class="card" style="padding:18px;text-align:center;">
-            <div style="font-family:var(--font-display);font-size:26px;font-weight:900;color:${c};">${v}</div>
-            <div style="font-size:11px;font-weight:600;color:var(--text-400);margin-top:4px;">${l}</div>
-          </div>`,
+      ([icon, label, val, color, bg]) => `
+      <div class="card pd-stat">
+        <div class="pd-icon" style="background:${bg};">${icon}</div>
+        <div>
+          <div class="pd-stat-val" style="color:${color};">${val}</div>
+          <div class="pd-stat-label">${label}</div>
+        </div>
+      </div>`,
     )
     .join("");
 
@@ -2805,65 +2909,77 @@ function renderParentProgress(subjects) {
     ? subjects
         .map((s) => {
           const st = getSubjectStyle(s.subjectName);
-          return `<div class="card" style="padding:16px;display:flex;align-items:center;gap:12px;">
-                <span style="font-size:22px;">${st.icon}</span>
-                <div style="flex:1;">
-                  <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-                    <span style="font-weight:700;font-size:14px;">${s.subjectName}</span>
-                    <span style="font-size:12px;font-weight:800;color:${st.color};">${s.progressPercent}%</span>
-                  </div>
-                  <div class="progress-track" style="height:6px;">
-                    <div class="progress-fill" style="height:6px;width:${s.progressPercent}%;background:${st.color};"></div>
-                  </div>
-                </div>
-              </div>`;
+          return `<div class="pd-row">
+            <div class="pd-icon" style="background:${st.pale};">${st.icon}</div>
+            <div style="flex:1;min-width:0;">
+              <div class="flex-between" style="margin-bottom:6px;">
+                <span class="pd-row-title">${escapeHtml(s.subjectName)}</span>
+                <span class="pd-row-pct" style="color:${st.color};">${s.progressPercent}%</span>
+              </div>
+              <div class="progress-track" style="height:6px;">
+                <div class="progress-fill" style="width:${s.progressPercent}%;background:${st.color};"></div>
+              </div>
+              <p class="pd-row-meta" style="margin-top:4px;">${s.completed} of ${s.total} lessons</p>
+            </div>
+          </div>`;
         })
         .join("")
-    : `<p style="color:var(--text-400);padding:20px;text-align:center;">No lessons started yet.</p>`;
+    : `<p class="pd-empty">No lessons started yet.</p>`;
 
   const weak = subjects.filter((s) => s.progressPercent < 50);
   document.getElementById("parent-weak").innerHTML = weak.length
     ? weak
-        .map(
-          (s) => `<p style="font-weight:700;font-size:13px;margin-bottom:10px;">
-              ${getSubjectStyle(s.subjectName).icon} ${s.subjectName}
-              <span style="font-weight:400;color:var(--text-400);">— ${s.progressPercent}%, needs practice</span></p>`,
-        )
+        .map((s) => {
+          const st = getSubjectStyle(s.subjectName);
+          return `<div class="pd-row">
+            <div class="pd-icon" style="background:${st.pale};">${st.icon}</div>
+            <div style="flex:1;min-width:0;">
+              <p class="pd-row-title">${escapeHtml(s.subjectName)}</p>
+              <p class="pd-row-sub">Needs practice</p>
+            </div>
+            <span class="pd-pill pd-pill-warn">${s.progressPercent}%</span>
+          </div>`;
+        })
         .join("")
-    : `<p style="text-align:center;padding:30px;font-weight:700;">🌟 No weak areas!</p>`;
+    : `<p class="pd-empty">🌟 No weak areas!</p>`;
 }
 
 function renderParentQuizzes(quizzes) {
   const el = document.getElementById("parent-quizzes");
+  if (!el) return;
   if (!quizzes.length) {
-    el.innerHTML = `<p style="color:var(--text-400);padding:20px;text-align:center;">No quizzes taken yet.</p>`;
+    el.innerHTML = `<p class="pd-empty">No quizzes taken yet.</p>`;
     return;
   }
-  el.innerHTML = quizzes.map((q) => {
-    const st = getSubjectStyle(q.subjectName);
-    const pct = q.percent;
-    const grade =
-      pct >= 85 ? { label: "Excellent", c: "#065f46", bg: "#d1fae5" }
-      : pct >= 70 ? { label: "Good", c: "#92400e", bg: "#fef3c7" }
-      : { label: "Needs Work", c: "#991b1b", bg: "#fee2e2" };
-    const date = q.attemptedAt
-      ? new Date(q.attemptedAt).toLocaleDateString("en-PH", { month: "short", day: "numeric" })
-      : "";
-    return `<div class="card" style="padding:14px 16px;">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-        <div style="width:34px;height:34px;border-radius:10px;background:${st.pale};display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">${st.icon}</div>
+  el.innerHTML = quizzes
+    .map((q) => {
+      const st = getSubjectStyle(q.subjectName);
+      const pct = q.percent;
+      const grade =
+        pct >= 85
+          ? { label: "Excellent", cls: "pd-pill-good" }
+          : pct >= 70
+            ? { label: "Good", cls: "pd-pill-warn" }
+            : { label: "Needs Work", cls: "pd-pill-bad" };
+      const date = q.attemptedAt
+        ? new Date(q.attemptedAt).toLocaleDateString("en-PH", {
+            month: "short",
+            day: "numeric",
+          })
+        : "";
+      return `<div class="pd-row">
+        <div class="pd-icon" style="background:${st.pale};">${st.icon}</div>
         <div style="flex:1;min-width:0;">
-          <p style="font-size:13px;font-weight:700;color:var(--text-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(q.quizTitle || "Quiz")}</p>
-          <p style="font-size:11px;color:var(--text-400);">${escapeHtml(q.subjectName || "—")}${date ? " · " + date : ""}</p>
+          <p class="pd-row-title truncate">${escapeHtml(q.quizTitle || "Quiz")}</p>
+          <p class="pd-row-meta">${escapeHtml(q.subjectName || "—")}${date ? " · " + date : ""}</p>
         </div>
         <div style="text-align:right;flex-shrink:0;">
-          <p style="font-size:15px;font-weight:900;color:${st.color};font-family:var(--font-display);">${pct}%</p>
-          <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:${grade.bg};color:${grade.c};">${grade.label}</span>
+          <p class="pd-row-pct" style="color:${st.color};font-size:15px;">${pct}%</p>
+          <span class="pd-pill ${grade.cls}">${grade.label}</span>
         </div>
-      </div>
-      <div class="progress-track" style="height:5px;"><div class="progress-fill" style="height:5px;width:${pct}%;background:${st.color};"></div></div>
-    </div>`;
-  }).join("");
+      </div>`;
+    })
+    .join("");
 }
 
 async function parentAction(path, body, okMsg) {
@@ -2901,6 +3017,14 @@ function launchGame(id) {
   } else if (id === "math") {
     document.getElementById("page-container").innerHTML = MathNinjaPage();
     bindMathNinja();
+  } else if (id === "logic") {
+    document.getElementById("page-container").innerHTML = LogicPuzzlesPage();
+    bindLogicPuzzles();
+  } else if (id === "eco") {
+    document.getElementById("page-container").innerHTML = EcoSorterPage();
+    bindEcoSorter();
+  } else if (id === "memory") {
+    document.getElementById("page-container").innerHTML = MemoryMatchPage();
   } else {
     showToast("Coming soon! 🚧", "🎮");
   }
@@ -3321,7 +3445,7 @@ function mnLoadQuestion() {
     .map(
       (c, i) =>
         `<button onclick="mnAnswer(${c})" id="mn-opt-${i}"
-      style="padding:18px;font-family:var(--font-display);font-size:24px;font-weight:900;border-radius:var(--radius-md);border:2px solid var(--border);background:white;cursor:pointer;transition:all 0.18s;color:var(--text-900);"
+      style="padding:18px;font-family:var(--font-display);font-size:24px;font-weight:900;border-radius:var(--radius-md);border:2px solid var(--border);background:var(--card-bg);cursor:pointer;transition:all 0.18s;color:var(--text-900);"
       onmouseover="if(!this.disabled)this.style.borderColor='var(--primary)';this.style.background='var(--primary-light)';"
       onmouseout="if(!this.disabled&&!this.dataset.chosen)this.style.borderColor='var(--border)';this.style.background='white';">
       ${c}
@@ -3468,6 +3592,1187 @@ function mnGameOver() {
     </div>`;
 }
 
+/* ============================================================
+   SHARED GAME HELPERS
+   ============================================================ */
+const shuffle = (arr) => {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+function GameHeader(icon, title, sub) {
+  return `<div class="game-head">
+    <button class="btn btn-ghost btn-sm" onclick="GamesPageWrapper()">← Back</button>
+    <div>
+      <h1>${icon} ${title}</h1>
+      <p>${sub}</p>
+    </div>
+  </div>`;
+}
+
+function GameStat(label, id, value, color) {
+  return `<div class="card game-stat">
+    <div class="game-stat-label">${label}</div>
+    <div class="game-stat-val" id="${id}" style="color:${color};">${value}</div>
+  </div>`;
+}
+
+function GameOverScreen({ emoji, title, color, sub, score, detail, replay }) {
+  return `<div class="game-over">
+    <div class="game-over-emoji">${emoji}</div>
+    <h1 style="color:${color};">${title}</h1>
+    <p class="game-over-sub">${sub}</p>
+    <div class="game-over-score" style="border-color:${color};background:color-mix(in srgb, ${color} 10%, transparent);">
+      <div class="game-over-num" style="color:${color};">${score}</div>
+      <div class="game-over-label">Total Points</div>
+      <div class="game-over-detail">${detail}</div>
+    </div>
+    <div style="display:flex;gap:12px;">
+      <button class="btn btn-primary" onclick="${replay}">Play Again</button>
+      <button class="btn btn-ghost" onclick="GamesPageWrapper()">Back to Games</button>
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   GAME: LOGIC PUZZLES
+   ============================================================ */
+const LP_ODD_ONE_OUT = [
+  {
+    items: ["🍎", "🍌", "🥕", "🍇"],
+    answer: 2,
+    why: "🥕 is a vegetable. The others are fruits.",
+  },
+  {
+    items: ["🚗", "🚌", "✈️", "🚲"],
+    answer: 2,
+    why: "✈️ flies in the sky. The others travel on roads.",
+  },
+  {
+    items: ["2", "4", "7", "8"],
+    answer: 2,
+    why: "7 is odd. The others are even numbers.",
+  },
+  {
+    items: ["Lunes", "Martes", "Enero", "Biyernes"],
+    answer: 2,
+    why: "Enero is a month. The others are days of the week.",
+  },
+  {
+    items: ["🐶", "🐱", "🐟", "🐰"],
+    answer: 2,
+    why: "🐟 lives in water. The others live on land.",
+  },
+  {
+    items: ["🔺", "🟥", "🔵", "🔷"],
+    answer: 2,
+    why: "🔵 has no corners. The others do.",
+  },
+  {
+    items: ["Pula", "Asul", "Aso", "Dilaw"],
+    answer: 2,
+    why: "Aso means dog. The others are colors.",
+  },
+  {
+    items: ["3", "6", "9", "10"],
+    answer: 3,
+    why: "10 is not in the 3-times table.",
+  },
+];
+
+const LP_MYSTERY = [
+  {
+    q: "Ana, Ben, and Carlo crossed Zapote Bridge one at a time. Ben was not first. Carlo crossed right after Ana. Who crossed last?",
+    choices: ["Ana", "Ben", "Carlo"],
+    answer: "Ben",
+    why: "Carlo is right after Ana, and Ben isn't first → Ana, Carlo, Ben.",
+  },
+  {
+    q: "A jeepney leaves Bacoor at 7:00 AM. It reaches Zapote Bridge in 15 minutes, waits 5 minutes, then drives 10 more minutes to school. When does it arrive?",
+    choices: ["7:20 AM", "7:25 AM", "7:30 AM", "7:35 AM"],
+    answer: "7:30 AM",
+    why: "15 + 5 + 10 = 30 minutes after 7:00.",
+  },
+  {
+    q: "At Bacoor Bay, Mang Jun caught more fish than Lito but fewer than Rosa. Who caught the most fish?",
+    choices: ["Mang Jun", "Lito", "Rosa"],
+    answer: "Rosa",
+    why: "Lito < Mang Jun < Rosa.",
+  },
+  {
+    q: "Every guard at the old bridge carried a lantern. Mateo was a guard at the old bridge. What can we be sure of?",
+    choices: ["Mateo carried a lantern", "Mateo was tall", "Mateo was sleepy"],
+    answer: "Mateo carried a lantern",
+    why: "If ALL guards carried lanterns, Mateo did too.",
+  },
+  {
+    q: "A flagpole's shadow is 6 m at 9 AM and 4 m at 10 AM. If it keeps shrinking the same way, how long is it at 11 AM?",
+    choices: ["1 m", "2 m", "3 m", "4 m"],
+    answer: "2 m",
+    why: "It shrinks by 2 m every hour: 6 → 4 → 2.",
+  },
+  {
+    q: "Three boats are tied at the bridge: red, blue, and green. The red boat is left of the blue one. The green boat is right of the blue one. Which boat is in the middle?",
+    choices: ["Red", "Blue", "Green"],
+    answer: "Blue",
+    why: "Red – Blue – Green.",
+  },
+];
+
+// Number sequences: each rule builds 4 visible terms and the next answer
+const LP_SEQ_RULES = [
+  () => {
+    const s = randInt(1, 20),
+      k = randInt(2, 9);
+    return {
+      terms: [0, 1, 2, 3].map((i) => s + i * k),
+      next: s + 4 * k,
+      why: `Add ${k} each time.`,
+    };
+  },
+  () => {
+    const s = randInt(1, 5);
+    return {
+      terms: [0, 1, 2, 3].map((i) => s * 2 ** i),
+      next: s * 16,
+      why: "Double the number each time.",
+    };
+  },
+  () => {
+    const s = randInt(1, 10);
+    const t = [s];
+    for (let i = 1; i < 5; i++) t.push(t[i - 1] + i);
+    return {
+      terms: t.slice(0, 4),
+      next: t[4],
+      why: "Add 1, then 2, then 3, then 4…",
+    };
+  },
+  () => {
+    const o = randInt(1, 3);
+    return {
+      terms: [0, 1, 2, 3].map((i) => (i + o) ** 2),
+      next: (4 + o) ** 2,
+      why: "These are square numbers (n × n).",
+    };
+  },
+  () => {
+    const k = randInt(3, 9),
+      s = k * 5 + randInt(5, 20);
+    return {
+      terms: [0, 1, 2, 3].map((i) => s - i * k),
+      next: s - 4 * k,
+      why: `Subtract ${k} each time.`,
+    };
+  },
+];
+
+const LP_PATTERN_SETS = [
+  ["🔴", "🔵", "🟡"],
+  ["🌞", "🌙", "⭐"],
+  ["🐸", "🐢", "🦀"],
+  ["🍎", "🍌", "🍇"],
+  ["🔺", "🟩", "🔷"],
+];
+const LP_PATTERN_SHAPES = ["AB", "ABC", "AAB", "ABB", "AABB"];
+
+function lpMakeNumberPuzzle() {
+  const { terms, next, why } =
+    LP_SEQ_RULES[randInt(0, LP_SEQ_RULES.length - 1)]();
+  const wrongs = new Set();
+  for (const d of shuffle([-3, -2, -1, 1, 2, 3, 4, 5, 10])) {
+    if (wrongs.size === 3) break;
+    if (next + d >= 0) wrongs.add(next + d);
+  }
+  return {
+    type: "Number Sequence",
+    prompt: "What number comes next?",
+    tokens: [...terms, "?"],
+    choices: shuffle([next, ...wrongs]).map(String),
+    answer: String(next),
+    why,
+  };
+}
+
+function lpMakePatternPuzzle() {
+  const set = LP_PATTERN_SETS[randInt(0, LP_PATTERN_SETS.length - 1)];
+  const shape = LP_PATTERN_SHAPES[randInt(0, LP_PATTERN_SHAPES.length - 1)];
+  const map = { A: set[0], B: set[1], C: set[2] };
+  const seq = Array.from({ length: 8 }, (_, i) => map[shape[i % shape.length]]);
+  const answer = seq[7];
+  const extra = LP_PATTERN_SETS.flat().find((e) => !set.includes(e));
+  return {
+    type: "Pattern",
+    prompt: "Which one completes the pattern?",
+    tokens: [...seq.slice(0, 7), "?"],
+    choices: shuffle([...new Set([...set, extra])]),
+    answer,
+    why: `The pattern repeats: ${shape
+      .split("")
+      .map((c) => map[c])
+      .join(" ")}`,
+  };
+}
+
+function lpMakeOddPuzzle(used) {
+  const pool = LP_ODD_ONE_OUT.filter((_, i) => !used.has(i));
+  const idx = LP_ODD_ONE_OUT.indexOf(pool[randInt(0, pool.length - 1)]);
+  used.add(idx);
+  const p = LP_ODD_ONE_OUT[idx];
+  return {
+    type: "Odd One Out",
+    prompt: "Which one does NOT belong?",
+    tokens: [],
+    choices: p.items,
+    answer: p.items[p.answer],
+    why: p.why,
+  };
+}
+
+function lpMakeMysteryPuzzle(used) {
+  const pool = LP_MYSTERY.filter((_, i) => !used.has(i));
+  const idx = LP_MYSTERY.indexOf(pool[randInt(0, pool.length - 1)]);
+  used.add(idx);
+  const p = LP_MYSTERY[idx];
+  return {
+    type: "Zapote Mystery 🌉",
+    prompt: p.q,
+    tokens: [],
+    choices: shuffle(p.choices),
+    answer: p.answer,
+    why: p.why,
+  };
+}
+
+function LogicPuzzlesPage() {
+  return `<div class="page" id="logic-root">
+    ${GameHeader("🧩", "Logic Puzzles", "Spot the pattern, find the odd one out, and solve the mystery of Zapote Bridge!")}
+
+    <div class="game-stats">
+      ${GameStat("Score", "lp-score", "0", "var(--primary)")}
+      ${GameStat("Puzzle", "lp-num", "1 / 8", "var(--text-900)")}
+      ${GameStat("Hints", "lp-hints", "💡💡💡", "var(--accent-orange)")}
+      ${GameStat("Streak", "lp-streak", "0", "var(--accent-red)")}
+    </div>
+
+    <div class="progress-track" style="height:8px;margin-bottom:20px;">
+      <div class="progress-fill" id="lp-progress" style="width:0%;"></div>
+    </div>
+
+    <div class="card lp-card">
+      <span class="badge badge-new" id="lp-type">—</span>
+      <h2 class="lp-prompt" id="lp-prompt"></h2>
+      <div class="lp-tokens" id="lp-tokens"></div>
+      <div class="lp-choices" id="lp-choices"></div>
+      <div class="lp-feedback" id="lp-feedback"></div>
+      <div class="lp-actions">
+        <button class="btn btn-ghost btn-sm" id="lp-hint-btn" onclick="lpUseHint()">💡 Use Hint</button>
+        <button class="btn btn-primary btn-sm" id="lp-next-btn" style="display:none;" onclick="lpNext()">Next Puzzle →</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+let _lp = {};
+
+function bindLogicPuzzles() {
+  const usedOdd = new Set();
+  const usedMystery = new Set();
+  const makers = shuffle([
+    lpMakeNumberPuzzle,
+    lpMakeNumberPuzzle,
+    lpMakePatternPuzzle,
+    lpMakePatternPuzzle,
+    () => lpMakeOddPuzzle(usedOdd),
+    () => lpMakeOddPuzzle(usedOdd),
+    () => lpMakeMysteryPuzzle(usedMystery),
+    () => lpMakeMysteryPuzzle(usedMystery),
+  ]);
+  _lp = {
+    puzzles: makers.map((make) => make()),
+    current: 0,
+    score: 0,
+    correct: 0,
+    streak: 0,
+    bestStreak: 0,
+    hints: 3,
+    hintUsedHere: false,
+    answered: false,
+  };
+  lpRender();
+}
+
+function lpRender() {
+  const p = _lp.puzzles[_lp.current];
+  const total = _lp.puzzles.length;
+  _lp.answered = false;
+  _lp.hintUsedHere = false;
+
+  document.getElementById("lp-type").textContent = p.type;
+  document.getElementById("lp-prompt").textContent = p.prompt;
+  document.getElementById("lp-num").textContent =
+    `${_lp.current + 1} / ${total}`;
+  document.getElementById("lp-progress").style.width =
+    `${(_lp.current / total) * 100}%`;
+  document.getElementById("lp-feedback").innerHTML = "";
+  document.getElementById("lp-next-btn").style.display = "none";
+  lpUpdateHintUi();
+
+  document.getElementById("lp-tokens").innerHTML = p.tokens
+    .map(
+      (t) =>
+        `<div class="lp-token ${t === "?" ? "lp-token-q" : ""}">${escapeHtml(t)}</div>`,
+    )
+    .join("");
+
+  document.getElementById("lp-choices").innerHTML = p.choices
+    .map(
+      (c, i) =>
+        `<button class="lp-choice" id="lp-opt-${i}" onclick="lpAnswer(${i})">${escapeHtml(c)}</button>`,
+    )
+    .join("");
+}
+
+function lpUpdateHintUi() {
+  document.getElementById("lp-hints").textContent = _lp.hints
+    ? "💡".repeat(_lp.hints)
+    : "—";
+  document.getElementById("lp-hint-btn").disabled =
+    _lp.hints === 0 || _lp.hintUsedHere || _lp.answered;
+}
+
+// Hint = remove one wrong choice (works for every puzzle type)
+function lpUseHint() {
+  if (_lp.hints === 0 || _lp.hintUsedHere || _lp.answered) return;
+  const p = _lp.puzzles[_lp.current];
+  const wrong = p.choices
+    .map((c, i) => ({ c, i }))
+    .filter(
+      ({ c, i }) =>
+        c !== p.answer && !document.getElementById(`lp-opt-${i}`).disabled,
+    );
+  if (!wrong.length) return;
+  const pick = wrong[randInt(0, wrong.length - 1)];
+  const btn = document.getElementById(`lp-opt-${pick.i}`);
+  btn.disabled = true;
+  btn.classList.add("lp-choice-out");
+  _lp.hints--;
+  _lp.hintUsedHere = true;
+  lpUpdateHintUi();
+}
+
+function lpAnswer(i) {
+  if (_lp.answered) return;
+  _lp.answered = true;
+  const p = _lp.puzzles[_lp.current];
+  const picked = p.choices[i];
+  const isCorrect = picked === p.answer;
+
+  p.choices.forEach((c, j) => {
+    const btn = document.getElementById(`lp-opt-${j}`);
+    btn.disabled = true;
+    if (c === p.answer) btn.classList.add("lp-choice-correct");
+    else if (j === i) btn.classList.add("lp-choice-wrong");
+  });
+
+  if (isCorrect) {
+    const pts = _lp.hintUsedHere ? 10 : 20;
+    const bonus = _lp.streak >= 2 ? 5 : 0;
+    _lp.score += pts + bonus;
+    _lp.correct++;
+    _lp.streak++;
+    _lp.bestStreak = Math.max(_lp.bestStreak, _lp.streak);
+    document.getElementById("lp-feedback").innerHTML =
+      `<p class="lp-fb-ok">✅ Correct! +${pts + bonus} pts${bonus ? " 🔥 streak bonus" : ""}</p><p class="lp-why">${escapeHtml(p.why)}</p>`;
+  } else {
+    _lp.streak = 0;
+    document.getElementById("lp-feedback").innerHTML =
+      `<p class="lp-fb-bad">❌ Not quite! Answer: <strong>${escapeHtml(p.answer)}</strong></p><p class="lp-why">${escapeHtml(p.why)}</p>`;
+  }
+
+  document.getElementById("lp-score").textContent = _lp.score;
+  document.getElementById("lp-streak").textContent = _lp.streak;
+  lpUpdateHintUi();
+
+  const next = document.getElementById("lp-next-btn");
+  next.textContent =
+    _lp.current === _lp.puzzles.length - 1 ? "See Results 🏁" : "Next Puzzle →";
+  next.style.display = "";
+}
+
+function lpNext() {
+  _lp.current++;
+  if (_lp.current >= _lp.puzzles.length) return lpGameOver();
+  lpRender();
+}
+
+function lpGameOver() {
+  const total = _lp.puzzles.length;
+  const g =
+    _lp.correct === total
+      ? { e: "🧠", t: "Master Detective!", c: "var(--accent-green)" }
+      : _lp.correct >= 6
+        ? { e: "🕵️", t: "Great Thinking!", c: "var(--primary)" }
+        : _lp.correct >= 4
+          ? { e: "👍", t: "Good Effort!", c: "var(--accent-orange)" }
+          : { e: "💪", t: "Keep Practicing!", c: "var(--accent-red)" };
+  document.getElementById("logic-root").innerHTML = GameOverScreen({
+    emoji: g.e,
+    title: g.t,
+    color: g.c,
+    sub: `You solved ${_lp.correct} of ${total} puzzles!`,
+    score: _lp.score,
+    detail: `Best streak: ${_lp.bestStreak} 🔥 · Hints left: ${_lp.hints}`,
+    replay: "launchGame('logic')",
+  });
+}
+
+/* ============================================================
+   GAME: ECO-SORTER
+   ============================================================ */
+const ECO_BINS = [
+  {
+    id: "bio",
+    label: "Nabubulok",
+    sub: "Biodegradable",
+    icon: "🌱",
+    color: "#10b981",
+  },
+  {
+    id: "rec",
+    label: "Recyclable",
+    sub: "Puwedeng i-recycle",
+    icon: "♻️",
+    color: "#3b82f6",
+  },
+  {
+    id: "res",
+    label: "Residual",
+    sub: "Di-nabubulok",
+    icon: "🗑️",
+    color: "#6b7280",
+  },
+  {
+    id: "spe",
+    label: "Special",
+    sub: "Hazardous waste",
+    icon: "⚠️",
+    color: "#ef4444",
+  },
+];
+
+const ECO_ITEMS = [
+  {
+    name: "Banana Peel",
+    icon: "🍌",
+    bin: "bio",
+    fact: "Fruit peels rot naturally and can become compost.",
+  },
+  {
+    name: "Leftover Rice",
+    icon: "🍚",
+    bin: "bio",
+    fact: "Food scraps are biodegradable.",
+  },
+  {
+    name: "Dried Leaves",
+    icon: "🍂",
+    bin: "bio",
+    fact: "Leaves break down and feed the soil.",
+  },
+  {
+    name: "Fish Bones",
+    icon: "🐟",
+    bin: "bio",
+    fact: "Fish scraps are biodegradable kitchen waste.",
+  },
+  {
+    name: "Eggshells",
+    icon: "🥚",
+    bin: "bio",
+    fact: "Eggshells add calcium to compost.",
+  },
+  {
+    name: "Mango Peel",
+    icon: "🥭",
+    bin: "bio",
+    fact: "Fruit peels are biodegradable.",
+  },
+  {
+    name: "Vegetable Scraps",
+    icon: "🥬",
+    bin: "bio",
+    fact: "Vegetable scraps make great compost.",
+  },
+  {
+    name: "Coconut Husk",
+    icon: "🥥",
+    bin: "bio",
+    fact: "Coconut husks are natural and break down over time.",
+  },
+  {
+    name: "Plastic Bottle",
+    icon: "🧴",
+    bin: "rec",
+    fact: "PET bottles can be recycled into new items.",
+  },
+  {
+    name: "Soda Can",
+    icon: "🥫",
+    bin: "rec",
+    fact: "Aluminum cans can be recycled again and again.",
+  },
+  {
+    name: "Newspaper",
+    icon: "📰",
+    bin: "rec",
+    fact: "Clean paper can be recycled.",
+  },
+  {
+    name: "Cardboard Box",
+    icon: "📦",
+    bin: "rec",
+    fact: "Flattened cardboard is recyclable.",
+  },
+  {
+    name: "Glass Bottle",
+    icon: "🍾",
+    bin: "rec",
+    fact: "Glass can be melted and made into new bottles.",
+  },
+  {
+    name: "Old Notebook",
+    icon: "📓",
+    bin: "rec",
+    fact: "Paper notebooks are recyclable.",
+  },
+  {
+    name: "Candy Wrapper",
+    icon: "🍬",
+    bin: "res",
+    fact: "Wrappers are mixed materials — they can't be recycled easily.",
+  },
+  {
+    name: "Shampoo Sachet",
+    icon: "🧃",
+    bin: "res",
+    fact: "Sachets are layered plastic and go to residual waste.",
+  },
+  {
+    name: "Used Tissue",
+    icon: "🧻",
+    bin: "res",
+    fact: "Dirty tissue can't be recycled.",
+  },
+  {
+    name: "Styrofoam Cup",
+    icon: "🥤",
+    bin: "res",
+    fact: "Styrofoam is hard to recycle and doesn't rot.",
+  },
+  {
+    name: "Used Diaper",
+    icon: "🧷",
+    bin: "res",
+    fact: "Diapers go to residual waste.",
+  },
+  {
+    name: "Old Battery",
+    icon: "🔋",
+    bin: "spe",
+    fact: "Batteries have chemicals — they need special disposal.",
+  },
+  {
+    name: "Light Bulb",
+    icon: "💡",
+    bin: "spe",
+    fact: "Some bulbs contain mercury, so they're special waste.",
+  },
+  {
+    name: "Old Phone",
+    icon: "📱",
+    bin: "spe",
+    fact: "Electronics are e-waste and need special handling.",
+  },
+  {
+    name: "Expired Medicine",
+    icon: "💊",
+    bin: "spe",
+    fact: "Old medicine is hazardous — never throw it in regular trash.",
+  },
+];
+
+const ECO_TIME = 60;
+
+function EcoSorterPage() {
+  return `<div class="page" id="eco-root">
+    ${GameHeader("🌍", "Eco-Sorter", "Help clean up Bacoor! Drag or tap each item into the right bin.")}
+
+    <div class="game-stats">
+      ${GameStat("Score", "eco-score", "0", "var(--primary)")}
+      ${GameStat("Sorted", "eco-sorted", "0", "var(--accent-green)")}
+      ${GameStat("Lives", "eco-lives", "❤️❤️❤️", "var(--accent-red)")}
+      ${GameStat("Time", "eco-time", ECO_TIME, "var(--accent-orange)")}
+    </div>
+
+    <div class="progress-track" style="height:8px;margin-bottom:20px;">
+      <div class="progress-fill" id="eco-time-bar" style="width:100%;background:var(--accent-green);transition:width 1s linear;"></div>
+    </div>
+
+    <div class="card eco-stage">
+      <p class="eco-label">Where does this go?</p>
+      <div class="eco-item" id="eco-item" draggable="true">
+        <div class="eco-item-icon" id="eco-item-icon">—</div>
+        <div class="eco-item-name" id="eco-item-name">—</div>
+      </div>
+      <div class="eco-feedback" id="eco-feedback"></div>
+    </div>
+
+    <div class="eco-bins">
+      ${ECO_BINS.map(
+        (b, i) => `
+        <button class="eco-bin" data-bin="${b.id}" style="--bin:${b.color};" onclick="ecoSort('${b.id}')">
+          <span class="eco-bin-key">${i + 1}</span>
+          <span class="eco-bin-icon">${b.icon}</span>
+          <span class="eco-bin-label">${b.label}</span>
+          <span class="eco-bin-sub">${b.sub}</span>
+        </button>`,
+      ).join("")}
+    </div>
+    <p class="eco-tip">💡 Tip: press keys 1–4 to sort faster</p>
+  </div>`;
+}
+
+let _eco = {};
+
+function bindEcoSorter() {
+  ecoStop();
+  _eco = {
+    deck: shuffle(ECO_ITEMS),
+    idx: 0,
+    item: null,
+    score: 0,
+    sorted: 0,
+    correct: 0,
+    combo: 1,
+    lives: 3,
+    time: ECO_TIME,
+    interval: null,
+    locked: false,
+    mistakes: [],
+  };
+
+  // Drag & drop (desktop); tap/click and keys 1–4 also work
+  const item = document.getElementById("eco-item");
+  item.addEventListener("dragstart", (e) => {
+    e.dataTransfer.setData("text/plain", "eco");
+    item.classList.add("dragging");
+  });
+  item.addEventListener("dragend", () => item.classList.remove("dragging"));
+  document.querySelectorAll(".eco-bin").forEach((bin) => {
+    bin.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      bin.classList.add("over");
+    });
+    bin.addEventListener("dragleave", () => bin.classList.remove("over"));
+    bin.addEventListener("drop", (e) => {
+      e.preventDefault();
+      bin.classList.remove("over");
+      ecoSort(bin.dataset.bin);
+    });
+  });
+  document.addEventListener("keydown", ecoKeyHandler);
+
+  ecoNextItem();
+  _eco.interval = setInterval(ecoTick, 1000);
+}
+
+function ecoStop() {
+  if (_eco.interval) clearInterval(_eco.interval);
+  document.removeEventListener("keydown", ecoKeyHandler);
+}
+
+function ecoKeyHandler(e) {
+  if (!document.getElementById("eco-root")) return ecoStop(); // navigated away
+  const n = parseInt(e.key, 10);
+  if (n >= 1 && n <= ECO_BINS.length) ecoSort(ECO_BINS[n - 1].id);
+}
+
+function ecoTick() {
+  if (!document.getElementById("eco-root")) return ecoStop(); // navigated away
+  _eco.time--;
+  document.getElementById("eco-time").textContent = _eco.time;
+  const pct = (_eco.time / ECO_TIME) * 100;
+  const bar = document.getElementById("eco-time-bar");
+  bar.style.width = pct + "%";
+  bar.style.background =
+    pct > 50
+      ? "var(--accent-green)"
+      : pct > 25
+        ? "var(--accent-orange)"
+        : "var(--accent-red)";
+  if (_eco.time <= 0) ecoGameOver();
+}
+
+function ecoNextItem() {
+  if (_eco.idx >= _eco.deck.length) {
+    _eco.deck = shuffle(ECO_ITEMS);
+    _eco.idx = 0;
+  }
+  _eco.item = _eco.deck[_eco.idx++];
+  _eco.locked = false;
+  const card = document.getElementById("eco-item");
+  card.classList.remove("eco-pop");
+  void card.offsetWidth; // restart animation
+  card.classList.add("eco-pop");
+  document.getElementById("eco-item-icon").textContent = _eco.item.icon;
+  document.getElementById("eco-item-name").textContent = _eco.item.name;
+}
+
+function ecoSort(binId) {
+  if (_eco.locked || !_eco.item) return;
+  _eco.locked = true;
+
+  const item = _eco.item;
+  const correctBin = ECO_BINS.find((b) => b.id === item.bin);
+  const binEl = document.querySelector(`.eco-bin[data-bin="${binId}"]`);
+  const fb = document.getElementById("eco-feedback");
+  _eco.sorted++;
+
+  if (binId === item.bin) {
+    const pts = Math.round(10 * _eco.combo);
+    _eco.score += pts;
+    _eco.correct++;
+    _eco.combo = Math.min(3, _eco.combo + 0.5);
+    binEl.classList.add("flash-ok");
+    fb.innerHTML = `<span class="lp-fb-ok">✅ +${pts} pts${_eco.combo > 1.5 ? ` 🔥 x${_eco.combo}` : ""}</span>`;
+  } else {
+    _eco.lives--;
+    _eco.combo = 1;
+    _eco.mistakes.push(item);
+    binEl.classList.add("flash-bad");
+    fb.innerHTML = `<span class="lp-fb-bad">❌ ${item.icon} goes in <strong>${correctBin.label}</strong></span><span class="lp-why">${item.fact}</span>`;
+  }
+
+  document.getElementById("eco-score").textContent = _eco.score;
+  document.getElementById("eco-sorted").textContent = _eco.correct;
+  document.getElementById("eco-lives").textContent =
+    "❤️".repeat(Math.max(0, _eco.lives)) +
+    "🖤".repeat(Math.max(0, 3 - _eco.lives));
+
+  setTimeout(() => binEl?.classList.remove("flash-ok", "flash-bad"), 450);
+
+  if (_eco.lives <= 0) {
+    ecoStop(); // freeze timer so it can't also end the game
+    return setTimeout(ecoGameOver, 1200);
+  }
+  // Give extra reading time after a mistake so kids can learn from the fact
+  setTimeout(
+    () => {
+      if (!document.getElementById("eco-root")) return;
+      fb.innerHTML = "";
+      ecoNextItem();
+    },
+    binId === item.bin ? 450 : 1600,
+  );
+}
+
+function ecoGameOver() {
+  ecoStop();
+  if (_eco.over || !document.getElementById("eco-root")) return;
+  _eco.over = true;
+  const acc = _eco.sorted ? Math.round((_eco.correct / _eco.sorted) * 100) : 0;
+  const g =
+    _eco.score >= 250
+      ? { e: "🌍", t: "Eco Hero!", c: "var(--accent-green)" }
+      : _eco.score >= 150
+        ? { e: "♻️", t: "Great Sorting!", c: "var(--primary)" }
+        : _eco.score >= 60
+          ? { e: "👍", t: "Good Job!", c: "var(--accent-orange)" }
+          : { e: "💪", t: "Keep Practicing!", c: "var(--accent-red)" };
+
+  const learn = [
+    ...new Map(_eco.mistakes.map((m) => [m.name, m])).values(),
+  ].slice(0, 4);
+  document.getElementById("eco-root").innerHTML =
+    GameOverScreen({
+      emoji: g.e,
+      title: g.t,
+      color: g.c,
+      sub: _eco.lives <= 0 ? "Out of lives!" : "Time's up!",
+      score: _eco.score,
+      detail: `${_eco.correct} sorted correctly · ${acc}% accuracy`,
+      replay: "launchGame('eco')",
+    }) +
+    (learn.length
+      ? `<div class="card eco-learn">
+          <h3>📚 Remember these</h3>
+          ${learn
+            .map((m) => {
+              const b = ECO_BINS.find((x) => x.id === m.bin);
+              return `<div class="pd-row">
+              <div class="pd-icon" style="background:var(--bg);">${m.icon}</div>
+              <div style="flex:1;min-width:0;">
+                <p class="pd-row-title">${m.name} → ${b.icon} ${b.label}</p>
+                <p class="pd-row-sub">${m.fact}</p>
+              </div>
+            </div>`;
+            })
+            .join("")}
+        </div>`
+      : "");
+}
+
+/* ============================================================
+   GAME: MEMORY MATCH — PHILIPPINE NATIONAL SYMBOLS
+   Match each symbol card to its meaning card.
+   ============================================================ */
+const MM_SYMBOLS = [
+  {
+    id: "flower",
+    icon: "🌼",
+    name: "Sampaguita",
+    role: "National Flower",
+    fact: "Sampaguita's small white flowers stand for purity and simplicity.",
+  },
+  {
+    id: "tree",
+    icon: "🌳",
+    name: "Narra",
+    role: "National Tree",
+    fact: "Narra wood is strong and is used for fine furniture.",
+  },
+  {
+    id: "bird",
+    icon: "🦅",
+    name: "Philippine Eagle",
+    role: "National Bird",
+    fact: "The Philippine Eagle is one of the biggest eagles in the world.",
+  },
+  {
+    id: "animal",
+    icon: "🐃",
+    name: "Carabao",
+    role: "National Animal",
+    fact: "The carabao is called the farmer's best friend for helping in the rice fields.",
+  },
+  {
+    id: "fish",
+    icon: "🐟",
+    name: "Bangus",
+    role: "National Fish",
+    fact: "Bangus (milkfish) is a favorite at Filipino breakfast tables.",
+  },
+  {
+    id: "fruit",
+    icon: "🥭",
+    name: "Mango",
+    role: "National Fruit",
+    fact: "Philippine mangoes are known worldwide for their sweetness.",
+  },
+  {
+    id: "leaf",
+    icon: "🌿",
+    name: "Anahaw",
+    role: "National Leaf",
+    fact: "Anahaw leaves are used for roofs, fans, and decorations.",
+  },
+  {
+    id: "sport",
+    icon: "🥢",
+    name: "Arnis",
+    role: "National Sport",
+    fact: "Arnis is a Filipino martial art that uses sticks.",
+  },
+  {
+    id: "gem",
+    icon: "🦪",
+    name: "South Sea Pearl",
+    role: "National Gem",
+    fact: "South Sea pearls are among the largest pearls in the world.",
+  },
+  {
+    id: "house",
+    icon: "🛖",
+    name: "Bahay Kubo",
+    role: "National House",
+    fact: "Bahay kubo is made of bamboo and nipa, keeping it cool in hot weather.",
+  },
+  {
+    id: "anthem",
+    icon: "🎵",
+    name: "Lupang Hinirang",
+    role: "National Anthem",
+    fact: "We sing Lupang Hinirang with our right hand over our heart.",
+  },
+  {
+    id: "rays",
+    icon: "☀️",
+    name: "8 Sun Rays",
+    role: "First 8 provinces that revolted against Spain",
+    fact: "The 8 rays on the flag honor the first provinces to fight for freedom.",
+  },
+  {
+    id: "stars",
+    icon: "⭐",
+    name: "3 Stars",
+    role: "Luzon, Visayas & Mindanao",
+    fact: "The 3 stars on the flag stand for our 3 main island groups.",
+  },
+  {
+    id: "lang",
+    icon: "🗣️",
+    name: "Filipino",
+    role: "National Language",
+    fact: "Filipino is our national language, used across the islands.",
+  },
+];
+
+const MM_LEVELS = {
+  easy: { label: "Easy", pairs: 6, time: 75, cols: 4, emoji: "🌱" },
+  medium: { label: "Medium", pairs: 8, time: 100, cols: 4, emoji: "🔥" },
+  hard: { label: "Hard", pairs: 10, time: 120, cols: 5, emoji: "🏆" },
+};
+
+const MM_PEEK_MS = 2500;
+
+// Card back: simplified Philippine flag (emoji flags don't render on Windows)
+const PH_FLAG_SVG = `<svg viewBox="0 0 60 30" class="mm-flag" aria-hidden="true">
+  <rect width="60" height="15" fill="#0038a8"/>
+  <rect y="15" width="60" height="15" fill="#ce1126"/>
+  <polygon points="0,0 26,15 0,30" fill="#fff"/>
+  <g fill="#fcd116">
+    <circle cx="8.7" cy="15" r="3"/>
+    ${[0, 45, 90, 135, 180, 225, 270, 315].map((a) => `<rect x="8.2" y="9.2" width="1" height="2.6" transform="rotate(${a} 8.7 15)"/>`).join("")}
+    <circle cx="2.6" cy="3.3" r="1.1"/><circle cx="2.6" cy="26.7" r="1.1"/><circle cx="22.4" cy="15" r="1.1"/>
+  </g>
+</svg>`;
+
+function MemoryMatchPage() {
+  return `<div class="page" id="mm-root">
+    ${GameHeader(`<span class="mm-flag-inline">${PH_FLAG_SVG}</span>`, "Memory Match", "Match each Philippine national symbol to what it stands for!")}
+
+    <div class="card mm-start" id="mm-start">
+      <div class="mm-start-flag">${PH_FLAG_SVG}</div>
+      <h2>Choose your level</h2>
+      <p class="pd-sub">Cards are shown for a few seconds — memorize them, then find the pairs!</p>
+      <div class="mm-levels">
+        ${Object.entries(MM_LEVELS)
+          .map(
+            ([key, l]) => `
+          <button class="mm-level" onclick="mmStart('${key}')">
+            <span class="mm-level-emoji">${l.emoji}</span>
+            <strong>${l.label}</strong>
+            <span>${l.pairs} pairs · ${l.time}s</span>
+          </button>`,
+          )
+          .join("")}
+      </div>
+    </div>
+
+    <div id="mm-game" style="display:none;">
+      <div class="game-stats">
+        ${GameStat("Score", "mm-score", "0", "var(--primary)")}
+        ${GameStat("Pairs", "mm-pairs", "0 / 0", "var(--accent-green)")}
+        ${GameStat("Moves", "mm-moves", "0", "var(--text-900)")}
+        ${GameStat("Time", "mm-time", "0", "var(--accent-orange)")}
+      </div>
+      <div class="progress-track" style="height:8px;margin-bottom:16px;">
+        <div class="progress-fill" id="mm-time-bar" style="width:100%;background:var(--accent-green);transition:width 1s linear;"></div>
+      </div>
+      <p class="mm-status" id="mm-status">👀 Memorize the cards!</p>
+      <div class="mm-grid" id="mm-grid"></div>
+      <div class="card mm-fact" id="mm-fact">
+        <span class="mm-fact-label"><span class="mm-flag-inline">${PH_FLAG_SVG}</span> Did you know?</span>
+        <p id="mm-fact-text">Match a pair to learn a fun fact!</p>
+      </div>
+    </div>
+  </div>`;
+}
+
+let _mm = {};
+
+function mmStart(levelKey) {
+  mmStop();
+  const level = MM_LEVELS[levelKey];
+  const chosen = shuffle(MM_SYMBOLS).slice(0, level.pairs);
+  const cards = shuffle(
+    chosen.flatMap((s) => [
+      { pairId: s.id, kind: "symbol", s },
+      { pairId: s.id, kind: "role", s },
+    ]),
+  );
+
+  _mm = {
+    levelKey,
+    level,
+    cards,
+    first: null,
+    lock: true,
+    moves: 0,
+    matches: 0,
+    score: 0,
+    combo: 0,
+    time: level.time,
+    interval: null,
+    over: false,
+  };
+
+  document.getElementById("mm-start").style.display = "none";
+  document.getElementById("mm-game").style.display = "";
+  document.getElementById("mm-pairs").textContent = `0 / ${level.pairs}`;
+  document.getElementById("mm-time").textContent = level.time;
+
+  const grid = document.getElementById("mm-grid");
+  grid.style.setProperty("--cols", level.cols);
+  grid.innerHTML = cards
+    .map(
+      (c, i) => `
+      <button class="mm-card flipped" id="mm-card-${i}" onclick="mmFlip(${i})" aria-label="Card ${i + 1}">
+        <span class="mm-inner">
+          <span class="mm-face mm-back">${PH_FLAG_SVG}</span>
+          <span class="mm-face mm-front ${c.kind === "role" ? "mm-front-role" : ""}">
+            ${
+              c.kind === "symbol"
+                ? `<span class="mm-icon">${c.s.icon}</span><span class="mm-name">${c.s.name}</span>`
+                : `<span class="mm-role-tag">Stands for</span><span class="mm-role">${c.s.role}</span>`
+            }
+          </span>
+        </span>
+      </button>`,
+    )
+    .join("");
+
+  // Peek phase: show everything, then hide and start the clock
+  setTimeout(() => {
+    if (!document.getElementById("mm-root") || _mm.over) return;
+    document
+      .querySelectorAll(".mm-card")
+      .forEach((el) => el.classList.remove("flipped"));
+    document.getElementById("mm-status").textContent =
+      "🔍 Find the matching pairs!";
+    _mm.lock = false;
+    _mm.interval = setInterval(mmTick, 1000);
+  }, MM_PEEK_MS);
+}
+
+function mmStop() {
+  if (_mm.interval) clearInterval(_mm.interval);
+  _mm.interval = null;
+}
+
+function mmTick() {
+  if (!document.getElementById("mm-root")) return mmStop(); // navigated away
+  _mm.time--;
+  document.getElementById("mm-time").textContent = _mm.time;
+  const pct = (_mm.time / _mm.level.time) * 100;
+  const bar = document.getElementById("mm-time-bar");
+  bar.style.width = pct + "%";
+  bar.style.background =
+    pct > 50
+      ? "var(--accent-green)"
+      : pct > 25
+        ? "var(--accent-orange)"
+        : "var(--accent-red)";
+  if (_mm.time <= 0) mmGameOver(false);
+}
+
+function mmFlip(i) {
+  const card = _mm.cards[i];
+  const el = document.getElementById(`mm-card-${i}`);
+  if (_mm.lock || _mm.over || card.matched || i === _mm.first) return;
+
+  el.classList.add("flipped");
+
+  if (_mm.first === null) {
+    _mm.first = i;
+    return;
+  }
+
+  const a = _mm.first;
+  _mm.first = null;
+  _mm.moves++;
+  document.getElementById("mm-moves").textContent = _mm.moves;
+
+  const elA = document.getElementById(`mm-card-${a}`);
+  if (_mm.cards[a].pairId === card.pairId) {
+    _mm.cards[a].matched = card.matched = true;
+    _mm.matches++;
+    _mm.combo++;
+    const pts = 50 + (_mm.combo - 1) * 10;
+    _mm.score += pts;
+    [elA, el].forEach((x) => x.classList.add("matched"));
+    document.getElementById("mm-score").textContent = _mm.score;
+    document.getElementById("mm-pairs").textContent =
+      `${_mm.matches} / ${_mm.level.pairs}`;
+    document.getElementById("mm-status").textContent =
+      `✅ ${card.s.name} — ${card.s.role}! +${pts}${_mm.combo > 1 ? ` 🔥 x${_mm.combo}` : ""}`;
+    document.getElementById("mm-fact-text").textContent = card.s.fact;
+
+    if (_mm.matches === _mm.level.pairs)
+      setTimeout(() => mmGameOver(true), 700);
+  } else {
+    _mm.combo = 0;
+    _mm.lock = true;
+    [elA, el].forEach((x) => x.classList.add("miss"));
+    document.getElementById("mm-status").textContent =
+      "❌ Not a match — try again!";
+    setTimeout(() => {
+      [elA, el].forEach((x) => x.classList.remove("flipped", "miss"));
+      _mm.lock = false;
+    }, 900);
+  }
+}
+
+function mmGameOver(won) {
+  mmStop();
+  if (_mm.over || !document.getElementById("mm-root")) return;
+  _mm.over = true;
+
+  const timeBonus = won ? _mm.time * 2 : 0;
+  _mm.score += timeBonus;
+  // Perfect game = one move per pair; accuracy rewards remembering, not guessing
+  const accuracy = _mm.moves ? Math.round((_mm.matches / _mm.moves) * 100) : 0;
+
+  const g = !won
+    ? { e: "⏰", t: "Time's Up!", c: "var(--accent-red)" }
+    : accuracy >= 75
+      ? { e: "🏆", t: "Super Memory!", c: "var(--accent-green)" }
+      : accuracy >= 50
+        ? { e: "🎉", t: "Great Job!", c: "var(--primary)" }
+        : { e: "👍", t: "You Did It!", c: "var(--accent-orange)" };
+
+  const learned = _mm.cards
+    .filter((c) => c.kind === "symbol")
+    .map(
+      (c) =>
+        `<span class="mm-chip">${c.s.icon} ${c.s.name} <em>${c.s.role}</em></span>`,
+    )
+    .join("");
+
+  document.getElementById("mm-root").innerHTML =
+    GameOverScreen({
+      emoji: g.e,
+      title: g.t,
+      color: g.c,
+      sub: won
+        ? `You matched all ${_mm.level.pairs} pairs in ${_mm.moves} moves (${_mm.level.label})!`
+        : `You matched ${_mm.matches} of ${_mm.level.pairs} pairs.`,
+      score: _mm.score,
+      detail: `${accuracy}% accuracy${timeBonus ? ` · +${timeBonus} time bonus` : ""}`,
+      replay: `launchGame('memory');mmStart('${_mm.levelKey}')`,
+    }) +
+    `<div class="card mm-learned">
+      <h3><span class="mm-flag-inline">${PH_FLAG_SVG}</span> Symbols in this round</h3>
+      <div class="mm-chips">${learned}</div>
+    </div>`;
+}
+
 function QuizPageWrapper() {
   if (window._quizState?.timerInterval) {
     clearInterval(window._quizState.timerInterval);
@@ -3480,6 +4785,7 @@ function ResearchPageWrapper() {
 }
 function AchievementsPageWrapper() {
   document.getElementById("page-container").innerHTML = AchievementsPage();
+  bindAchievements();
 }
 function SettingsPageWrapper() {
   document.getElementById("page-container").innerHTML = SettingsPage();
@@ -3491,7 +4797,7 @@ async function doResearch() {
   if (!query) return;
 
   const results = document.getElementById("research-results");
-  results.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:16px;background:white;border-radius:var(--radius-lg);border:1px solid var(--border);">
+  results.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:16px;background:var(--card-bg);border-radius:var(--radius-lg);border:1px solid var(--border);">
           <div class="spinner" style="width:20px;height:20px;border-width:2px;"></div>
           <span style="font-size:14px;color:var(--text-400);">Searching...</span>
         </div>`;
@@ -3504,7 +4810,7 @@ async function doResearch() {
     const reply =
       res.reply || res.message || res.response || "No answer found.";
     results.innerHTML = `
-            <div style="background:white;border-radius:var(--radius-lg);border:1px solid var(--border);padding:24px;box-shadow:var(--shadow-sm);">
+            <div style="background:var(--card-bg);border-radius:var(--radius-lg);border:1px solid var(--border);padding:24px;box-shadow:var(--shadow-sm);">
               <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
                 <div style="width:28px;height:28px;border-radius:8px;background:var(--primary);display:flex;align-items:center;justify-content:center;color:white;font-size:14px;">✦</div>
                 <span style="font-size:13px;font-weight:700;color:var(--primary);">BIBO AI Answer</span>
@@ -3577,6 +4883,7 @@ function render() {
     settings: SettingsPageWrapper,
   };
   const isParent = state.user?.role === "PARENT";
+  if (!isParent && !_stats) loadStats().catch(() => {});
   const parentOnlyPages = ["parent", "settings"];
   if (isParent && !parentOnlyPages.includes(state.currentPage)) {
     (pageMap["parent"] || pageMap.dashboard)();

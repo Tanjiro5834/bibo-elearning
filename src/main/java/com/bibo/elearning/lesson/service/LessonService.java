@@ -117,14 +117,20 @@ public class LessonService {
     public LessonDetailResponse updateLesson(Long lessonId, UpdateLessonRequest request) {
         Lesson lesson = lessonRepository.findById(lessonId)
                 .orElseThrow(() -> new RuntimeException("Lesson not found with id: " + lessonId));
+
         lesson.setTitle(request.getTitle());
         lesson.setDescription(request.getDescription());
         lesson.setEstimatedMinutes(request.getEstimatedMinutes());
         lesson.setLearningLevel(request.getLearningLevel());
-        lesson.setPublished(request.getPublished());
+        
+        if (request.getPublished() != null) {
+            lesson.setPublished(request.getPublished());
+        }
+
         Lesson updatedLesson = lessonRepository.save(lesson);
 
         List<LessonSection> sections = lessonSectionRepository.findByLessonOrderByContentOrderAsc(lesson);
+        
         return lessonMapper.toDetailResponse(updatedLesson, sections);
     }
 

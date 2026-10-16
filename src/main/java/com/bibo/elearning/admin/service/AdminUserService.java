@@ -123,9 +123,9 @@ public class AdminUserService {
         studentProfileRepository.save(StudentProfile.builder()
                 .user(user)
                 .fullName((nz(user.getFirstName()) + " " + nz(user.getLastName())).trim())
-                .age(age != null ? age : 0)          // column is NOT NULL
+                .age(age != null ? age : 0)          
                 .learningLevel("BEGINNER")
-                .createdAt(LocalDateTime.now())      // NOT NULL; drop if entity uses @CreationTimestamp/@PrePersist
+                .createdAt(LocalDateTime.now())
                 .build());
     }
 
