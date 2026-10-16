@@ -92,6 +92,8 @@ const api = {
 
   submitQuiz: (data) => api.request("POST", "/quiz/submit", data, state.token),
 
+  checkAnswer: (data) => api.request("POST", "/quiz/check", data, state.token),
+
   getChildren: () => api.request("GET", "/parent/children", null, state.token),
 
   getChildProgress: (childId) =>
@@ -148,6 +150,41 @@ applyTheme(getTheme());
 requestAnimationFrame(() =>
   document.documentElement.classList.add("theme-ready"),
 );
+
+// ── Sound effects ────────────────────────────────────────────
+const SOUND_KEY = "bibo_sound";
+
+function getSoundEnabled() {
+  try {
+    return localStorage.getItem(SOUND_KEY) !== "off"; // default ON
+  } catch {
+    return true;
+  }
+}
+
+function setSoundEnabled(on) {
+  try {
+    localStorage.setItem(SOUND_KEY, on ? "on" : "off");
+  } catch {}
+  showToast(on ? "Sound effects on" : "Sound effects off", on ? "🔊" : "🔇");
+}
+
+const SFX = {
+  correct: new Audio("/sounds/correct-sound.mp3"),
+  wrong: new Audio("/sounds/wrong-sound.mp3"),
+};
+Object.values(SFX).forEach((a) => {
+  a.preload = "auto";
+  a.volume = 0.6;
+});
+
+function playSfx(name) {
+  if (!getSoundEnabled()) return;
+  const a = SFX[name];
+  if (!a) return;
+  a.currentTime = 0;
+  a.play().catch(() => {});
+}
 
 // ── State (unchanged) ──────────────────────────────────────
 const state = {
@@ -434,7 +471,7 @@ function SidebarHtml() {
 
   return `<nav id="sidebar">
     <div class="sidebar-logo">
-      <div class="sidebar-logo-icon">B</div>
+      <div class="sidebar-logo-icon"><img src="images/bibo-logo.jpg" alt="BIBO" class="bibo-logo" /></div>
       <div class="sidebar-logo-text">
         <div class="sidebar-logo-title">BIBO</div>
         <div class="sidebar-logo-sub">${isParent ? "Parent Portal" : "Bacoor Learn"}</div>
@@ -492,9 +529,9 @@ function LoginPage() {
   return `<div class="auth-card page" id="login-card">
     <!-- Logo -->
     <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:32px;gap:10px;">
-      <div style="width:56px;height:56px;border-radius:14px;background:var(--primary);display:flex;align-items:center;justify-content:center;">
-        <span style="color:white;font-family:var(--font-display);font-weight:900;font-size:22px;">B</span>
-      </div>
+        <div style="width:56px;height:56px;border-radius:14px;overflow:hidden;">
+          <img src="images/bibo-logo.jpg" alt="BIBO" class="bibo-logo" />
+        </div>
       <div style="text-align:center;">
         <h1 style="font-size:24px;margin-bottom:4px;">Welcome back! 👋</h1>
         <p style="color:var(--text-400);font-size:14px;">Sign in to continue learning</p>
@@ -587,8 +624,8 @@ function RegisterPage() {
   return `<div class="auth-card page" id="reg-card">
     <!-- Logo -->
     <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:28px;gap:8px;">
-      <div style="width:48px;height:48px;border-radius:12px;background:var(--primary);display:flex;align-items:center;justify-content:center;">
-        <span style="color:white;font-family:var(--font-display);font-weight:900;font-size:20px;">B</span>
+      <div style="width:48px;height:48px;border-radius:12px;overflow:hidden;">
+        <img src="images/bibo-logo.jpg" alt="BIBO" class="bibo-logo" />
       </div>
       <h1 style="font-size:22px;margin-bottom:2px;">Join BIBO! 🌟</h1>
       <p style="color:var(--text-400);font-size:13px;">Join thousands of young learners</p>
@@ -1737,16 +1774,34 @@ function QuizPage() {
   </div>`;
 }
 
-function quizSelect(idx, choiceId) {
+async function quizSelect(idx, choiceId) {
   const qs = window._quizState;
+  if (qs.checked[qs.current]) return; // one answer per question
+  qs.checked[qs.current] = true;
   qs.selectedChoiceIds[qs.current] = choiceId;
 
-  // Highlight selected choice
-  document
-    .querySelectorAll(".quiz-option")
-    .forEach((el) => el.classList.remove("selected"));
-  const opt = document.getElementById(`opt-${idx}`);
-  if (opt) opt.classList.add("selected");
+  document.querySelectorAll(".quiz-option").forEach((el) => el.classList.add("locked"));
+  const picked = document.getElementById(`opt-${idx}`);
+  picked?.classList.add("selected");
+
+  try {
+    const q = qs.questions[qs.current];
+    const res = await api.checkAnswer({ questionId: q.id, choiceId });
+    picked?.classList.remove("selected");
+
+    if (res.correct) {
+      picked?.classList.add("correct");
+      playSfx("correct");
+    } else {
+      picked?.classList.add("wrong");
+      document
+        .querySelector(`.quiz-option[data-choice-id="${Number(res.correctChoiceId)}"]`)
+        ?.classList.add("correct");
+      playSfx("wrong");
+    }
+  } catch (e) {
+    // Feedback failed, but the answer still counts on submit
+  }
 
   document.getElementById("quiz-next-btn").style.display = "";
 }
@@ -1786,7 +1841,8 @@ async function bindQuiz() {
     qs.quiz = quiz;
     qs.questions = quiz.questions;
     qs.selectedChoiceIds = new Array(quiz.questions.length).fill(null);
-    qs.timer = 60 * quiz.questions.length; // 1 min per question
+    qs.checked = new Array(quiz.questions.length).fill(false);
+    qs.timer = 60 * quiz.questions.length;
 
     document.getElementById("quiz-loading").style.display = "none";
     document.getElementById("quiz-body").style.display = "";
@@ -2351,8 +2407,8 @@ function SettingsPage() {
           "Sound Effects",
           "Enable sounds for correct/wrong answers",
           "pref-sound",
-          false,
-          "",
+          getSoundEnabled(),
+          "setSoundEnabled(this.checked)",
         ],
         [
           "🌙",
