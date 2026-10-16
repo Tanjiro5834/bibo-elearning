@@ -43,6 +43,7 @@ public class Lesson {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
+    @Builder.Default
     @OneToMany(mappedBy = "lesson", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @OrderBy("contentOrder ASC")
     private List<LessonSection> sections = new ArrayList<>();
