@@ -219,11 +219,11 @@ function Empty(emoji, title, sub) {
 function PageHeader(title, sub, btnLabel, btnFn) {
   return `<div class="flex-between mb-32"><div><h1 style="font-size:26px;margin-bottom:4px;">${title}</h1><p style="color:var(--text-400);font-size:14px;">${sub}</p></div>${btnLabel ? `<button class="btn btn-primary" onclick="${btnFn}">${btnLabel}</button>` : ""}</div>`;
 }
-function openModal(html) {
+function openModal(html, extraClass = "") {
   const overlay = document.createElement("div");
   overlay.className = "modal-overlay";
   overlay.id = "active-modal";
-  overlay.innerHTML = `<div class="modal">${html}</div>`;
+  overlay.innerHTML = `<div class="modal ${extraClass}">${html}</div>`;
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) closeModal();
   });
@@ -2072,38 +2072,82 @@ async function openQuizForm(quiz) {
            ⚠️ Students have taken this quiz ${quiz.attemptCount} time${quiz.attemptCount === 1 ? "" : "s"}. Their past scores stay as recorded; changes apply to new attempts.
          </div>`
       : "";
-  openModal(`<div class="modal-header"><div class="modal-title">✅ ${editing ? "Edit Quiz" : "New Quiz"}</div><button class="modal-close" onclick="closeModal()">✕</button></div>
-    ${takenNote}
-    <div id="qz-err" style="display:none;background:#FEE2E2;color:#991B1B;font-size:13px;font-weight:700;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:14px;"></div>
-    <div class="field"><label>Lesson</label><select id="qz-lesson" class="bibo-input">${opts}</select></div>
-    <div class="field"><label>Quiz Title</label><input id="qz-title" class="bibo-input" placeholder="e.g. Fractions Quiz" /></div>
-    <div class="field"><label>Description</label><input id="qz-desc" class="bibo-input" placeholder="Optional" /></div>
-    <div class="field"><label>Passing Score (%)</label><input id="qz-passing" class="bibo-input" type="number" value="75" min="0" max="100" /></div>
-    <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:16px;"><p style="font-size:13px;font-weight:700;color:var(--text-900);margin-bottom:4px;">Questions</p><p style="font-size:12px;color:var(--text-400);margin-bottom:14px;">Mark the correct answer with the radio button.</p><div id="qz-questions"></div><button class="btn btn-ghost btn-sm" onclick="addQuestion()" style="width:100%;margin-top:8px;">+ Add Question</button></div>
-    <div style="display:flex;gap:10px;margin-top:8px;"><button class="btn btn-ghost" style="flex:1;" onclick="closeModal()">Cancel</button><button class="btn btn-primary" style="flex:1;" id="qz-btn" onclick="submitQuiz()">${editing ? "Save Changes" : "Create Quiz"}</button></div>`);
+  openModal(
+    `<div class="mq-head">
+      <div class="modal-title">✅ ${editing ? "Edit Quiz" : "New Quiz"}</div>
+      <button class="modal-close" onclick="closeModal()" aria-label="Close">✕</button>
+    </div>
+
+    <div class="mq-body">
+      ${takenNote}
+      <div id="qz-err" class="mq-err" style="display:none;"></div>
+
+      <div class="mq-details">
+        <div class="field"><label>Lesson</label><select id="qz-lesson" class="bibo-input">${opts}</select></div>
+        <div class="field"><label>Quiz Title</label><input id="qz-title" class="bibo-input" placeholder="e.g. Fractions Quiz" /></div>
+        <div class="field"><label>Description</label><input id="qz-desc" class="bibo-input" placeholder="Optional" /></div>
+        <div class="field"><label>Passing Score (%)</label><input id="qz-passing" class="bibo-input" type="number" value="75" min="0" max="100" /></div>
+      </div>
+
+      <div class="mq-qhead">
+        <div>
+          <span class="mq-qtitle">Questions</span>
+          <span id="qz-count" class="badge badge-blue" style="margin-left:6px;">0</span>
+        </div>
+        <span class="mq-hint">Click a question to edit · select the radio next to the correct answer</span>
+      </div>
+      <div id="qz-questions"></div>
+      <button class="btn btn-ghost btn-sm mq-add" onclick="addQuestion()">+ Add Question</button>
+    </div>
+
+    <div class="mq-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="qz-btn" onclick="submitQuiz()">${editing ? "Save Changes" : "Create Quiz"}</button>
+    </div>`,
+    "modal-quiz",
+  );
 
   if (editing) {
     // .value assignment (not HTML interpolation) so quotes/HTML in saved text are safe
     document.getElementById("qz-title").value = quiz.title || "";
     document.getElementById("qz-desc").value = quiz.description || "";
     document.getElementById("qz-passing").value = quiz.passingScore;
-    (quiz.questions || []).forEach((q) => addQuestion(q));
+    (quiz.questions || []).forEach((q) => addQuestion(q, { open: false }));
     if (!quiz.questions?.length) addQuestion();
+    else openQuestion(document.querySelector("#qz-questions .mq-q").id.replace("qb-", ""));
   } else {
     addQuestion();
   }
 }
-function addQuestion(prefill = null) {
+const CHOICE_KEYS = ["A", "B", "C", "D"];
+
+function addQuestion(prefill = null, { open = true } = {}) {
   _qCount++;
   const n = _qCount;
   const el = document.createElement("div");
   el.id = `qb-${n}`;
-  el.style.cssText =
-    "background:var(--bg);border-radius:var(--radius-md);padding:16px;margin-bottom:12px;";
-  el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><span style="font-size:13px;font-weight:700;color:var(--text-700);">Question ${n}</span>${n > 1 ? `<button style="background:none;border:none;cursor:pointer;color:var(--accent-red);font-size:12px;font-weight:700;" onclick="document.getElementById('qb-${n}').remove()">Remove</button>` : ""}</div>
-    <input class="bibo-input" id="qt-${n}" placeholder="Enter question text..." style="margin-bottom:8px;" />
-    ${["A", "B", "C", "D"].map((k, i) => `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><input type="radio" name="cr-${n}" value="${i}" id="r-${n}-${i}" style="accent-color:var(--primary);width:16px;height:16px;flex-shrink:0;" /><label for="r-${n}-${i}" style="font-size:12px;font-weight:700;color:var(--text-400);width:16px;">${k}</label><input class="bibo-input" id="ch-${n}-${i}" placeholder="Choice ${k}..." style="flex:1;padding:9px 12px;" /></div>`).join("")}
-    <p style="font-size:11px;color:var(--text-400);margin-top:4px;">Select the radio next to the correct answer.</p>`;
+  el.className = "mq-q";
+  el.innerHTML = `
+    <div class="mq-q-summary" onclick="toggleQuestion(${n})">
+      <span class="mq-q-num"></span>
+      <span class="mq-q-text" id="qs-text-${n}"></span>
+      <span class="mq-q-answer" id="qs-ans-${n}"></span>
+      <button type="button" class="mq-q-remove" title="Remove question"
+        onclick="event.stopPropagation(); removeQuestion(${n})">✕</button>
+      <span class="mq-q-chevron">▾</span>
+    </div>
+    <div class="mq-q-body">
+      <input class="bibo-input" id="qt-${n}" placeholder="Enter question text..." oninput="updateQuestionSummary(${n})" />
+      <div class="mq-choices">
+        ${CHOICE_KEYS.map(
+          (k, i) => `<label class="mq-choice" for="ch-${n}-${i}">
+            <input type="radio" name="cr-${n}" value="${i}" id="r-${n}-${i}" onchange="updateQuestionSummary(${n})" />
+            <span class="mq-choice-key">${k}</span>
+            <input class="bibo-input" id="ch-${n}-${i}" placeholder="Choice ${k}..." oninput="updateQuestionSummary(${n})" />
+          </label>`,
+        ).join("")}
+      </div>
+    </div>`;
   document.getElementById("qz-questions").appendChild(el);
 
   if (prefill) {
@@ -2112,6 +2156,58 @@ function addQuestion(prefill = null) {
       document.getElementById(`ch-${n}-${i}`).value = c.choiceText || "";
       if (c.correct) document.getElementById(`r-${n}-${i}`).checked = true;
     });
+  }
+  updateQuestionSummary(n);
+  renumberQuestions();
+  if (open) {
+    openQuestion(n);
+    if (!prefill) document.getElementById(`qt-${n}`).focus();
+  }
+}
+
+// Only one question open at a time keeps the modal short.
+function openQuestion(n) {
+  document.querySelectorAll("#qz-questions .mq-q").forEach((q) => q.classList.toggle("open", q.id === `qb-${n}`));
+  document.getElementById(`qb-${n}`)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
+
+function toggleQuestion(n) {
+  const el = document.getElementById(`qb-${n}`);
+  if (el.classList.contains("open")) el.classList.remove("open");
+  else openQuestion(n);
+}
+
+function removeQuestion(n) {
+  const blocks = document.querySelectorAll("#qz-questions .mq-q");
+  if (blocks.length <= 1) {
+    showToast("A quiz needs at least one question", "⚠️");
+    return;
+  }
+  document.getElementById(`qb-${n}`).remove();
+  renumberQuestions();
+}
+
+function renumberQuestions() {
+  const blocks = document.querySelectorAll("#qz-questions .mq-q");
+  blocks.forEach((b, i) => (b.querySelector(".mq-q-num").textContent = `Q${i + 1}`));
+  const count = document.getElementById("qz-count");
+  if (count) count.textContent = blocks.length;
+}
+
+function updateQuestionSummary(n) {
+  const text = document.getElementById(`qt-${n}`)?.value.trim();
+  const checked = document.querySelector(`input[name="cr-${n}"]:checked`);
+  const filled = CHOICE_KEYS.filter((_, i) => document.getElementById(`ch-${n}-${i}`)?.value.trim()).length;
+  const textEl = document.getElementById(`qs-text-${n}`);
+  const ansEl = document.getElementById(`qs-ans-${n}`);
+  textEl.textContent = text || "New question";
+  textEl.classList.toggle("muted", !text);
+  if (checked && filled === 4 && text) {
+    ansEl.textContent = `✓ ${CHOICE_KEYS[+checked.value]}`;
+    ansEl.className = "mq-q-answer ok";
+  } else {
+    ansEl.textContent = !checked ? "No answer" : `${filled}/4 choices`;
+    ansEl.className = "mq-q-answer warn";
   }
 }
 async function deleteQuiz(id, title) {
@@ -2148,7 +2244,8 @@ async function submitQuiz() {
   const lessonId = document.getElementById("qz-lesson").value,
     title = document.getElementById("qz-title").value.trim(),
     desc = document.getElementById("qz-desc").value.trim(),
-    passingScore = parseInt(document.getElementById("qz-passing").value) || 75,
+    passingRaw = parseInt(document.getElementById("qz-passing").value, 10),
+    passingScore = Number.isNaN(passingRaw) ? 75 : passingRaw, // 0 is a valid score
     errEl = document.getElementById("qz-err");
   if (!lessonId) {
     errEl.textContent = "Select a lesson.";
@@ -2161,32 +2258,27 @@ async function submitQuiz() {
     return;
   }
   const questions = [];
-  const blocks = document.querySelectorAll('[id^="qb-"]');
-  for (const block of blocks) {
+  const blocks = document.querySelectorAll("#qz-questions .mq-q");
+  const fail = (msg, n) => {
+    errEl.textContent = msg;
+    errEl.style.display = "";
+    if (n) openQuestion(n);
+    errEl.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  };
+  for (const [pos, block] of [...blocks].entries()) {
     const n = block.id.replace("qb-", "");
+    const label = `Question ${pos + 1}`;
     const qt = document.getElementById(`qt-${n}`)?.value.trim();
-    if (!qt) {
-      errEl.textContent = `Question ${n} text required.`;
-      errEl.style.display = "";
-      return;
-    }
+    if (!qt) return fail(`${label}: question text is required.`, n);
     const correct = block.querySelector(`input[name="cr-${n}"]:checked`);
-    if (!correct) {
-      errEl.textContent = `Mark correct answer for Question ${n}.`;
-      errEl.style.display = "";
-      return;
-    }
+    if (!correct) return fail(`${label}: select the correct answer.`, n);
     const correctIdx = parseInt(correct.value);
     const choices = [0, 1, 2, 3].map((i) => {
       const t = document.getElementById(`ch-${n}-${i}`)?.value.trim();
       if (!t) return null;
       return { choiceText: t, correct: i === correctIdx };
     });
-    if (choices.some((c) => !c)) {
-      errEl.textContent = `All 4 choices required for Question ${n}.`;
-      errEl.style.display = "";
-      return;
-    }
+    if (choices.some((c) => !c)) return fail(`${label}: all 4 choices are required.`, n);
     questions.push({ questionText: qt, choices });
   }
   if (!questions.length) {
