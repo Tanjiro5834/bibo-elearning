@@ -1,4 +1,4 @@
-const API = "http://localhost:8080/api";
+const API = "/api"; // same-origin: works on localhost and on the deployed server
 let token = localStorage.getItem("bibo_admin_token") || null;
 let currentUser = JSON.parse(localStorage.getItem("bibo_admin_user") || "null");
 let userRole = "";
@@ -720,42 +720,19 @@ async function activateAccount(id) {
 }
 
 // ── REPORTS ─────────────────────────────────────────────────
+const REPORTS = [
+  { type: "users", icon: "👥", title: "User Report", sub: "All accounts by role and status", color: "#EEF0FF" },
+  { type: "content", icon: "📚", title: "Content Report", sub: "Subjects, lessons, and section counts", color: "#D1FAE5" },
+  { type: "progress", icon: "📊", title: "Progress Report", sub: "Every student's lesson progress", color: "#FEF3C7" },
+  { type: "quizzes", icon: "✅", title: "Quiz Report", sub: "Quiz attempts, scores, and pass/fail", color: "#FCE7F3" },
+];
+
 async function reports() {
   document.getElementById("page-container").innerHTML = `<div class="page">
-    ${PageHeader("Reports", "Generate and export platform reports", "", "")}
+    ${PageHeader("Reports", "Preview and export live platform data as CSV", "", "")}
     <div class="grid-2 mb-24">
-      ${[
-        {
-          icon: "👥",
-          title: "User Report",
-          sub: "All registered users by role and status",
-          endpoint: "/admin/reports/users",
-          color: "#EEF0FF",
-        },
-        {
-          icon: "📚",
-          title: "Content Report",
-          sub: "Subjects, lessons, and sections summary",
-          endpoint: "/admin/reports/content",
-          color: "#D1FAE5",
-        },
-        {
-          icon: "📊",
-          title: "Progress Report",
-          sub: "Student progress across all subjects",
-          endpoint: "/admin/reports/progress",
-          color: "#FEF3C7",
-        },
-        {
-          icon: "✅",
-          title: "Quiz Report",
-          sub: "Quiz attempts, scores, and pass rates",
-          endpoint: "/admin/reports/quizzes",
-          color: "#FCE7F3",
-        },
-      ]
-        .map(
-          (r) => `
+      ${REPORTS.map(
+        (r) => `
         <div class="card" style="padding:24px;">
           <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
             <div style="width:48px;height:48px;border-radius:14px;background:${r.color};display:flex;align-items:center;justify-content:center;font-size:24px;">${r.icon}</div>
@@ -765,23 +742,106 @@ async function reports() {
             </div>
           </div>
           <div style="display:flex;gap:8px;">
-            <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="showToast('Generating report...','📄');setTimeout(()=>showToast('Report ready! (connect backend)','✅'),1500)">Preview</button>
-            <button class="btn btn-primary btn-sm" style="flex:1;" onclick="showToast('Export coming soon!','📥')">Export CSV</button>
+            <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="previewReport('${r.type}', this)">Preview</button>
+            <button class="btn btn-primary btn-sm" style="flex:1;" onclick="exportReport('${r.type}', this)">Export CSV</button>
           </div>
         </div>`,
-        )
-        .join("")}
-    </div>
-    <div class="card" style="padding:24px;">
-      <p style="font-weight:800;font-size:15px;color:var(--text-900);margin-bottom:4px;">📅 Scheduled Reports</p>
-      <p style="font-size:13px;color:var(--text-400);margin-bottom:16px;">Set up automatic weekly or monthly report emails.</p>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        <select class="bibo-input" style="width:auto;flex:1;min-width:160px;"><option>Weekly</option><option>Monthly</option></select>
-        <input class="bibo-input" type="email" placeholder="Send to email..." style="flex:2;min-width:200px;" />
-        <button class="btn btn-primary" onclick="showToast('Scheduled report saved!','📅')">Schedule</button>
-      </div>
+      ).join("")}
     </div>
   </div>`;
+}
+
+// CSV endpoints return text, so they bypass apiFetch (which expects JSON).
+async function fetchReport(type) {
+  const res = await fetch(`${API}/admin/reports/${type}`, {
+    headers: { Authorization: "Bearer " + token },
+  });
+  if (res.status === 401) {
+    logout();
+    throw new Error("Session expired");
+  }
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || err.error || `HTTP ${res.status}`);
+  }
+  return res;
+}
+
+// Minimal RFC 4180 parser — enough for our own exports (quoted cells, "" escapes, CRLF).
+function parseCsv(text) {
+  const rows = [];
+  let row = [], cell = "", quoted = false;
+  text = text.replace(/^\uFEFF/, "");
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (quoted) {
+      if (c === '"' && text[i + 1] === '"') { cell += '"'; i++; }
+      else if (c === '"') quoted = false;
+      else cell += c;
+    } else if (c === '"') quoted = true;
+    else if (c === ",") { row.push(cell); cell = ""; }
+    else if (c === "\n") { row.push(cell); rows.push(row); row = []; cell = ""; }
+    else if (c !== "\r") cell += c;
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  return rows;
+}
+
+async function withBusy(btn, label, fn) {
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = label;
+  try {
+    await fn();
+  } catch (e) {
+    showToast(e.message, "⚠️");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = original;
+  }
+}
+
+function previewReport(type, btn) {
+  const meta = REPORTS.find((r) => r.type === type);
+  return withBusy(btn, "Loading…", async () => {
+    const rows = parseCsv(await (await fetchReport(type)).text());
+    const [header = [], ...body] = rows;
+    const shown = body.slice(0, 15);
+    openModal(`
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <h3>${meta.icon} ${meta.title}</h3>
+        <button class="btn btn-ghost btn-sm" onclick="closeModal()">Close</button>
+      </div>
+      <p style="font-size:12px;color:var(--text-400);margin-bottom:12px;">
+        ${body.length} row${body.length === 1 ? "" : "s"}${body.length > shown.length ? ` · showing first ${shown.length}` : ""}
+      </p>
+      ${
+        body.length
+          ? `<div style="overflow:auto;max-height:60vh;"><table class="data-table">
+              <thead><tr>${header.map((h) => `<th>${esc(h)}</th>`).join("")}</tr></thead>
+              <tbody>${shown.map((r) => `<tr>${r.map((c) => `<td style="white-space:nowrap;">${esc(c)}</td>`).join("")}</tr>`).join("")}</tbody>
+            </table></div>`
+          : Empty("📭", "No data yet", "This report is empty.")
+      }
+      <button class="btn btn-primary" style="width:100%;margin-top:16px;" onclick="exportReport('${type}', this)">Export CSV</button>`);
+  });
+}
+
+function exportReport(type, btn) {
+  return withBusy(btn, "Exporting…", async () => {
+    const res = await fetchReport(type);
+    const blob = await res.blob();
+    const disposition = res.headers.get("Content-Disposition") || "";
+    const match = disposition.match(/filename="?([^";]+)"?/);
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = match ? match[1] : `bibo-${type}-report.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    showToast("Report downloaded", "📥");
+  });
 }
 
 // ── ANALYTICS ────────────────────────────────────────────────
@@ -927,29 +987,40 @@ async function updateReviewStatus(id, status) {
 // ── ADMIN SETTINGS ───────────────────────────────────────────
 function adminSettings() {
   document.getElementById("page-container").innerHTML = `<div class="page">
-    ${PageHeader("Settings", "System configuration and preferences", "", "")}
+    ${PageHeader("Settings", "Your admin account", "", "")}
     <div style="display:flex;flex-direction:column;gap:16px;max-width:640px;">
       <div class="card" style="padding:24px;">
         <p style="font-weight:800;font-size:15px;color:var(--text-900);margin-bottom:4px;">🔐 Change Password</p>
-        <p style="font-size:13px;color:var(--text-400);margin-bottom:16px;">Update your admin account password.</p>
-        <div class="field"><label>Current Password</label><input class="bibo-input" type="password" placeholder="Enter current password" /></div>
-        <div class="field"><label>New Password</label><input class="bibo-input" type="password" placeholder="Enter new password" /></div>
-        <div class="field"><label>Confirm Password</label><input class="bibo-input" type="password" placeholder="Repeat new password" /></div>
-        <button class="btn btn-primary" onclick="showToast('Password updated!','🔐')">Update Password</button>
-      </div>
-      <div class="card" style="padding:24px;">
-        <p style="font-weight:800;font-size:15px;color:var(--text-900);margin-bottom:4px;">🌐 API Configuration</p>
-        <p style="font-size:13px;color:var(--text-400);margin-bottom:16px;">Backend API base URL used by this portal.</p>
-        <div class="field"><label>API Base URL</label><input class="bibo-input" value="${API}" /></div>
-        <button class="btn btn-primary" onclick="showToast('Settings saved!','⚙️')">Save</button>
-      </div>
-      <div class="card" style="padding:24px;border:1.5px solid #FEE2E2;">
-        <p style="font-weight:800;font-size:15px;color:var(--accent-red);margin-bottom:4px;">⚠️ Danger Zone</p>
-        <p style="font-size:13px;color:var(--text-400);margin-bottom:16px;">These actions are irreversible. Proceed with caution.</p>
-        <button class="btn btn-danger" onclick="showToast('Feature coming soon','⚠️')">Clear All Student Progress</button>
+        <p style="font-size:13px;color:var(--text-400);margin-bottom:16px;">Signed in as <strong>@${esc(username)}</strong>. Use at least 8 characters.</p>
+        <div class="field"><label>Current Password</label><input id="pw-current" class="bibo-input" type="password" autocomplete="current-password" placeholder="Enter current password" /></div>
+        <div class="field"><label>New Password</label><input id="pw-new" class="bibo-input" type="password" autocomplete="new-password" placeholder="Enter new password" /></div>
+        <div class="field"><label>Confirm Password</label><input id="pw-confirm" class="bibo-input" type="password" autocomplete="new-password" placeholder="Repeat new password" /></div>
+        <button id="pw-submit" class="btn btn-primary" onclick="submitChangePassword()">Update Password</button>
       </div>
     </div>
   </div>`;
+}
+
+async function submitChangePassword() {
+  const val = (id) => document.getElementById(id).value;
+  const currentPassword = val("pw-current");
+  const newPassword = val("pw-new");
+
+  if (!currentPassword || !newPassword) return showToast("Fill in all fields", "⚠️");
+  if (newPassword.length < 8) return showToast("New password must be at least 8 characters", "⚠️");
+  if (newPassword !== val("pw-confirm")) return showToast("New passwords don't match", "⚠️");
+
+  const btn = document.getElementById("pw-submit");
+  btn.disabled = true;
+  try {
+    await apiFetch("POST", "/admin/change-password", { currentPassword, newPassword });
+    ["pw-current", "pw-new", "pw-confirm"].forEach((id) => (document.getElementById(id).value = ""));
+    showToast("Password updated!", "🔐");
+  } catch (e) {
+    showToast(e.message, "⚠️");
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1874,33 +1945,6 @@ async function submitQuiz() {
     errEl.style.display = "";
     btn.disabled = false;
     btn.textContent = "Create Quiz";
-  }
-}
-
-// ── STUDENTS ──────────────────────────────────────────────────
-async function students() {
-  document.getElementById("page-container").innerHTML =
-    `<div class="page">${PageHeader("Students", "View registered student accounts", "", "")}
-    <div class="card" style="padding:20px;background:var(--primary-light);border-color:#dde2ff;margin-bottom:24px;"><div style="display:flex;align-items:flex-start;gap:12px;"><span style="font-size:22px;">ℹ️</span><div><p style="font-weight:700;color:var(--primary);margin-bottom:4px;">Student Accounts</p><p style="font-size:13px;color:var(--text-500);">Students register through the main BIBO app. Their accounts appear here once registered.</p></div></div></div>
-    <div id="students-list">${Loading()}</div>
-  </div>`;
-  try {
-    const data = await apiFetch("GET", "/student/all");
-    if (!Array.isArray(data) || data.length === 0) {
-      document.getElementById("students-list").innerHTML = Empty(
-        "👥",
-        "No students yet",
-        "Students appear here after registering through the BIBO app.",
-      );
-      return;
-    }
-    document.getElementById("students-list").innerHTML =
-      `<div class="card" style="overflow:hidden;"><table class="data-table"><thead><tr><th>Student</th><th>Username</th><th>Level</th><th>Joined</th></tr></thead><tbody>
-      ${data.map((s) => `<tr><td><div style="display:flex;align-items:center;gap:10px;"><div style="width:36px;height:36px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--primary);font-size:14px;">${((s.fullName || s.username || "?").trim()[0] || "?").toUpperCase()}</div><span style="font-weight:600;">${s.fullName || s.name || "—"}</span></div></td><td style="color:var(--text-400);">@${s.username || "—"}</td><td><span class="badge badge-blue">${s.learningLevel || s.level || "BEGINNER"}</span></td><td style="font-size:13px;color:var(--text-400);">${s.createdAt ? new Date(s.createdAt).toLocaleDateString() : "—"}</td></tr>`).join("")}
-    </tbody></table></div>`;
-  } catch (e) {
-    document.getElementById("students-list").innerHTML =
-      `<div class="card" style="padding:16px;color:var(--accent-red);">⚠️ Failed to load students: ${e.message}</div>`;
   }
 }
 

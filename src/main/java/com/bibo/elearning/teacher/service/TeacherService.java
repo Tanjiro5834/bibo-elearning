@@ -55,10 +55,14 @@ public class TeacherService {
         if(!isTeacher(teacher)){
             throw new IllegalStateException("User is not a teacher");
         }
-        
-        List<TeacherReviewRequest> requests = teacherReviewRequestRepository.findAllByParent(teacher);
 
-        return requests.stream()
+        // Requests aren't assigned to a specific teacher, so every teacher sees the shared queue.
+        return getAllReviewRequests();
+    }
+
+    /** Shared review queue, newest first. Used by teachers and admins. */
+    public List<ReviewRequestResponse> getAllReviewRequests() {
+        return teacherReviewRequestRepository.findAllByOrderByRequestedAtDesc().stream()
                 .map(teacherMapper::mapToReviewRequestResponse)
                 .collect(Collectors.toList());
     }
@@ -67,14 +71,19 @@ public class TeacherService {
         User teacher = userRepository.findByUsername(teacherUsername)
                 .orElseThrow(() -> new IllegalStateException("Teacher not found with username: " + teacherUsername));
 
-        TeacherReviewRequest request = teacherReviewRequestRepository.findById(requestId)
-                .orElseThrow(() -> new IllegalStateException("Review request not found with id: " + requestId));
-
         if(!isTeacher(teacher)){
             throw new IllegalStateException("User is not a teacher");
         }
 
-        String upperStatus = status.toUpperCase();
+        setReviewStatus(requestId, status);
+    }
+
+    /** Status change without the teacher-role check (admin path; controller enforces ADMIN). */
+    public void setReviewStatus(Long requestId, String status) {
+        TeacherReviewRequest request = teacherReviewRequestRepository.findById(requestId)
+                .orElseThrow(() -> new IllegalArgumentException("Review request not found with id: " + requestId));
+
+        String upperStatus = status == null ? "" : status.trim().toUpperCase();
         if(!VALID_STATUSES.contains(upperStatus)){
             throw new IllegalArgumentException("Status must be either IN_REVIEW or DONE");
         }
