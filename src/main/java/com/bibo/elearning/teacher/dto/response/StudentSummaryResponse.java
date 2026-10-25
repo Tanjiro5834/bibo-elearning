@@ -18,4 +18,6 @@ public class StudentSummaryResponse {
     private Integer age;
     private String grade;
     private String school;
+    private String learningLevel;
+    private java.time.LocalDateTime joinedAt;
 }

@@ -8,6 +8,7 @@ import com.bibo.elearning.auth.user.entity.User;
 import com.bibo.elearning.auth.user.repository.UserRepository;
 import com.bibo.elearning.parent.entity.TeacherReviewRequest;
 import com.bibo.elearning.parent.repository.TeacherReviewRequestRepository;
+import com.bibo.elearning.student.repository.StudentProfileRepository;
 import com.bibo.elearning.teacher.dto.response.ReviewRequestResponse;
 import com.bibo.elearning.teacher.dto.response.StudentSummaryResponse;
 import com.bibo.elearning.teacher.dto.response.TeacherProfileResponse;
@@ -19,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 public class TeacherService {
     private final UserRepository userRepository;
     private final TeacherReviewRequestRepository teacherReviewRequestRepository;
+    private final StudentProfileRepository studentProfileRepository;
     private final TeacherMapper teacherMapper;
     private static final Set<String> VALID_STATUSES = Set.of("IN_REVIEW", "DONE");
     
@@ -44,8 +46,15 @@ public class TeacherService {
         List<User> students = userRepository.findAllByRoleName("STUDENT");
 
         return students.stream()
-                .map(teacherMapper::mapToStudentSummaryResponse)
-                .collect(Collectors.toList());
+        .map(u -> {
+            StudentSummaryResponse dto = teacherMapper.mapToStudentSummaryResponse(u);
+            studentProfileRepository.findByUserId(u.getId()).ifPresent(p -> {
+                dto.setLearningLevel(p.getLearningLevel());
+                dto.setJoinedAt(p.getCreatedAt());
+            });
+            return dto;
+        })
+        .collect(Collectors.toList());
     }
 
     public List<ReviewRequestResponse> getReviewRequests(String username) {

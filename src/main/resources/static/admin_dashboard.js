@@ -1165,26 +1165,13 @@ async function students() {
 
   try {
     const data = await apiFetch("GET", "/teacher/students");
-    console.log("API Response:", data); // Debug log
+    const studentsList = Array.isArray(data) ? data : [];
 
-    // Handle different response formats
-    let studentsList = [];
-    if (Array.isArray(data)) {
-      studentsList = data;
-    } else if (data && typeof data === "object") {
-      // Try common response structures
-      if (Array.isArray(data.content)) studentsList = data.content;
-      else if (Array.isData(data.students)) studentsList = data.students;
-      else if (Array.isArray(data.data)) studentsList = data.data;
-      else if (data.totalElements !== undefined && data.content)
-        studentsList = data.content;
-    }
-
-    if (!studentsList || studentsList.length === 0) {
+    if (studentsList.length === 0) {
       document.getElementById("students-list").innerHTML = Empty(
         "👥",
         "No students yet",
-        "Students will appear here once assigned.",
+        "Students will appear here once their accounts are created.",
       );
       return;
     }
@@ -1193,47 +1180,36 @@ async function students() {
       <div class="card" style="overflow:hidden;">
         <table class="data-table">
           <thead>
-            <tr>
-              <th>Student</th>
-              <th>Username</th>
-              <th>Level</th>
-              <th>Joined</th>
-            </tr>
+            <tr><th>Student</th><th>Username</th><th>Level</th><th>Joined</th></tr>
           </thead>
           <tbody>
             ${studentsList
               .map((s) => {
-                const name =
-                  s.fullName ||
-                  s.name ||
-                  s.firstName + " " + s.lastName ||
-                  s.username ||
-                  "—";
-                const level = s.learningLevel || s.level || "BEGINNER";
+                const name = `${s.firstName || ""} ${s.lastName || ""}`.trim() || s.username || "—";
+                const level = s.learningLevel || "—";
+                const joined = s.joinedAt ? new Date(s.joinedAt).toLocaleDateString() : "—";
                 return `
                 <tr>
                   <td>
                     <div style="display:flex;align-items:center;gap:10px;">
                       <div style="width:36px;height:36px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--primary);font-size:14px;">
-                        ${(name[0] || "?").toUpperCase()}
+                        ${esc((name[0] || "?").toUpperCase())}
                       </div>
-                      <span style="font-weight:600;">${name}</span>
+                      <span style="font-weight:600;">${esc(name)}</span>
                     </div>
                   </td>
-                  <td style="color:var(--text-400);">@${s.username || "—"}</td>
-                  <td><span class="badge badge-blue">${level}</span></td>
-                  <td style="font-size:13px;color:var(--text-400);">${s.createdAt ? new Date(s.createdAt).toLocaleDateString() : "—"}</td>
-                </tr>
-              `;
+                  <td style="color:var(--text-400);">@${esc(s.username || "—")}</td>
+                  <td><span class="badge badge-blue">${esc(level)}</span></td>
+                  <td style="font-size:13px;color:var(--text-400);">${joined}</td>
+                </tr>`;
               })
               .join("")}
           </tbody>
         </table>
       </div>`;
   } catch (e) {
-    console.error("Students API error:", e);
     document.getElementById("students-list").innerHTML =
-      `<div style="color:var(--accent-red);padding:20px;">⚠️ ${e.message}</div>`;
+      `<div style="color:var(--accent-red);padding:20px;">⚠️ ${esc(e.message)}</div>`;
   }
 }
 
