@@ -3094,12 +3094,11 @@ function renderParentQuizzes(quizzes) {
     .map((q) => {
       const st = getSubjectStyle(q.subjectName);
       const pct = q.percent;
-      const grade =
-        pct >= 85
+      const grade = !q.passed
+        ? { label: "Needs Work", cls: "pd-pill-bad" }
+        : pct >= 85
           ? { label: "Excellent", cls: "pd-pill-good" }
-          : pct >= 70
-            ? { label: "Good", cls: "pd-pill-warn" }
-            : { label: "Needs Work", cls: "pd-pill-bad" };
+          : { label: "Passed", cls: "pd-pill-warn" };
       const date = q.attemptedAt
         ? new Date(q.attemptedAt).toLocaleDateString("en-PH", {
             month: "short",
