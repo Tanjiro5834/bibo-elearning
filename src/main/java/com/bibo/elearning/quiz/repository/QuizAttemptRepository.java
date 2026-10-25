@@ -14,6 +14,10 @@ public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, Long> 
 
     long countByQuizLessonId(Long lessonId);
 
+    long countByQuizId(Long quizId);
+
+    void deleteByQuizId(Long quizId);
+
     void deleteByQuizLessonId(Long lessonId);
     @Query("""
         SELECT qa FROM QuizAttempt qa

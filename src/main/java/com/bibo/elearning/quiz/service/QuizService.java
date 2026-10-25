@@ -10,6 +10,10 @@ import com.bibo.elearning.quiz.entity.QuizAttempt;
 import com.bibo.elearning.quiz.dto.request.CreateQuizRequest;
 import com.bibo.elearning.quiz.dto.request.SubmitQuizRequest;
 import com.bibo.elearning.quiz.dto.response.QuizResponse;
+import com.bibo.elearning.quiz.dto.response.QuizEditResponse;
+import com.bibo.elearning.quiz.dto.request.CreateQuestionRequest;
+import com.bibo.elearning.quiz.dto.request.CreateChoiceRequest;
+import java.util.ArrayList;
 import com.bibo.elearning.quiz.dto.response.QuizResultResponse;
 import com.bibo.elearning.auth.user.entity.User;
 import com.bibo.elearning.auth.user.repository.UserRepository;
@@ -42,26 +46,9 @@ public class QuizService {
         Lesson lesson = lessonRepository.findById(request.getLessonId())
             .orElseThrow(() -> new RuntimeException("Lesson not found"));
 
+        validate(request);
         Quiz quiz = quizMapper.toEntity(request, lesson);
-
-        List<Question> questions = request.getQuestions().stream().map(q -> {
-            Question question = new Question();
-            question.setQuestionText(q.getQuestionText());
-            question.setQuiz(quiz);
-
-            List<Choice> choices = q.getChoices().stream().map(c -> {
-                Choice choice = new Choice();
-                choice.setChoiceText(c.getChoiceText());
-                choice.setCorrect(c.getCorrect());
-                choice.setQuestion(question);
-                return choice;
-            }).toList();
-
-            question.setChoices(choices);
-            return question;
-        }).toList();
-
-        quiz.setQuestions(questions);
+        quiz.setQuestions(buildQuestions(quiz, request.getQuestions()));
         return quizMapper.toResponse(quizRepository.save(quiz));
     }
 
@@ -127,5 +114,113 @@ public class QuizService {
     public List<QuizResponse> getQuizzesByLesson(Long lessonId) {
         return quizRepository.findByLessonIdWithQuestions(lessonId)
         .stream().map(quizMapper::toResponse).toList();
+    }
+
+    // ── Edit / delete (ADMIN, TEACHER) ──
+
+    @Transactional(readOnly = true)
+    public QuizEditResponse getQuizForEdit(Long quizId) {
+        Quiz quiz = findQuiz(quizId);
+        List<QuizEditResponse.QuestionEdit> questions = quiz.getQuestions().stream()
+                .map(q -> new QuizEditResponse.QuestionEdit(q.getQuestionText(),
+                        q.getChoices().stream()
+                                .map(c -> new QuizEditResponse.ChoiceEdit(c.getChoiceText(), c.isCorrect()))
+                                .toList()))
+                .toList();
+        return new QuizEditResponse(quiz.getId(), quiz.getTitle(), quiz.getDescription(), quiz.getPassingScore(),
+                quiz.getLesson() == null ? null : quiz.getLesson().getId(),
+                quizAttemptRepository.countByQuizId(quizId), questions);
+    }
+
+    /**
+     * Replaces the quiz details and its whole question set. Past attempts keep their
+     * recorded score (attempts store only score/total, not individual answers).
+     */
+    @Transactional
+    public QuizResponse updateQuiz(Long quizId, CreateQuizRequest request) {
+        validate(request);
+        Quiz quiz = findQuiz(quizId);
+        Lesson lesson = lessonRepository.findById(request.getLessonId())
+                .orElseThrow(() -> new IllegalArgumentException("Lesson not found"));
+
+        quiz.setTitle(request.getTitle().trim());
+        quiz.setDescription(request.getDescription());
+        quiz.setPassingScore(request.getPassingScore());
+        quiz.setLesson(lesson);
+        // Mutate the managed collection (orphanRemoval deletes the old questions + their choices)
+        quiz.getQuestions().clear();
+        quiz.getQuestions().addAll(buildQuestions(quiz, request.getQuestions()));
+
+        // quiz is managed: dirty checking + cascade persist the new questions on flush.
+        // (save() would merge and could duplicate the new children.)
+        quizRepository.flush();
+        return quizMapper.toResponse(quiz);
+    }
+
+    /** Refuses (409) when students already took it, unless {@code force} (admin) — which also erases attempts. */
+    @Transactional
+    public void deleteQuiz(Long quizId, boolean force) {
+        Quiz quiz = findQuiz(quizId);
+        long attempts = quizAttemptRepository.countByQuizId(quizId);
+        if (attempts > 0 && !force) {
+            throw new IllegalStateException(String.format(
+                    "\"%s\" has already been taken %d time%s. Deleting it would erase those scores.",
+                    quiz.getTitle(), attempts, attempts == 1 ? "" : "s"));
+        }
+        quizAttemptRepository.deleteByQuizId(quizId);
+        quizRepository.delete(quiz); // cascades questions + choices
+    }
+
+    private Quiz findQuiz(Long quizId) {
+        return quizRepository.findById(quizId)
+                .orElseThrow(() -> new IllegalArgumentException("Quiz not found with id: " + quizId));
+    }
+
+    static void validate(CreateQuizRequest r) {
+        if (r == null || r.getLessonId() == null) throw new IllegalArgumentException("Select a lesson");
+        if (r.getTitle() == null || r.getTitle().isBlank()) throw new IllegalArgumentException("Quiz title is required");
+        if (r.getPassingScore() < 0 || r.getPassingScore() > 100) {
+            throw new IllegalArgumentException("Passing score must be between 0 and 100");
+        }
+        if (r.getQuestions() == null || r.getQuestions().isEmpty()) {
+            throw new IllegalArgumentException("Add at least one question");
+        }
+        for (int i = 0; i < r.getQuestions().size(); i++) {
+            CreateQuestionRequest q = r.getQuestions().get(i);
+            int n = i + 1;
+            if (q.getQuestionText() == null || q.getQuestionText().isBlank()) {
+                throw new IllegalArgumentException("Question " + n + " text is required");
+            }
+            if (q.getChoices() == null || q.getChoices().size() < 2) {
+                throw new IllegalArgumentException("Question " + n + " needs at least 2 choices");
+            }
+            if (q.getChoices().stream().anyMatch(c -> c.getChoiceText() == null || c.getChoiceText().isBlank())) {
+                throw new IllegalArgumentException("Question " + n + " has an empty choice");
+            }
+            long correct = q.getChoices().stream().filter(CreateChoiceRequest::getCorrect).count();
+            if (correct != 1) {
+                throw new IllegalArgumentException("Question " + n + " must have exactly one correct answer");
+            }
+        }
+    }
+
+    private static List<Question> buildQuestions(Quiz quiz, List<CreateQuestionRequest> requests) {
+        List<Question> questions = new ArrayList<>();
+        for (CreateQuestionRequest q : requests) {
+            Question question = new Question();
+            question.setQuestionText(q.getQuestionText().trim());
+            question.setQuiz(quiz);
+            List<Choice> choices = new ArrayList<>();
+            for (CreateChoiceRequest c : q.getChoices()) {
+                Choice choice = new Choice();
+                choice.setChoiceText(c.getChoiceText().trim());
+                choice.setCorrect(c.getCorrect());
+                choice.setQuestion(question);
+                choices.add(choice);
+            }
+            question.setChoices(choices);
+            questions.add(question);
+        }
+        return questions;
     }
 }

@@ -2,10 +2,16 @@ package com.bibo.elearning.quiz.controller;
 
 import java.util.List;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import com.bibo.elearning.quiz.dto.response.QuizEditResponse;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -50,5 +56,32 @@ public class QuizController {
     @GetMapping("/lesson/{lessonId}")
     public ResponseEntity<List<QuizResponse>> getByLesson(@PathVariable Long lessonId) {
         return ResponseEntity.ok(quizService.getQuizzesByLesson(lessonId));
+    }
+
+    @GetMapping("/{quizId}/edit")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER')")
+    public ResponseEntity<QuizEditResponse> getForEdit(@PathVariable Long quizId) {
+        return ResponseEntity.ok(quizService.getQuizForEdit(quizId));
+    }
+
+    @PutMapping("/{quizId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER')")
+    public ResponseEntity<QuizResponse> updateQuiz(@PathVariable Long quizId, @RequestBody CreateQuizRequest request) {
+        return ResponseEntity.ok(quizService.updateQuiz(quizId, request));
+    }
+
+    @DeleteMapping("/{quizId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER')")
+    public ResponseEntity<Void> deleteQuiz(
+            @PathVariable Long quizId,
+            @RequestParam(defaultValue = "false") boolean force,
+            Authentication authentication) {
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        if (force && !isAdmin) {
+            throw new AccessDeniedException("Only admins can delete a quiz that students already took");
+        }
+        quizService.deleteQuiz(quizId, force);
+        return ResponseEntity.noContent().build();
     }
 }

@@ -2011,11 +2011,11 @@ async function quizzes() {
       return;
     }
     document.getElementById("quizzes-list").innerHTML =
-      `<div class="card" style="overflow:hidden;"><table class="data-table"><thead><tr><th>Quiz Title</th><th>Lesson</th><th>Subject</th><th>Passing Score</th><th>Questions</th></tr></thead><tbody>
+      `<div class="card" style="overflow:hidden;"><table class="data-table"><thead><tr><th>Quiz Title</th><th>Lesson</th><th>Subject</th><th>Passing Score</th><th>Questions</th><th style="text-align:right;">Actions</th></tr></thead><tbody>
       ${all
         .map((q) => {
           const st = getSubjectStyle(q.subjectName);
-          return `<tr><td><div style="font-weight:700;color:var(--text-900);">${q.title}</div><div style="font-size:12px;color:var(--text-400);">${q.description || "—"}</div></td><td style="font-size:13px;">${q.lessonTitle}</td><td><span style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:${st.color};">${st.icon} ${q.subjectName}</span></td><td><span class="badge badge-blue">${q.passingScore}%</span></td><td style="font-size:13px;color:var(--text-500);">${q.questions?.length || 0} questions</td></tr>`;
+          return `<tr><td><div style="font-weight:700;color:var(--text-900);">${esc(q.title)}</div><div style="font-size:12px;color:var(--text-400);">${esc(q.description || "—")}</div></td><td style="font-size:13px;">${esc(q.lessonTitle)}</td><td><span style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:${st.color};">${st.icon} ${q.subjectName}</span></td><td><span class="badge badge-blue">${q.passingScore}%</span></td><td style="font-size:13px;color:var(--text-500);">${q.questions?.length || 0} questions</td><td style="text-align:right;white-space:nowrap;"><button class="btn btn-sm" style="background:var(--bg);color:var(--text-500);" onclick="openEditQuiz(${q.id})">Edit</button> <button class="btn btn-sm" style="background:#FEF2F2;color:#B91C1C;" data-title="${esc(q.title)}" onclick="deleteQuiz(${q.id}, this.dataset.title)">Delete</button></td></tr>`;
         })
         .join("")}
     </tbody></table></div>`;
@@ -2026,8 +2026,9 @@ async function quizzes() {
 }
 
 let _qCount = 0;
-async function openCreateQuiz() {
-  _qCount = 0;
+let _editingQuizId = null;
+
+async function lessonOptionsHtml(selectedId = null) {
   let opts = '<option value="">Select lesson...</option>';
   try {
     const subs = await apiFetch("GET", "/subjects");
@@ -2035,26 +2036,64 @@ async function openCreateQuiz() {
       try {
         const ls = await apiFetch("GET", `/lessons/subject/${s.id}`);
         if (ls?.length) {
-          opts += `<optgroup label="${s.name}">`;
+          opts += `<optgroup label="${esc(s.name)}">`;
           opts += ls
-            .map((l) => `<option value="${l.id}">${l.title}</option>`)
+            .map((l) => `<option value="${l.id}" ${l.id === selectedId ? "selected" : ""}>${esc(l.title)}</option>`)
             .join("");
           opts += `</optgroup>`;
         }
       } catch (e) {}
     }
   } catch (e) {}
-  openModal(`<div class="modal-header"><div class="modal-title">✅ New Quiz</div><button class="modal-close" onclick="closeModal()">✕</button></div>
+  return opts;
+}
+
+async function openCreateQuiz() {
+  await openQuizForm(null);
+}
+
+async function openEditQuiz(id) {
+  try {
+    const quiz = await apiFetch("GET", `/quiz/${id}/edit`);
+    await openQuizForm(quiz);
+  } catch (e) {
+    showToast(e.message, "⚠️");
+  }
+}
+
+async function openQuizForm(quiz) {
+  _qCount = 0;
+  _editingQuizId = quiz?.id ?? null;
+  const editing = !!quiz;
+  const opts = await lessonOptionsHtml(quiz?.lessonId ?? null);
+  const takenNote =
+    editing && quiz.attemptCount > 0
+      ? `<div style="background:#FEF3C7;color:#92400E;font-size:12px;font-weight:600;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:14px;">
+           ⚠️ Students have taken this quiz ${quiz.attemptCount} time${quiz.attemptCount === 1 ? "" : "s"}. Their past scores stay as recorded; changes apply to new attempts.
+         </div>`
+      : "";
+  openModal(`<div class="modal-header"><div class="modal-title">✅ ${editing ? "Edit Quiz" : "New Quiz"}</div><button class="modal-close" onclick="closeModal()">✕</button></div>
+    ${takenNote}
     <div id="qz-err" style="display:none;background:#FEE2E2;color:#991B1B;font-size:13px;font-weight:700;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:14px;"></div>
     <div class="field"><label>Lesson</label><select id="qz-lesson" class="bibo-input">${opts}</select></div>
     <div class="field"><label>Quiz Title</label><input id="qz-title" class="bibo-input" placeholder="e.g. Fractions Quiz" /></div>
     <div class="field"><label>Description</label><input id="qz-desc" class="bibo-input" placeholder="Optional" /></div>
     <div class="field"><label>Passing Score (%)</label><input id="qz-passing" class="bibo-input" type="number" value="75" min="0" max="100" /></div>
     <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:16px;"><p style="font-size:13px;font-weight:700;color:var(--text-900);margin-bottom:4px;">Questions</p><p style="font-size:12px;color:var(--text-400);margin-bottom:14px;">Mark the correct answer with the radio button.</p><div id="qz-questions"></div><button class="btn btn-ghost btn-sm" onclick="addQuestion()" style="width:100%;margin-top:8px;">+ Add Question</button></div>
-    <div style="display:flex;gap:10px;margin-top:8px;"><button class="btn btn-ghost" style="flex:1;" onclick="closeModal()">Cancel</button><button class="btn btn-primary" style="flex:1;" id="qz-btn" onclick="submitQuiz()">Create Quiz</button></div>`);
-  addQuestion();
+    <div style="display:flex;gap:10px;margin-top:8px;"><button class="btn btn-ghost" style="flex:1;" onclick="closeModal()">Cancel</button><button class="btn btn-primary" style="flex:1;" id="qz-btn" onclick="submitQuiz()">${editing ? "Save Changes" : "Create Quiz"}</button></div>`);
+
+  if (editing) {
+    // .value assignment (not HTML interpolation) so quotes/HTML in saved text are safe
+    document.getElementById("qz-title").value = quiz.title || "";
+    document.getElementById("qz-desc").value = quiz.description || "";
+    document.getElementById("qz-passing").value = quiz.passingScore;
+    (quiz.questions || []).forEach((q) => addQuestion(q));
+    if (!quiz.questions?.length) addQuestion();
+  } else {
+    addQuestion();
+  }
 }
-function addQuestion() {
+function addQuestion(prefill = null) {
   _qCount++;
   const n = _qCount;
   const el = document.createElement("div");
@@ -2066,7 +2105,45 @@ function addQuestion() {
     ${["A", "B", "C", "D"].map((k, i) => `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><input type="radio" name="cr-${n}" value="${i}" id="r-${n}-${i}" style="accent-color:var(--primary);width:16px;height:16px;flex-shrink:0;" /><label for="r-${n}-${i}" style="font-size:12px;font-weight:700;color:var(--text-400);width:16px;">${k}</label><input class="bibo-input" id="ch-${n}-${i}" placeholder="Choice ${k}..." style="flex:1;padding:9px 12px;" /></div>`).join("")}
     <p style="font-size:11px;color:var(--text-400);margin-top:4px;">Select the radio next to the correct answer.</p>`;
   document.getElementById("qz-questions").appendChild(el);
+
+  if (prefill) {
+    document.getElementById(`qt-${n}`).value = prefill.questionText || "";
+    (prefill.choices || []).slice(0, 4).forEach((c, i) => {
+      document.getElementById(`ch-${n}-${i}`).value = c.choiceText || "";
+      if (c.correct) document.getElementById(`r-${n}-${i}`).checked = true;
+    });
+  }
 }
+async function deleteQuiz(id, title) {
+  if (!confirm(`Delete quiz "${title}"?\n\nIts questions and choices will be removed. This cannot be undone.`)) return;
+  const send = (force) =>
+    fetch(`${API}/quiz/${id}${force ? "?force=true" : ""}`, {
+      method: "DELETE",
+      headers: { Authorization: "Bearer " + token },
+    });
+  try {
+    let res = await send(false);
+    if (res.status === 401) return logout();
+    if (res.status === 409) {
+      const { message } = await res.json().catch(() => ({}));
+      if (!isAdmin) {
+        showToast(message || "Students already took this quiz.", "⚠️");
+        return;
+      }
+      if (!confirm(`${message}\n\nDelete anyway? Those quiz scores will be permanently erased.`)) return;
+      res = await send(true);
+    }
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || err.error || `Delete failed (HTTP ${res.status})`);
+    }
+    showToast("Quiz deleted", "🗑️");
+    await quizzes();
+  } catch (e) {
+    showToast(e.message, "⚠️");
+  }
+}
+
 async function submitQuiz() {
   const lessonId = document.getElementById("qz-lesson").value,
     title = document.getElementById("qz-title").value.trim(),
@@ -2118,24 +2195,23 @@ async function submitQuiz() {
     return;
   }
   const btn = document.getElementById("qz-btn");
+  const editing = _editingQuizId !== null;
+  const idleLabel = editing ? "Save Changes" : "Create Quiz";
   btn.disabled = true;
-  btn.textContent = "Creating...";
+  btn.textContent = editing ? "Saving..." : "Creating...";
   try {
-    await apiFetch("POST", "/quiz/create", {
-      lessonId: parseInt(lessonId),
-      title,
-      description: desc,
-      passingScore,
-      questions,
-    });
+    const body = { lessonId: parseInt(lessonId), title, description: desc, passingScore, questions };
+    if (editing) await apiFetch("PUT", `/quiz/${_editingQuizId}`, body);
+    else await apiFetch("POST", "/quiz/create", body);
     closeModal();
-    showToast("Quiz created!", "✅");
+    showToast(editing ? "Quiz updated!" : "Quiz created!", "✅");
+    _editingQuizId = null;
     await quizzes();
   } catch (e) {
     errEl.textContent = e.message;
     errEl.style.display = "";
     btn.disabled = false;
-    btn.textContent = "Create Quiz";
+    btn.textContent = idleLabel;
   }
 }
 
