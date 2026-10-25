@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BIBO Teacher Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="admin_login.css" />
+    <link rel="icon" type="image/png" href="images/bibo-logo.jpg" />
+  </head>
+  <body class="portal-teacher"
+        data-role="TEACHER"
+        data-token-key="bibo_admin_token"
+        data-user-key="bibo_admin_user"
+        data-redirect="admin_dashboard.html">
+    <div class="auth-shell">
+      <section class="auth-hero">
+        <div class="hero-top">
+          <div class="brand">
+            <div class="brand-icon"><img src="images/bibo-logo.jpg" alt="BIBO" class="bibo-logo" /></div>
+            <div>
+              <div class="brand-title">BIBO</div>
+              <div class="brand-sub">Teacher Portal</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-middle">
+          <div class="hero-chip">👩‍🏫 For BIBO Teachers</div>
+          <div class="hero-copy">
+            <h1>Guide every learner, one lesson at a time.</h1>
+            <p>Build subjects and lessons, write quizzes, follow your students' progress, and respond to parent review requests.</p>
+          </div>
+          <div class="hero-features">
+            <div class="feature-card">
+              <div class="feature-icon">📚</div>
+              <h3>Lessons &amp; Quizzes</h3>
+              <p>Create lessons, sections, and quizzes aligned with DepEd ARAL.</p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">📋</div>
+              <h3>Parent Requests</h3>
+              <p>See review requests from parents and update their status.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-bottom">
+          <div class="stat-pill">🧑‍🎓 Student progress</div>
+          <div class="stat-pill">📝 Quiz builder</div>
+          <div class="stat-pill">🤝 Parent collaboration</div>
+        </div>
+      </section>
+
+      <section class="auth-panel">
+        <div class="auth-card">
+          <div class="eyebrow">BIBO Teacher Portal</div>
+          <h2>Welcome back.</h2>
+          <p class="auth-subtext">Sign in with the teacher account provided by your administrator.</p>
+
+          <form id="loginForm">
+            <div class="field">
+              <label for="loginUsername">Username</label>
+              <input id="loginUsername" class="bibo-input" type="text" autocomplete="username" placeholder="Your teacher username" required />
+            </div>
+            <div class="field">
+              <label for="loginPassword">Password</label>
+              <input id="loginPassword" class="bibo-input" type="password" autocomplete="current-password" placeholder="Enter your password" required />
+            </div>
+            <button class="btn btn-primary" type="submit" id="loginBtn">Login to Teacher Portal</button>
+            <div id="loginMessage" class="msg" role="alert" aria-live="polite"></div>
+          </form>
+
+          <div class="auth-footer-note">
+            Only <strong>TEACHER</strong> accounts can sign in here. Ask your administrator if you don't have one.
+          </div>
+
+          <nav class="portal-switch" aria-label="Other portals">
+            <span>Not a teacher?</span>
+            <a href="/">🎒 Student</a>
+            <a href="/parent">👨‍👩‍👧 Parent</a>
+            <a href="/admin">🛡️ Admin</a>
+          </nav>
+        </div>
+      </section>
+    </div>
+
+    <script src="portal_login.js"></script>
+  </body>
+</html>

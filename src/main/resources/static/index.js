@@ -17,8 +17,7 @@ const api = {
 
     const res = await fetch(API_BASE + path, opts);
     if (res.status === 401 && validToken) {
-      clearAuth();
-      render();
+      signOut();
       throw new Error("Session expired. Please log in again.");
     }
 
@@ -217,6 +216,22 @@ function saveAuth(token, user) {
   state.user = user || null;
   localStorage.setItem("bibo_token", token);
   localStorage.setItem("bibo_user", JSON.stringify(user || null));
+}
+
+const PORTAL_LOGINS = {
+  PARENT: { name: "Parent Portal", url: "/parent" },
+  TEACHER: { name: "Teacher Portal", url: "/teacher" },
+  ADMIN: { name: "Admin Portal", url: "/admin" },
+};
+
+function signOut() {
+  const wasParent = state.user?.role === "PARENT";
+  clearAuth();
+  if (wasParent) {
+    window.location.href = "/parent";
+  } else {
+    navigate("login");
+  }
 }
 
 function clearAuth() {
@@ -518,7 +533,7 @@ function SidebarHtml() {
     `
     }
 
-    <button class="sidebar-logout" onclick="clearAuth(); render();">
+    <button class="sidebar-logout" onclick="signOut();">
       ${icons.logout}
       <span>Log Out</span>
     </button>
@@ -571,7 +586,14 @@ function LoginPage() {
       </button>
     </div>
 
-    <p style="text-align:center;font-size:11px;color:var(--text-400);margin-top:28px;">🇵🇭 Made with ❤️ for Filipino learners</p>
+    <div style="display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px;margin-top:24px;padding-top:18px;border-top:1px solid var(--border, #e5e7eb);font-size:12px;color:var(--text-400);">
+      <span>Not a student?</span>
+      <a href="/parent" class="portal-link">👨‍👩‍👧 Parent</a>
+      <a href="/teacher" class="portal-link">👩‍🏫 Teacher</a>
+      <a href="/admin" class="portal-link">🛡️ Admin</a>
+    </div>
+
+    <p style="text-align:center;font-size:11px;color:var(--text-400);margin-top:20px;">🇵🇭 Made with ❤️ for Filipino learners</p>
   </div>`;
 }
 
@@ -595,11 +617,19 @@ function bindLogin() {
 
     try {
       const res = await api.login({ username, password });
+      const portal = PORTAL_LOGINS[res.role];
+      if (portal) {
+        // Not a student: send them to the right login page instead of signing in here.
+        showError(`This login is for students. `, portal);
+        btn.disabled = false;
+        btn.innerHTML = "Sign In";
+        return;
+      }
       saveAuth(res.accessToken, {
         username: res.username,
         role: res.role,
       });
-      navigate(res.role === "PARENT" ? "parent" : "dashboard");
+      navigate("dashboard");
     } catch (e) {
       showError(e.message || "Wrong username or password");
       btn.disabled = false;
@@ -607,8 +637,15 @@ function bindLogin() {
     }
   }
 
-  function showError(msg) {
+  function showError(msg, portal = null) {
     errMsg.textContent = msg;
+    if (portal) {
+      const a = document.createElement("a");
+      a.href = portal.url;
+      a.textContent = `Go to the ${portal.name} →`;
+      a.style.cssText = "color:inherit;text-decoration:underline;";
+      errMsg.appendChild(a);
+    }
     errDiv.style.display = "block";
     card.classList.add("shake");
     setTimeout(() => card.classList.remove("shake"), 500);
@@ -2447,7 +2484,7 @@ function SettingsPage() {
       <div style="display:flex;flex-direction:column;gap:10px;">
         <button class="btn btn-ghost" style="justify-content:flex-start;border-radius:var(--radius-sm);">🔑 Change Password</button>
         <button class="btn btn-ghost" style="justify-content:flex-start;border-radius:var(--radius-sm);">📋 Download My Data</button>
-        <button style="display:flex;align-items:center;gap:10px;padding:10px 20px;border-radius:var(--radius-sm);background:none;border:1.5px solid #FECACA;color:var(--accent-red);font-size:14px;font-weight:700;cursor:pointer;transition:all 0.18s;" onclick="clearAuth();render();">
+        <button style="display:flex;align-items:center;gap:10px;padding:10px 20px;border-radius:var(--radius-sm);background:none;border:1.5px solid #FECACA;color:var(--accent-red);font-size:14px;font-weight:700;cursor:pointer;transition:all 0.18s;" onclick="signOut();">
           ${icons.logout} Sign Out
         </button>
       </div>

@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BIBO Parent Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="admin_login.css" />
+    <link rel="icon" type="image/png" href="images/bibo-logo.jpg" />
+  </head>
+  <body class="portal-parent"
+        data-role="PARENT"
+        data-token-key="bibo_token"
+        data-user-key="bibo_user"
+        data-redirect="/">
+    <div class="auth-shell">
+      <section class="auth-hero">
+        <div class="hero-top">
+          <div class="brand">
+            <div class="brand-icon"><img src="images/bibo-logo.jpg" alt="BIBO" class="bibo-logo" /></div>
+            <div>
+              <div class="brand-title">BIBO</div>
+              <div class="brand-sub">Parent Portal</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-middle">
+          <div class="hero-chip">👨‍👩‍👧 For Parents &amp; Guardians</div>
+          <div class="hero-copy">
+            <h1>Stay close to your child's learning journey.</h1>
+            <p>See lessons completed, quiz scores, and daily streaks, set learning goals, and cheer your child on every step of the way.</p>
+          </div>
+          <div class="hero-features">
+            <div class="feature-card">
+              <div class="feature-icon">📈</div>
+              <h3>Real-time Progress</h3>
+              <p>Subject progress, quiz results, and weekly activity at a glance.</p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">💬</div>
+              <h3>Encourage &amp; Support</h3>
+              <p>Send encouragement, set daily goals, and request a teacher review.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-bottom">
+          <div class="stat-pill">🔥 Learning streaks</div>
+          <div class="stat-pill">🎯 Daily goals</div>
+          <div class="stat-pill">🔔 Activity alerts</div>
+        </div>
+      </section>
+
+      <section class="auth-panel">
+        <div class="auth-card">
+          <div class="eyebrow">BIBO Parent Portal</div>
+          <h2>Welcome back.</h2>
+          <p class="auth-subtext">Sign in with the parent account provided by the school.</p>
+
+          <form id="loginForm">
+            <div class="field">
+              <label for="loginUsername">Username</label>
+              <input id="loginUsername" class="bibo-input" type="text" autocomplete="username" placeholder="Your parent username" required />
+            </div>
+            <div class="field">
+              <label for="loginPassword">Password</label>
+              <input id="loginPassword" class="bibo-input" type="password" autocomplete="current-password" placeholder="Enter your password" required />
+            </div>
+            <button class="btn btn-primary" type="submit" id="loginBtn">Login to Parent Portal</button>
+            <div id="loginMessage" class="msg" role="alert" aria-live="polite"></div>
+          </form>
+
+          <div class="auth-footer-note">
+            Only <strong>PARENT</strong> accounts can sign in here. Your child's account is linked by the school.
+          </div>
+
+          <nav class="portal-switch" aria-label="Other portals">
+            <span>Not a parent?</span>
+            <a href="/">🎒 Student</a>
+            <a href="/teacher">👩‍🏫 Teacher</a>
+            <a href="/admin">🛡️ Admin</a>
+          </nav>
+        </div>
+      </section>
+    </div>
+
+    <script src="portal_login.js"></script>
+  </body>
+</html>

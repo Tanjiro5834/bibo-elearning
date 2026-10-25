@@ -2243,3 +2243,13 @@ html.theme-ready #sidebar {
   object-fit: cover;
   display: block;
 }
+/* Links from the student login to the other portals */
+.portal-link {
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: var(--primary-light);
+  color: var(--primary);
+  font-weight: 700;
+  text-decoration: none;
+}
+.portal-link:hover { filter: brightness(0.95); }

@@ -5,10 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BIBO Admin Portal</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="admin_login.css">
+    <link rel="stylesheet" href="admin_login.css" />
     <link rel="icon" type="image/png" href="images/bibo-logo.jpg" />
   </head>
-  <body>
+  <body class="portal-admin"
+        data-role="ADMIN"
+        data-token-key="bibo_admin_token"
+        data-user-key="bibo_admin_user"
+        data-redirect="admin_dashboard.html">
     <div class="auth-shell">
       <section class="auth-hero">
         <div class="hero-top">
@@ -25,57 +29,62 @@
           <div class="hero-chip">🛡️ Administrator Access Only</div>
           <div class="hero-copy">
             <h1>Manage the learning world behind BIBO.</h1>
-            <p>Create and organize subjects, publish lessons, structure lesson sections, and keep the content pipeline clean for your student app.</p>
+            <p>Create accounts, track platform analytics, export reports, and keep the content pipeline clean for every learner.</p>
           </div>
           <div class="hero-features">
             <div class="feature-card">
-              <div class="feature-icon">📚</div>
-              <h3>Curriculum Control</h3>
-              <p>Build subjects, lessons, and sections with a proper content workflow.</p>
+              <div class="feature-icon">👥</div>
+              <h3>Account Management</h3>
+              <p>Create and manage student, parent, and teacher accounts.</p>
             </div>
             <div class="feature-card">
-              <div class="feature-icon">🎯</div>
-              <h3>Admin-Only Space</h3>
-              <p>Keep student experience focused while content management stays separate and secure.</p>
+              <div class="feature-icon">📊</div>
+              <h3>Reports &amp; Analytics</h3>
+              <p>Live platform metrics and CSV exports for every report.</p>
             </div>
           </div>
         </div>
 
         <div class="hero-bottom">
-          <div class="stat-pill">✨ Same BIBO design system</div>
           <div class="stat-pill">🔐 Role-based entry point</div>
-          <div class="stat-pill">🧩 CMS-ready foundation</div>
+          <div class="stat-pill">📈 Live data</div>
+          <div class="stat-pill">🧾 CSV exports</div>
         </div>
       </section>
 
       <section class="auth-panel">
         <div class="auth-card">
-          <div class="eyebrow">BIBO Admin Access</div>
+          <div class="eyebrow">BIBO Admin Portal</div>
           <h2>Welcome back.</h2>
           <p class="auth-subtext">Sign in with your admin credentials to access the dashboard.</p>
-
-          <div class="login-label">BIBO Admin Login</div>
 
           <form id="loginForm">
             <div class="field">
               <label for="loginUsername">Username</label>
-              <input id="loginUsername" class="bibo-input" type="text" placeholder="admin" required />
+              <input id="loginUsername" class="bibo-input" type="text" autocomplete="username" placeholder="admin" required />
             </div>
             <div class="field">
               <label for="loginPassword">Password</label>
-              <input id="loginPassword" class="bibo-input" type="password" placeholder="Enter your password" required />
+              <input id="loginPassword" class="bibo-input" type="password" autocomplete="current-password" placeholder="Enter your password" required />
             </div>
             <button class="btn btn-primary" type="submit" id="loginBtn">Login to Admin Dashboard</button>
-            <div id="loginMessage" class="msg"></div>
+            <div id="loginMessage" class="msg" role="alert" aria-live="polite"></div>
           </form>
 
           <div class="auth-footer-note">
-            Login uses <strong>username + password</strong>. Only <strong>ADMIN</strong> role accounts can access this portal.
+            Only <strong>ADMIN</strong> accounts can sign in here.
           </div>
+
+          <nav class="portal-switch" aria-label="Other portals">
+            <span>Not an admin?</span>
+            <a href="/">🎒 Student</a>
+            <a href="/parent">👨‍👩‍👧 Parent</a>
+            <a href="/teacher">👩‍🏫 Teacher</a>
+          </nav>
         </div>
       </section>
     </div>
 
-    <script src="admin_login.js"></script>
+    <script src="portal_login.js"></script>
   </body>
 </html>

@@ -3,8 +3,11 @@ let token = localStorage.getItem("bibo_admin_token") || null;
 let currentUser = JSON.parse(localStorage.getItem("bibo_admin_user") || "null");
 let userRole = "";
 
+// Login page this person used (set by portal_login.js); teachers go back to /teacher.
+const LOGIN_PAGE = localStorage.getItem("bibo_login_page") || "/admin";
+
 if (!token || !currentUser) {
-  window.location.href = "admin_login.html";
+  window.location.replace(LOGIN_PAGE);
 }
 
 // ── Determine Role ───────────────────────────────────────────
@@ -15,10 +18,9 @@ const isAdmin = userRole === "ADMIN";
 const isTeacher = userRole === "TEACHER";
 
 if (!isAdmin && !isTeacher) {
-  alert(
-    "Access denied. Only ADMIN or TEACHER accounts can access this portal.",
-  );
-  window.location.href = "admin_login.html";
+  localStorage.removeItem("bibo_admin_token");
+  localStorage.removeItem("bibo_admin_user");
+  window.location.replace(LOGIN_PAGE);
 }
 
 // ── Setup Sidebar ────────────────────────────────────────────
@@ -198,7 +200,7 @@ function toggleSidebar() {
 function logout() {
   localStorage.removeItem("bibo_admin_token");
   localStorage.removeItem("bibo_admin_user");
-  window.location.href = "admin_login.html";
+  window.location.href = isTeacher ? "/teacher" : "/admin";
 }
 
 function showToast(msg, emoji = "✅") {
