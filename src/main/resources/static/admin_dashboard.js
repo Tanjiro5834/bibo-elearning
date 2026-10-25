@@ -1731,7 +1731,7 @@ async function openCreateSection() {
     <div id="sec-err" style="display:none;background:#FEE2E2;color:#991B1B;font-size:13px;font-weight:700;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:14px;"></div>
     <div class="field"><label>Lesson</label><select id="sec-lesson" class="bibo-input">${opts}</select></div>
     <div class="field"><label>Section Title</label><input id="sec-title" class="bibo-input" placeholder="e.g. What are Fractions?" /></div>
-    <div class="field-row"><div class="field" style="margin-bottom:0;"><label>Content Type</label><select id="sec-type" class="bibo-input" onchange="onSectionTypeChange(this.value)"><option value="TEXT">Text</option><option value="IMAGE">Image</option><option value="VIDEO">Video</option><option value="ACTIVITY">Activity</option></select></div><div class="field" style="margin-bottom:0;"><label>Order</label><input id="sec-order" class="bibo-input" type="number" placeholder="1" min="1" /></div></div>
+    <div class="field-row"><div class="field" style="margin-bottom:0;"><label>Content Type</label><select id="sec-type" class="bibo-input" onchange="onSectionTypeChange(this.value)"><option value="TEXT">Text</option><option value="IMAGE">Image</option><option value="VIDEO">Video</option><option value="ACTIVITY">Activity</option></select></div><div class="field" style="margin-bottom:0;"><label>Order</label><input id="sec-order" class="bibo-input" type="number" placeholder="Auto (last)" min="1" /></div></div>
     <div class="field" id="sec-content-field" style="margin-top:14px;"><label id="sec-content-label">Content</label><textarea id="sec-content" class="bibo-input" placeholder="Write lesson content here..." style="min-height:120px;"></textarea></div>
     <div class="field" id="sec-image-field" style="display:none;margin-top:14px;">
       <label>Image</label>
@@ -1797,7 +1797,7 @@ async function submitSection() {
     title = document.getElementById("sec-title").value.trim(),
     textContent = document.getElementById("sec-content").value.trim(),
     type = document.getElementById("sec-type").value,
-    order = parseInt(document.getElementById("sec-order").value) || 1,
+    order = parseInt(document.getElementById("sec-order").value) || null, // blank → server puts it last
     imageFile = document.getElementById("sec-image")?.files?.[0],
     errEl = document.getElementById("sec-err"),
     btn = document.getElementById("sec-btn");
@@ -1843,32 +1843,134 @@ async function submitSection() {
   }
 }
 
+// ── Section list: drag-and-drop or ↑/↓ to reorder, delete per row ──
+let _sections = [];
+let _sectionsLessonId = null;
+let _dragIndex = null;
+
 async function loadSections(lessonId) {
   const container = document.getElementById("sections-content");
   if (!container || !lessonId) return;
   container.innerHTML = Loading();
   try {
-    const sections = await apiFetch(
-      "GET",
-      `/lesson-sections/lesson/${lessonId}`,
-    );
-    if (!sections || sections.length === 0) {
-      container.innerHTML = Empty(
-        "📄",
-        "No sections yet",
-        "Add the first section for this lesson.",
-      );
-      return;
-    }
-    container.innerHTML = `<div class="card" style="overflow:hidden;"><table class="data-table"><thead><tr><th>Order</th><th>Title</th><th>Type</th><th>Content</th></tr></thead><tbody>
-      ${sections.map((s) => `<tr><td>${s.contentOrder ?? "—"}</td><td>${esc(s.title ?? "—")}</td><td>${esc(s.contentType ?? "—")}</td><td>${
-        s.contentType === "IMAGE" && /^(https?:\/\/|\/uploads\/)/.test(s.content || "")
-          ? `<img src="${esc(s.content)}" alt="" style="height:56px;max-width:120px;object-fit:cover;border-radius:6px;" />`
-          : esc(s.content ?? "—")
-      }</td></tr>`).join("")}
-    </tbody></table></div>`;
+    _sections = (await apiFetch("GET", `/lesson-sections/lesson/${lessonId}`)) || [];
+    _sectionsLessonId = lessonId;
+    renderSectionsTable();
   } catch (e) {
-    container.innerHTML = `<div style="color:var(--accent-red);padding:16px;">⚠️ ${e.message}</div>`;
+    container.innerHTML = `<div style="color:var(--accent-red);padding:16px;">⚠️ ${esc(e.message)}</div>`;
+  }
+}
+
+function sectionContentCell(s) {
+  return s.contentType === "IMAGE" && /^(https?:\/\/|\/uploads\/)/.test(s.content || "")
+    ? `<img src="${esc(s.content)}" alt="" style="height:56px;max-width:120px;object-fit:cover;border-radius:6px;" />`
+    : `<div style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;">${esc(s.content ?? "—")}</div>`;
+}
+
+function renderSectionsTable() {
+  const container = document.getElementById("sections-content");
+  if (!container) return;
+  if (_sections.length === 0) {
+    container.innerHTML = Empty("📄", "No sections yet", "Add the first section for this lesson.");
+    return;
+  }
+  const last = _sections.length - 1;
+  const arrowBtn = (label, i, delta, disabled) =>
+    `<button class="btn btn-ghost btn-sm" style="padding:4px 9px;" aria-label="${label}" title="${label}"
+       ${disabled ? "disabled" : ""} onclick="moveSection(${i}, ${delta})">${delta < 0 ? "↑" : "↓"}</button>`;
+
+  container.innerHTML = `
+    <p style="font-size:12px;color:var(--text-400);margin-bottom:10px;">Drag rows by ⠿ or use ↑ ↓ to change the order students see.</p>
+    <div class="card" style="overflow:hidden;"><table class="data-table">
+      <thead><tr><th style="width:40px;"></th><th>Order</th><th>Title</th><th>Type</th><th>Content</th><th style="text-align:right;">Actions</th></tr></thead>
+      <tbody id="sections-tbody">
+      ${_sections
+        .map(
+          (s, i) => `<tr draggable="true" data-index="${i}"
+              ondragstart="onSectionDragStart(event, ${i})" ondragover="onSectionDragOver(event)"
+              ondragleave="this.style.boxShadow=''" ondrop="onSectionDrop(event, ${i})" ondragend="onSectionDragEnd()">
+            <td style="cursor:grab;color:var(--text-400);font-size:18px;user-select:none;" title="Drag to reorder">⠿</td>
+            <td style="font-weight:700;">${s.contentOrder ?? i + 1}</td>
+            <td>${esc(s.title ?? "—")}</td>
+            <td><span class="badge badge-gray">${esc(s.contentType ?? "—")}</span></td>
+            <td style="max-width:520px;">${sectionContentCell(s)}</td>
+            <td style="text-align:right;white-space:nowrap;">
+              ${arrowBtn("Move up", i, -1, i === 0)}
+              ${arrowBtn("Move down", i, 1, i === last)}
+              <button class="btn btn-sm" style="background:#FEF2F2;color:#B91C1C;margin-left:4px;"
+                onclick="deleteSection(${s.id})">Delete</button>
+            </td>
+          </tr>`,
+        )
+        .join("")}
+      </tbody>
+    </table></div>`;
+}
+
+// Optimistic: show the new order immediately, roll back if the server rejects it.
+async function saveSectionOrder(newOrder) {
+  const previous = _sections;
+  _sections = newOrder.map((s, i) => ({ ...s, contentOrder: i + 1 }));
+  renderSectionsTable();
+  try {
+    _sections = await apiFetch("PUT", `/lesson-sections/lesson/${_sectionsLessonId}/order`, {
+      sectionIds: newOrder.map((s) => s.id),
+    });
+    renderSectionsTable();
+    showToast("Order saved", "↕️");
+  } catch (e) {
+    _sections = previous;
+    renderSectionsTable();
+    showToast(e.message, "⚠️");
+  }
+}
+
+function moveSection(index, delta) {
+  const target = index + delta;
+  if (target < 0 || target >= _sections.length) return;
+  const next = [..._sections];
+  [next[index], next[target]] = [next[target], next[index]];
+  saveSectionOrder(next);
+}
+
+function onSectionDragStart(e, index) {
+  _dragIndex = index;
+  e.dataTransfer.effectAllowed = "move";
+  e.dataTransfer.setData("text/plain", String(index)); // required by Firefox
+  e.currentTarget.style.opacity = "0.4";
+}
+function onSectionDragOver(e) {
+  e.preventDefault(); // allows dropping
+  e.dataTransfer.dropEffect = "move";
+  e.currentTarget.style.boxShadow = "inset 0 3px 0 var(--primary)";
+}
+function onSectionDrop(e, index) {
+  e.preventDefault();
+  e.currentTarget.style.boxShadow = "";
+  if (_dragIndex === null || _dragIndex === index) return;
+  const next = [..._sections];
+  const [moved] = next.splice(_dragIndex, 1);
+  next.splice(index, 0, moved);
+  _dragIndex = null;
+  saveSectionOrder(next);
+}
+function onSectionDragEnd() {
+  _dragIndex = null;
+  document.querySelectorAll("#sections-tbody tr").forEach((tr) => {
+    tr.style.opacity = "";
+    tr.style.boxShadow = "";
+  });
+}
+
+async function deleteSection(id) {
+  const s = _sections.find((x) => x.id === id);
+  if (!confirm(`Delete section "${s?.title || "Untitled"}"?\n\nThe remaining sections will be renumbered. This cannot be undone.`)) return;
+  try {
+    await apiFetch("DELETE", `/lesson-sections/${id}`);
+    showToast("Section deleted", "🗑️");
+    await loadSections(_sectionsLessonId);
+  } catch (e) {
+    showToast(e.message, "⚠️");
   }
 }
 

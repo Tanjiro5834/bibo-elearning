@@ -3,13 +3,16 @@ package com.bibo.elearning.lesson.controller;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.bibo.elearning.lesson.dto.request.CreateLessonSectionRequest;
+import com.bibo.elearning.lesson.dto.request.ReorderSectionsRequest;
 import com.bibo.elearning.lesson.dto.response.LessonSectionResponse;
 import com.bibo.elearning.lesson.service.LessonSectionService;
 import lombok.RequiredArgsConstructor;
@@ -31,5 +34,19 @@ public class LessonSectionController {
     @PreAuthorize("hasAnyRole('ADMIN','STUDENT','PARENT','TEACHER')")
     public ResponseEntity<List<LessonSectionResponse>> getSectionsByLesson(@PathVariable Long lessonId) {
         return ResponseEntity.ok(lessonSectionService.getSectionsByLessonId(lessonId));
+    }
+
+    @PutMapping("/lesson/{lessonId}/order")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER')")
+    public ResponseEntity<List<LessonSectionResponse>> reorderSections(
+            @PathVariable Long lessonId, @RequestBody ReorderSectionsRequest request) {
+        return ResponseEntity.ok(lessonSectionService.reorderSections(lessonId, request.sectionIds()));
+    }
+
+    @DeleteMapping("/{sectionId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER')")
+    public ResponseEntity<Void> deleteSection(@PathVariable Long sectionId) {
+        lessonSectionService.deleteSection(sectionId);
+        return ResponseEntity.noContent().build();
     }
 }
