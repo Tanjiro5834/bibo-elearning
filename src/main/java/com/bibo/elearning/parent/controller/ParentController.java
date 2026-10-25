@@ -1,11 +1,11 @@
 package com.bibo.elearning.parent.controller;
 
-//import com.bibo.elearning.parent.dto.*;
 import com.bibo.elearning.parent.dto.request.LinkChildRequest;
 import com.bibo.elearning.parent.dto.request.SendMessageRequest;
 import com.bibo.elearning.parent.dto.request.SetDailyGoalRequest;
 import com.bibo.elearning.parent.dto.request.TeacherReviewRequestDto;
 import com.bibo.elearning.parent.dto.response.ChildResponse;
+import com.bibo.elearning.parent.dto.response.ParentOverviewResponse;
 import com.bibo.elearning.parent.service.ParentService;
 import com.bibo.elearning.quiz.dto.response.QuizResultDto;
 import jakarta.validation.Valid;
@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/parent")
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('PARENT')")
 public class ParentController {
 
     private final ParentService parentService;
@@ -48,6 +50,13 @@ public class ParentController {
             @PathVariable Long childId) {
         ChildResponse progress = parentService.getChildProgress(userDetails.getUsername(), childId);
         return ResponseEntity.ok(progress);
+    }
+
+    @GetMapping("/child/{childId}/overview")
+    public ResponseEntity<ParentOverviewResponse> getChildOverview(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long childId) {
+        return ResponseEntity.ok(parentService.getChildOverview(userDetails.getUsername(), childId));
     }
 
     @PostMapping("/message-child")

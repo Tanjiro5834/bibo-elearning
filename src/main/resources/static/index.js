@@ -26,7 +26,7 @@ const api = {
       const err = await res
         .json()
         .catch(() => ({ message: "Something went wrong" }));
-      throw new Error(err.message || `HTTP ${res.status}`);
+      throw new Error(err.message || err.error || `HTTP ${res.status}`);
     }
 
     return res.json();
@@ -98,6 +98,9 @@ const api = {
 
   getChildProgress: (childId) =>
     api.request("GET", `/parent/child/${childId}/progress`, null, state.token),
+
+  getChildOverview: (childId) =>
+    api.request("GET", `/parent/child/${childId}/overview`, null, state.token),
 
   getChildQuizResults: (childId) =>
     api.request(
@@ -2456,44 +2459,6 @@ function SettingsPage() {
    PAGE: PARENT VIEW
    ============================================================ */
 function ParentViewPage() {
-  const notifs = [
-    {
-      icon: "⚠️",
-      bg: "#fef3c7",
-      title: "Math needs attention",
-      desc: "Progress dropped below 40% this week",
-      time: "2h ago",
-    },
-    {
-      icon: "🏆",
-      bg: "#d1fae5",
-      title: "Quiz completed!",
-      desc: "Scored 90% on Filipino Quiz 3",
-      time: "Yesterday",
-    },
-    {
-      icon: "📚",
-      bg: "#eef0ff",
-      title: "New lesson available",
-      desc: "Science: The Water Cycle is now unlocked",
-      time: "2 days ago",
-    },
-  ];
-
-  const week = [
-    { day: "Mon", val: 4 },
-    { day: "Tue", val: 6 },
-    { day: "Wed", val: 2 },
-    { day: "Thu", val: 5 },
-    { day: "Fri", val: 3 },
-    { day: "Sat", val: 1 },
-    { day: "Sun", val: 0 },
-  ];
-  const weekMax = Math.max(1, ...week.map((d) => d.val));
-  const todayLabel = new Date().toLocaleDateString("en-US", {
-    weekday: "short",
-  });
-
   const tips = [
     "Set a fixed study schedule every day, even 20 minutes helps.",
     "Celebrate small wins — praise boosts motivation for young learners.",
@@ -2517,26 +2482,13 @@ function ParentViewPage() {
 
       <div class="pd-bell">
         <button class="pd-bell-btn" onclick="toggleParentNotifs()" aria-label="Notifications">🔔</button>
-        <span id="notif-badge" class="pd-bell-badge">${notifs.length}</span>
+        <span id="notif-badge" class="pd-bell-badge" style="display:none;">0</span>
         <div id="notif-dropdown" class="pd-notif" style="display:none;">
           <div class="pd-notif-head">
             <span>Notifications</span>
             <button onclick="clearNotifs(event)">Mark all read</button>
           </div>
-          ${notifs
-            .map(
-              (n) => `
-            <div class="pd-notif-item">
-              <div class="pd-icon" style="background:${n.bg};">${n.icon}</div>
-              <div style="flex:1;min-width:0;">
-                <p class="pd-row-title">${n.title}</p>
-                <p class="pd-row-sub">${n.desc}</p>
-                <p class="pd-row-meta">${n.time}</p>
-              </div>
-              <span class="pd-dot"></span>
-            </div>`,
-            )
-            .join("")}
+          <div id="notif-list"><p class="pd-empty">No notifications yet.</p></div>
         </div>
       </div>
     </header>
@@ -2572,8 +2524,8 @@ function ParentViewPage() {
             <p class="pd-banner-text">Lessons follow the DepEd ARAL small-group tutorial structure for foundational learning recovery.</p>
           </div>
           <div class="pd-banner-phase">
-            <strong>Week 3</strong>
-            <span>Current Phase</span>
+            <strong id="parent-learning-week">Week —</strong>
+            <span>Learning Phase</span>
           </div>
         </section>
 
@@ -2589,21 +2541,7 @@ function ParentViewPage() {
 
         <section class="card pd-card">
           ${cardHead("Weekly Activity 📅", "Lessons completed per day this week")}
-          <div class="pd-chart">
-            ${week
-              .map((d) => {
-                const h = Math.round((d.val / weekMax) * 100);
-                const isToday = d.day === todayLabel;
-                return `<div class="pd-bar-col">
-                <span class="pd-bar-val">${d.val}</span>
-                <div class="pd-bar-track">
-                  <div class="pd-bar ${isToday ? "today" : ""} ${d.val === 0 ? "empty" : ""}" style="height:${Math.max(h, 6)}%;"></div>
-                </div>
-                <span class="pd-bar-day ${isToday ? "today" : ""}">${d.day}</span>
-              </div>`;
-              })
-              .join("")}
-          </div>
+          <div class="pd-chart" id="parent-week">${Loading()}</div>
         </section>
       </div>
 
@@ -2613,9 +2551,9 @@ function ParentViewPage() {
           <span class="pd-streak-icon">🔥</span>
           <div>
             <p class="pd-row-title">Learning Streak</p>
-            <p class="pd-row-sub">Consecutive days of activity</p>
+            <p class="pd-row-sub" id="parent-streak-sub">Consecutive days of activity</p>
           </div>
-          <div class="pd-streak-num"><strong>5</strong><span>days</span></div>
+          <div class="pd-streak-num"><strong id="parent-streak">—</strong><span id="parent-streak-unit">days</span></div>
         </section>
 
         <section class="card pd-card">
@@ -2638,12 +2576,13 @@ function ParentViewPage() {
 
           <div class="pd-tool">
             <p class="pd-tool-title">🎯 Daily Goal <span class="pd-row-sub">— lessons per day</span></p>
+            <p class="pd-row-sub" id="parent-goal-today" style="margin-bottom:8px;">&nbsp;</p>
             <div class="pd-goal">
               <input type="range" min="1" max="10" value="3" id="daily-goal-slider"
                 oninput="document.getElementById('goal-val').textContent=this.value" />
               <div class="pd-goal-val" id="goal-val">3</div>
             </div>
-            <button onclick="parentAction('set-daily-goal', { goal: +document.getElementById('daily-goal-slider').value }, 'Daily goal saved!')"
+            <button onclick="saveDailyGoal()"
               class="btn btn-primary btn-sm pd-full">Save Goal</button>
           </div>
 
@@ -2873,11 +2812,141 @@ function toggleParentNotifs() {
   const d = document.getElementById("notif-dropdown");
   if (d) d.style.display = d.style.display === "none" ? "block" : "none";
 }
+/* ── Parent notifications: "read" = older than the last time the parent
+   cleared them for this child (kept per browser, no server state needed) ── */
+const NOTIF_STYLE = {
+  QUIZ_PASSED: { icon: "🏆", bg: "#d1fae5" },
+  QUIZ_FAILED: { icon: "⚠️", bg: "#fef3c7" },
+  LESSON_COMPLETED: { icon: "📘", bg: "#eef0ff" },
+  GOAL_REACHED: { icon: "🎯", bg: "#fce7f3" },
+  NEW_LESSON: { icon: "📚", bg: "#eef0ff" },
+};
+let _parentNotifs = [];
+
+function notifSeenKey() {
+  return `bibo_notif_seen_${state.selectedChildId}`;
+}
+function getNotifSeen() {
+  try {
+    return Number(localStorage.getItem(notifSeenKey())) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+function timeAgo(iso) {
+  const t = new Date(iso).getTime();
+  if (!t) return "";
+  const mins = Math.floor((Date.now() - t) / 60000);
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return days === 1 ? "Yesterday" : `${days} days ago`;
+}
+
+function renderParentNotifs() {
+  const list = document.getElementById("notif-list");
+  const badge = document.getElementById("notif-badge");
+  if (!list || !badge) return;
+
+  const seen = getNotifSeen();
+  const unread = _parentNotifs.filter((n) => new Date(n.at).getTime() > seen).length;
+  badge.textContent = unread;
+  badge.style.display = unread ? "" : "none";
+
+  list.innerHTML = _parentNotifs.length
+    ? _parentNotifs
+        .map((n) => {
+          const st = NOTIF_STYLE[n.type] || { icon: "🔔", bg: "#eef0ff" };
+          const isUnread = new Date(n.at).getTime() > seen;
+          return `<div class="pd-notif-item">
+            <div class="pd-icon" style="background:${st.bg};">${st.icon}</div>
+            <div style="flex:1;min-width:0;">
+              <p class="pd-row-title">${escapeHtml(n.title)}</p>
+              <p class="pd-row-sub">${escapeHtml(n.description)}</p>
+              <p class="pd-row-meta">${timeAgo(n.at)}</p>
+            </div>
+            ${isUnread ? '<span class="pd-dot"></span>' : ""}
+          </div>`;
+        })
+        .join("")
+    : `<p class="pd-empty">No activity in the last 7 days.</p>`;
+}
+
 function clearNotifs(e) {
   e.stopPropagation();
-  document.getElementById("notif-badge").style.display = "none";
+  const newest = Math.max(0, ..._parentNotifs.map((n) => new Date(n.at).getTime() || 0));
+  try {
+    localStorage.setItem(notifSeenKey(), String(Math.max(newest, Date.now())));
+  } catch {}
+  renderParentNotifs();
   document.getElementById("notif-dropdown").style.display = "none";
   showToast("All notifications marked as read");
+}
+
+function renderParentOverview(o) {
+  const $ = (id) => document.getElementById(id);
+  if (!$("parent-week")) return; // navigated away
+
+  // Streak
+  $("parent-streak").textContent = o.streak;
+  $("parent-streak-unit").textContent = o.streak === 1 ? "day" : "days";
+  $("parent-streak-sub").textContent =
+    o.longestStreak > 0 ? `Best: ${o.longestStreak} day${o.longestStreak === 1 ? "" : "s"}` : "No activity yet";
+
+  // Learning week (weeks since first activity)
+  $("parent-learning-week").textContent = `Week ${o.learningWeek}`;
+
+  // Daily goal: slider shows the saved goal
+  const slider = $("daily-goal-slider");
+  if (slider) {
+    slider.value = o.dailyGoal;
+    $("goal-val").textContent = o.dailyGoal;
+  }
+  $("parent-goal-today").textContent =
+    `Today: ${o.todayCompleted} of ${o.dailyGoal} lesson${o.dailyGoal === 1 ? "" : "s"}` +
+    (o.dailyGoalSetByParent ? "" : " (default goal)");
+
+  // Weekly activity
+  const max = Math.max(1, ...o.weeklyActivity.map((d) => d.lessonsCompleted));
+  const todayIso = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD, local time
+  $("parent-week").innerHTML = o.weeklyActivity
+    .map((d) => {
+      const v = d.lessonsCompleted;
+      const h = Math.round((v / max) * 100);
+      const isToday = d.date === todayIso;
+      return `<div class="pd-bar-col">
+        <span class="pd-bar-val">${v}</span>
+        <div class="pd-bar-track">
+          <div class="pd-bar ${isToday ? "today" : ""} ${v === 0 ? "empty" : ""}" style="height:${Math.max(h, 6)}%;"></div>
+        </div>
+        <span class="pd-bar-day ${isToday ? "today" : ""}">${d.day}</span>
+      </div>`;
+    })
+    .join("");
+
+  _parentNotifs = o.notifications || [];
+  renderParentNotifs();
+}
+
+function renderParentOverviewError() {
+  const $ = (id) => document.getElementById(id);
+  if (!$("parent-week")) return;
+  $("parent-week").innerHTML = `<p class="pd-empty">Could not load activity.</p>`;
+  $("parent-streak").textContent = "—";
+  $("parent-learning-week").textContent = "Week —";
+  _parentNotifs = [];
+  renderParentNotifs();
+}
+
+async function saveDailyGoal() {
+  const goal = +document.getElementById("daily-goal-slider").value;
+  await parentAction("set-daily-goal", { goal }, "Daily goal saved!");
+  try {
+    renderParentOverview(await api.getChildOverview(state.selectedChildId));
+  } catch {}
 }
 // Close dropdown on any click outside the bell wrapper
 document.addEventListener("click", (e) => {
@@ -2899,7 +2968,13 @@ async function bindParent() {
       $("parent-subjects").innerHTML =
         $("parent-quizzes").innerHTML =
         $("parent-weak").innerHTML =
+        $("parent-week").innerHTML =
           empty;
+      $("parent-streak").textContent = "—";
+      $("parent-learning-week").textContent = "Week —";
+      $("parent-goal-today").innerHTML = "&nbsp;";
+      _parentNotifs = [];
+      renderParentNotifs();
       return;
     }
 
@@ -2914,10 +2989,18 @@ async function bindParent() {
       [child.grade, child.school].filter(Boolean).join(" · ") || "Student";
 
     // Fetch in parallel; a quiz failure must not block progress (and vice versa)
-    const [progress, quizzes] = await Promise.allSettled([
+    const [progress, quizzes, overview] = await Promise.allSettled([
       api.getChildProgress(child.childId),
       api.getChildQuizResults(child.childId),
+      api.getChildOverview(child.childId),
     ]);
+    if (!$("parent-stats")) return; // navigated away while loading
+
+    if (overview.status === "fulfilled") {
+      renderParentOverview(overview.value);
+    } else {
+      renderParentOverviewError();
+    }
 
     if (progress.status === "fulfilled") {
       renderParentProgress(progress.value?.subjectProgress || []);

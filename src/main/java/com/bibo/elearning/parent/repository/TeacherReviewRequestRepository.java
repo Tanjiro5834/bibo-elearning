@@ -13,4 +13,6 @@ public interface TeacherReviewRequestRepository extends JpaRepository<TeacherRev
     List<TeacherReviewRequest> findAllByParent(User parent);
 
     List<TeacherReviewRequest> findAllByChild(User child);
+
+    List<TeacherReviewRequest> findAllByOrderByRequestedAtDesc();
 }
