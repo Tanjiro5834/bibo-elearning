@@ -1691,17 +1691,74 @@ async function openCreateSection() {
     <div id="sec-err" style="display:none;background:#FEE2E2;color:#991B1B;font-size:13px;font-weight:700;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:14px;"></div>
     <div class="field"><label>Lesson</label><select id="sec-lesson" class="bibo-input">${opts}</select></div>
     <div class="field"><label>Section Title</label><input id="sec-title" class="bibo-input" placeholder="e.g. What are Fractions?" /></div>
-    <div class="field"><label>Content</label><textarea id="sec-content" class="bibo-input" placeholder="Write lesson content here..." style="min-height:120px;"></textarea></div>
-    <div class="field-row"><div class="field" style="margin-bottom:0;"><label>Content Type</label><select id="sec-type" class="bibo-input"><option value="TEXT">Text</option><option value="IMAGE">Image</option><option value="VIDEO">Video</option><option value="ACTIVITY">Activity</option></select></div><div class="field" style="margin-bottom:0;"><label>Order</label><input id="sec-order" class="bibo-input" type="number" placeholder="1" min="1" /></div></div>
+    <div class="field-row"><div class="field" style="margin-bottom:0;"><label>Content Type</label><select id="sec-type" class="bibo-input" onchange="onSectionTypeChange(this.value)"><option value="TEXT">Text</option><option value="IMAGE">Image</option><option value="VIDEO">Video</option><option value="ACTIVITY">Activity</option></select></div><div class="field" style="margin-bottom:0;"><label>Order</label><input id="sec-order" class="bibo-input" type="number" placeholder="1" min="1" /></div></div>
+    <div class="field" id="sec-content-field" style="margin-top:14px;"><label id="sec-content-label">Content</label><textarea id="sec-content" class="bibo-input" placeholder="Write lesson content here..." style="min-height:120px;"></textarea></div>
+    <div class="field" id="sec-image-field" style="display:none;margin-top:14px;">
+      <label>Image</label>
+      <input id="sec-image" class="bibo-input" type="file" accept="image/png,image/jpeg,image/gif,image/webp" onchange="previewSectionImage(this)" />
+      <p style="font-size:12px;color:var(--text-400);margin-top:6px;">PNG, JPG, GIF, or WEBP · max 5 MB</p>
+      <img id="sec-image-preview" alt="" style="display:none;width:100%;max-height:220px;object-fit:contain;margin-top:10px;border-radius:var(--radius-sm);background:var(--bg);" />
+    </div>
     <div style="display:flex;gap:10px;margin-top:18px;"><button class="btn btn-ghost" style="flex:1;" onclick="closeModal()">Cancel</button><button class="btn btn-primary" style="flex:1;" id="sec-btn" onclick="submitSection()">Add Section</button></div>`);
+}
+
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
+function onSectionTypeChange(type) {
+  const isImage = type === "IMAGE";
+  document.getElementById("sec-image-field").style.display = isImage ? "" : "none";
+  document.getElementById("sec-content-field").style.display = isImage ? "none" : "";
+  document.getElementById("sec-content-label").textContent = type === "VIDEO" ? "Video URL" : "Content";
+  document.getElementById("sec-content").placeholder =
+    {
+      VIDEO: "Paste a YouTube link, e.g. https://youtu.be/abc123XYZ00",
+      ACTIVITY: "Describe the activity or instructions...",
+    }[type] || "Write lesson content here...";
+}
+
+function previewSectionImage(input) {
+  const img = document.getElementById("sec-image-preview");
+  const file = input.files?.[0];
+  if (!file) {
+    img.style.display = "none";
+    return;
+  }
+  if (file.size > MAX_IMAGE_BYTES) {
+    showToast("Image is too large (max 5 MB)", "⚠️");
+    input.value = "";
+    img.style.display = "none";
+    return;
+  }
+  if (img.src.startsWith("blob:")) URL.revokeObjectURL(img.src);
+  img.src = URL.createObjectURL(file);
+  img.style.display = "";
+}
+
+// Multipart upload: let the browser set the multipart boundary (no Content-Type header).
+async function uploadImage(file) {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(`${API}/uploads/images`, {
+    method: "POST",
+    headers: { Authorization: "Bearer " + token },
+    body: form,
+  });
+  if (res.status === 401) {
+    logout();
+    throw new Error("Session expired");
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || data.error || `Upload failed (HTTP ${res.status})`);
+  return data.url;
 }
 
 async function submitSection() {
   const lessonId = parseInt(document.getElementById("sec-lesson").value),
     title = document.getElementById("sec-title").value.trim(),
-    content = document.getElementById("sec-content").value.trim(),
+    textContent = document.getElementById("sec-content").value.trim(),
     type = document.getElementById("sec-type").value,
     order = parseInt(document.getElementById("sec-order").value) || 1,
+    imageFile = document.getElementById("sec-image")?.files?.[0],
     errEl = document.getElementById("sec-err"),
     btn = document.getElementById("sec-btn");
   errEl.style.display = "none";
@@ -1715,9 +1772,19 @@ async function submitSection() {
     errEl.style.display = "";
     return;
   }
+  if (type === "IMAGE" && !imageFile) {
+    errEl.textContent = "Choose an image to upload.";
+    errEl.style.display = "";
+    return;
+  }
   btn.disabled = true;
-  btn.textContent = "Adding...";
   try {
+    let content = textContent;
+    if (type === "IMAGE") {
+      btn.textContent = "Uploading image...";
+      content = await uploadImage(imageFile);
+    }
+    btn.textContent = "Adding...";
     await apiFetch("POST", "/lesson-sections", {
       lessonId,
       title,
@@ -1754,7 +1821,11 @@ async function loadSections(lessonId) {
       return;
     }
     container.innerHTML = `<div class="card" style="overflow:hidden;"><table class="data-table"><thead><tr><th>Order</th><th>Title</th><th>Type</th><th>Content</th></tr></thead><tbody>
-      ${sections.map((s) => `<tr><td>${s.contentOrder ?? "—"}</td><td>${s.title ?? "—"}</td><td>${s.contentType ?? "—"}</td><td>${s.content ?? "—"}</td></tr>`).join("")}
+      ${sections.map((s) => `<tr><td>${s.contentOrder ?? "—"}</td><td>${esc(s.title ?? "—")}</td><td>${esc(s.contentType ?? "—")}</td><td>${
+        s.contentType === "IMAGE" && /^(https?:\/\/|\/uploads\/)/.test(s.content || "")
+          ? `<img src="${esc(s.content)}" alt="" style="height:56px;max-width:120px;object-fit:cover;border-radius:6px;" />`
+          : esc(s.content ?? "—")
+      }</td></tr>`).join("")}
     </tbody></table></div>`;
   } catch (e) {
     container.innerHTML = `<div style="color:var(--accent-red);padding:16px;">⚠️ ${e.message}</div>`;

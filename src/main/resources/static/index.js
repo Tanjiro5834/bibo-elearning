@@ -1578,6 +1578,34 @@ async function bindLessonDetail() {
   }
 }
 
+// IMAGE → content is an image URL (uploaded: /uploads/images/..., or external https);
+// VIDEO → YouTube or direct video URL; anything else → plain text with line breaks.
+function sectionBodyHtml(sec) {
+  const raw = (sec.content || "").trim();
+  const isUrl = /^(https?:\/\/\S+|\/uploads\/images\/[\w.-]+)$/i.test(raw);
+
+  if (sec.contentType === "IMAGE" && isUrl) {
+    return `<img src="${escapeHtml(raw)}" alt="${escapeHtml(sec.title || "")}" loading="lazy"
+      style="width:100%;border-radius:var(--radius-lg);margin-top:16px;max-height:420px;object-fit:contain;background:var(--bg);" />`;
+  }
+
+  if (sec.contentType === "VIDEO" && isUrl) {
+    const yt = raw.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{11})/);
+    if (yt) {
+      return `<div style="position:relative;padding-top:56.25%;margin-top:16px;border-radius:var(--radius-lg);overflow:hidden;">
+        <iframe src="https://www.youtube-nocookie.com/embed/${yt[1]}" title="${escapeHtml(sec.title || "Video")}"
+          style="position:absolute;inset:0;width:100%;height:100%;border:0;"
+          allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+      </div>`;
+    }
+    return `<video src="${escapeHtml(raw)}" controls style="width:100%;border-radius:var(--radius-lg);margin-top:16px;"></video>`;
+  }
+
+  return raw
+    ? `<div style="color:var(--text-700);line-height:1.8;font-size:15px;margin-top:16px;">${escapeHtml(raw).replace(/\n/g, "<br>")}</div>`
+    : "";
+}
+
 function renderLessonSection() {
   const { sections, current } = lessonState;
 
@@ -1606,18 +1634,12 @@ function renderLessonSection() {
     .join("");
 
   const sec = sections[current];
-  const contentHtml = sec.content
-    ? `<div style="color:var(--text-700);line-height:1.8;font-size:15px;margin-top:16px;">${sec.content}</div>`
-    : "";
-  const imageHtml = sec.imageUrl
-    ? `<img src="${sec.imageUrl}" alt="${sec.title || ""}" style="width:100%;border-radius:var(--radius-lg);margin-top:16px;max-height:280px;object-fit:cover;" />`
-    : "";
 
   document.getElementById("lesson-body").innerHTML = `
     <div class="card" style="padding:28px;">
       <span class="badge badge-new" style="margin-bottom:12px;display:inline-flex;">Section ${current + 1} of ${total}</span>
-      <h2 style="font-size:20px;margin-bottom:0;">${sec.title || "Section " + (current + 1)}</h2>
-      ${imageHtml}${contentHtml}
+      <h2 style="font-size:20px;margin-bottom:0;">${escapeHtml(sec.title || "Section " + (current + 1))}</h2>
+      ${sectionBodyHtml(sec)}
     </div>`;
 
   document.getElementById("btn-prev").style.display = isFirst ? "none" : "";

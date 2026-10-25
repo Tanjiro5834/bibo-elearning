@@ -22,7 +22,7 @@ public class LessonSectionController {
     private final LessonSectionService lessonSectionService;
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER')")
     public ResponseEntity<LessonSectionResponse> createSection(@RequestBody CreateLessonSectionRequest request) {
         return ResponseEntity.ok(lessonSectionService.createSection(request.getLessonId(), request));
     }
