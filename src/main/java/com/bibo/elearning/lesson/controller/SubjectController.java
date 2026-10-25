@@ -2,6 +2,7 @@ package com.bibo.elearning.lesson.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -22,6 +23,7 @@ import java.util.List;
 public class SubjectController {
     private final SubjectService subjectService;
     
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER')")
     @PostMapping
     public ResponseEntity<SubjectResponse> createSubject(@RequestBody CreateSubjectRequest request) {
         SubjectResponse response = subjectService.createSubject(request);
@@ -44,6 +46,7 @@ public class SubjectController {
         return ResponseEntity.ok(response);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER')")
     @PutMapping("/{subjectId}")
     public ResponseEntity<SubjectResponse> updateSubject(
         @PathVariable Long subjectId, 
@@ -52,12 +55,14 @@ public class SubjectController {
         return ResponseEntity.ok(response);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER')")
     @PatchMapping("/{subjectId}/deactivate")
     public ResponseEntity<Void> deactivateSubject(@PathVariable Long subjectId) {
         subjectService.deactivateSubject(subjectId);
         return ResponseEntity.noContent().build();
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER')")
     @PatchMapping("/{subjectId}/activate")
     public ResponseEntity<Void> activateSubject(@PathVariable Long subjectId) {
         subjectService.activateSubject(subjectId);

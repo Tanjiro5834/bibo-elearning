@@ -20,6 +20,9 @@ public class GeminiService {
     "https://api.groq.com/openai/v1/chat/completions";
 
     public String chat(String message) {
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new IllegalStateException("AI assistant is not configured (GROQ_API_KEY missing)");
+        }
         Map<String, Object> body = Map.of(
             "model", "llama-3.3-70b-versatile",
             "messages", List.of(Map.of("role", "user", "content", message))
