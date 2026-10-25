@@ -2,7 +2,9 @@ package com.bibo.elearning.lesson.controller;
 
 import java.util.List;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import com.bibo.elearning.lesson.dto.request.CreateLessonRequest;
 import com.bibo.elearning.lesson.dto.request.UpdateLessonRequest;
@@ -85,8 +87,16 @@ public class LessonController {
 
     @DeleteMapping("/{lessonId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER')")
-    public ResponseEntity<Void> deleteLesson(@PathVariable Long lessonId) {
-        lessonService.deleteLesson(lessonId);
+    public ResponseEntity<Void> deleteLesson(
+            @PathVariable Long lessonId,
+            @RequestParam(defaultValue = "false") boolean force,
+            Authentication authentication) {
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        if (force && !isAdmin) {
+            throw new AccessDeniedException("Only admins can delete a lesson that has student activity");
+        }
+        lessonService.deleteLesson(lessonId, force);
         return ResponseEntity.noContent().build();
     }
 }

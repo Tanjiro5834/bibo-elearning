@@ -12,6 +12,11 @@ import com.bibo.elearning.lesson.mapper.LessonMapper;
 import com.bibo.elearning.lesson.repository.LessonRepository;
 import com.bibo.elearning.lesson.repository.LessonSectionRepository;
 import com.bibo.elearning.lesson.repository.SubjectRepository;
+import com.bibo.elearning.lesson.repository.LessonProgressRepository;
+import com.bibo.elearning.auth.common.enums.ContentType;
+import com.bibo.elearning.quiz.repository.QuizAttemptRepository;
+import com.bibo.elearning.quiz.repository.QuizRepository;
+import com.bibo.elearning.upload.ImageStorageService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import java.util.List;
@@ -23,6 +28,10 @@ public class LessonService {
     private final LessonSectionRepository lessonSectionRepository;
     private final SubjectRepository subjectRepository;
     private final LessonMapper lessonMapper;
+    private final LessonProgressRepository lessonProgressRepository;
+    private final QuizRepository quizRepository;
+    private final QuizAttemptRepository quizAttemptRepository;
+    private final ImageStorageService imageStorageService;
 
    @Transactional
     public LessonDetailResponse createLesson(CreateLessonRequest request) {
@@ -148,9 +157,36 @@ public class LessonService {
         lessonRepository.save(lesson);
     }
 
-    public void deleteLesson(Long lessonId) {
+    /**
+     * Deletes a lesson with its sections, quizzes and uploaded images.
+     * If students already have progress or quiz attempts on it, the delete is refused
+     * (409) unless {@code force} is set, which also removes that student history.
+     */
+    @Transactional
+    public void deleteLesson(Long lessonId, boolean force) {
         Lesson lesson = lessonRepository.findById(lessonId)
-                .orElseThrow(() -> new RuntimeException("Lesson not found with id: " + lessonId));
-        lessonRepository.delete(lesson);
+                .orElseThrow(() -> new IllegalArgumentException("Lesson not found with id: " + lessonId));
+
+        long progress = lessonProgressRepository.countByLessonId(lessonId);
+        long attempts = quizAttemptRepository.countByQuizLessonId(lessonId);
+        if ((progress > 0 || attempts > 0) && !force) {
+            throw new IllegalStateException(String.format(
+                    "\"%s\" already has student activity (%d progress record%s, %d quiz attempt%s). "
+                            + "Unpublish it instead to keep students' history.",
+                    lesson.getTitle(), progress, progress == 1 ? "" : "s", attempts, attempts == 1 ? "" : "s"));
+        }
+
+        List<String> images = lesson.getSections().stream()
+                .filter(s -> s.getContentType() == ContentType.IMAGE)
+                .map(LessonSection::getContent)
+                .toList();
+
+        quizAttemptRepository.deleteByQuizLessonId(lessonId);
+        lessonProgressRepository.deleteByLessonId(lessonId);
+        quizRepository.deleteAll(quizRepository.findByLessonId(lessonId)); // cascades questions + choices
+        lessonRepository.delete(lesson);                                    // cascades sections
+        lessonRepository.flush(); // surface FK errors before touching files
+
+        images.forEach(imageStorageService::deleteIfStored);
     }
 }

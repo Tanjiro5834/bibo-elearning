@@ -11,6 +11,10 @@ import java.time.LocalDateTime;
 
 public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, Long> {
     List<QuizAttempt> findByStudentId(Long studentId);
+
+    long countByQuizLessonId(Long lessonId);
+
+    void deleteByQuizLessonId(Long lessonId);
     @Query("""
         SELECT qa FROM QuizAttempt qa
         JOIN FETCH qa.quiz q

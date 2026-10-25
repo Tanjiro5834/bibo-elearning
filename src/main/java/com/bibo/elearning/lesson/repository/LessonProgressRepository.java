@@ -29,6 +29,10 @@ public interface LessonProgressRepository extends JpaRepository<LessonProgress, 
 
     List<LessonProgress> findAllByStudentProfile(StudentProfile studentProfile);
 
+    long countByLessonId(Long lessonId);
+
+    void deleteByLessonId(Long lessonId);
+
     @Query("""
         SELECT lp FROM LessonProgress lp
         JOIN FETCH lp.lesson l

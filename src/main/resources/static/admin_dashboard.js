@@ -1498,6 +1498,7 @@ async function loadLessons(subjectId = null, subjectName = null) {
             <button class="btn btn-sm" style="background:${l.published ? "#FEF3C7" : "#ECFDF5"};color:${l.published ? "#92400E" : "#047857"};" onclick="togglePublish(${l.id}, ${!l.published})">${l.published ? "Unpublish" : "Publish"}</button>
             <button class="btn btn-ghost btn-sm" onclick="navigate('sections')">Sections</button>
             <button class="btn btn-sm" style="background:var(--bg);color:var(--text-500);" onclick="openEditLesson(${l.id})">Edit</button>
+            <button class="btn btn-sm" style="background:#FEF2F2;color:#B91C1C;" data-title="${esc(l.title)}" onclick="deleteLesson(${l.id}, this.dataset.title)">Delete</button>
           </div></td></tr>`;
         })
         .join("")}
@@ -1505,6 +1506,45 @@ async function loadLessons(subjectId = null, subjectName = null) {
   } catch (e) {
     document.getElementById("lessons-list").innerHTML =
       `<div style="color:var(--accent-red);padding:20px;">⚠️ ${e.message}</div>`;
+  }
+}
+
+// DELETE /lessons/{id}: 409 means students already used it → offer Unpublish (or force, admins only)
+async function deleteLesson(id, title) {
+  if (!confirm(`Delete "${title}"?\n\nThis also removes its sections, quizzes, and uploaded images. This cannot be undone.`)) return;
+
+  const send = (force) =>
+    fetch(`${API}/lessons/${id}${force ? "?force=true" : ""}`, {
+      method: "DELETE",
+      headers: { Authorization: "Bearer " + token },
+    });
+
+  try {
+    let res = await send(false);
+    if (res.status === 401) return logout();
+
+    if (res.status === 409) {
+      const { message } = await res.json().catch(() => ({}));
+      if (!isAdmin) {
+        showToast(message || "This lesson has student activity. Unpublish it instead.", "⚠️");
+        return;
+      }
+      const force = confirm(
+        `${message || "This lesson has student activity."}\n\n` +
+          `Delete anyway? Students' progress and quiz attempts for this lesson will be permanently erased.`,
+      );
+      if (!force) return;
+      res = await send(true);
+    }
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || err.error || `Delete failed (HTTP ${res.status})`);
+    }
+    showToast("Lesson deleted", "🗑️");
+    await loadLessons();
+  } catch (e) {
+    showToast(e.message, "⚠️");
   }
 }
 
