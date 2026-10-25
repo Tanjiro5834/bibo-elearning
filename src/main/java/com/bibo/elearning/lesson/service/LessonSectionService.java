@@ -27,6 +27,11 @@ public class LessonSectionService {
         Lesson lesson = lessonRepository.findById(lessonId)
             .orElseThrow(() -> new RuntimeException("Lesson not found"));
 
+        if (request.getContentType() == ContentType.VIDEO
+                && (request.getContent() == null || !request.getContent().trim().matches("(?i)https?://\\S+"))) {
+            throw new IllegalArgumentException("Video sections need a valid video link (http/https)");
+        }
+
         // No order given → append after the current last section
         Integer order = request.getContentOrder();
         if (order == null || order < 1) {

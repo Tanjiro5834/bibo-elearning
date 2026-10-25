@@ -1590,7 +1590,7 @@ function sectionBodyHtml(sec) {
   }
 
   if (sec.contentType === "VIDEO" && isUrl) {
-    const yt = raw.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{11})/);
+    const yt = raw.match(/(?:youtube(?:-nocookie)?\.com\/(?:[^#]*[?&]v=|shorts\/|embed\/|live\/|v\/)|youtu\.be\/)([\w-]{11})/);
     if (yt) {
       return `<div style="position:relative;padding-top:56.25%;margin-top:16px;border-radius:var(--radius-lg);overflow:hidden;">
         <iframe src="https://www.youtube-nocookie.com/embed/${yt[1]}" title="${escapeHtml(sec.title || "Video")}"
@@ -1598,7 +1598,11 @@ function sectionBodyHtml(sec) {
           allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
       </div>`;
     }
-    return `<video src="${escapeHtml(raw)}" controls style="width:100%;border-radius:var(--radius-lg);margin-top:16px;"></video>`;
+    if (/\.(mp4|webm|ogg)(\?.*)?$/i.test(raw)) {
+      return `<video src="${escapeHtml(raw)}" controls preload="metadata" style="width:100%;border-radius:var(--radius-lg);margin-top:16px;"></video>`;
+    }
+    // Not embeddable (e.g. a Facebook/Drive page): give students a link instead of a broken player
+    return `<a href="${escapeHtml(raw)}" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="margin-top:16px;display:inline-flex;">▶ Watch video</a>`;
   }
 
   return raw

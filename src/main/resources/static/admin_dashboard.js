@@ -1732,7 +1732,7 @@ async function openCreateSection() {
     <div class="field"><label>Lesson</label><select id="sec-lesson" class="bibo-input">${opts}</select></div>
     <div class="field"><label>Section Title</label><input id="sec-title" class="bibo-input" placeholder="e.g. What are Fractions?" /></div>
     <div class="field-row"><div class="field" style="margin-bottom:0;"><label>Content Type</label><select id="sec-type" class="bibo-input" onchange="onSectionTypeChange(this.value)"><option value="TEXT">Text</option><option value="IMAGE">Image</option><option value="VIDEO">Video</option><option value="ACTIVITY">Activity</option></select></div><div class="field" style="margin-bottom:0;"><label>Order</label><input id="sec-order" class="bibo-input" type="number" placeholder="Auto (last)" min="1" /></div></div>
-    <div class="field" id="sec-content-field" style="margin-top:14px;"><label id="sec-content-label">Content</label><textarea id="sec-content" class="bibo-input" placeholder="Write lesson content here..." style="min-height:120px;"></textarea></div>
+    <div class="field" id="sec-content-field" style="margin-top:14px;"><label id="sec-content-label">Content</label><textarea id="sec-content" class="bibo-input" placeholder="Write lesson content here..." style="min-height:120px;" oninput="if (document.getElementById('sec-type').value === 'VIDEO') previewSectionVideo()"></textarea><div id="sec-video-preview"></div></div>
     <div class="field" id="sec-image-field" style="display:none;margin-top:14px;">
       <label>Image</label>
       <input id="sec-image" class="bibo-input" type="file" accept="image/png,image/jpeg,image/gif,image/webp" onchange="previewSectionImage(this)" />
@@ -1744,11 +1744,46 @@ async function openCreateSection() {
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
+// YouTube id from watch / youtu.be / shorts / embed / live links (any extra params)
+function youtubeId(url) {
+  const m = (url || "").match(/(?:youtube(?:-nocookie)?\.com\/(?:[^#]*[?&]v=|shorts\/|embed\/|live\/|v\/)|youtu\.be\/)([\w-]{11})/);
+  return m ? m[1] : null;
+}
+const isDirectVideo = (url) => /^https?:\/\/\S+\.(mp4|webm|ogg)(\?\S*)?$/i.test(url || "");
+
+function videoEmbedHtml(url) {
+  const id = youtubeId(url);
+  if (id) {
+    return `<div style="position:relative;padding-top:56.25%;border-radius:var(--radius-sm);overflow:hidden;background:#000;">
+      <iframe src="https://www.youtube-nocookie.com/embed/${id}" style="position:absolute;inset:0;width:100%;height:100%;border:0;"
+        allow="encrypted-media; picture-in-picture" allowfullscreen title="Video preview"></iframe></div>`;
+  }
+  if (isDirectVideo(url)) return `<video src="${esc(url)}" controls preload="metadata" style="width:100%;border-radius:var(--radius-sm);"></video>`;
+  return "";
+}
+
+function previewSectionVideo() {
+  const url = document.getElementById("sec-content").value.trim();
+  const box = document.getElementById("sec-video-preview");
+  if (!box) return;
+  if (!url) {
+    box.innerHTML = "";
+    return;
+  }
+  const html = videoEmbedHtml(url);
+  box.innerHTML = html
+    ? `<p style="font-size:12px;color:var(--accent-green);font-weight:700;margin:8px 0 6px;">✓ Preview — this is what students will see</p>${html}`
+    : `<p style="font-size:12px;color:#B45309;font-weight:700;margin-top:8px;">⚠️ Paste a YouTube link (youtube.com/watch?v=…, youtu.be/…, Shorts) or a direct .mp4 link.</p>`;
+}
+
 function onSectionTypeChange(type) {
   const isImage = type === "IMAGE";
   document.getElementById("sec-image-field").style.display = isImage ? "" : "none";
   document.getElementById("sec-content-field").style.display = isImage ? "none" : "";
   document.getElementById("sec-content-label").textContent = type === "VIDEO" ? "Video URL" : "Content";
+  document.getElementById("sec-content").style.minHeight = type === "VIDEO" ? "48px" : "120px";
+  if (type === "VIDEO") previewSectionVideo();
+  else document.getElementById("sec-video-preview").innerHTML = "";
   document.getElementById("sec-content").placeholder =
     {
       VIDEO: "Paste a YouTube link, e.g. https://youtu.be/abc123XYZ00",
@@ -1820,6 +1855,14 @@ async function submitSection() {
   btn.disabled = true;
   try {
     let content = textContent;
+    if (type === "VIDEO") {
+      const id = youtubeId(textContent);
+      if (!id && !isDirectVideo(textContent)) {
+        throw new Error("Paste a YouTube link or a direct .mp4 video link.");
+      }
+      // store a clean canonical link (drops tracking params / timestamps)
+      if (id) content = `https://www.youtube.com/watch?v=${id}`;
+    }
     if (type === "IMAGE") {
       btn.textContent = "Uploading image...";
       content = await uploadImage(imageFile);
@@ -1862,6 +1905,12 @@ async function loadSections(lessonId) {
 }
 
 function sectionContentCell(s) {
+  const vid = s.contentType === "VIDEO" ? youtubeId(s.content) : null;
+  if (vid) {
+    return `<a href="${esc(s.content)}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:10px;text-decoration:none;color:inherit;">
+      <img src="https://img.youtube.com/vi/${vid}/mqdefault.jpg" alt="" style="height:56px;width:100px;object-fit:cover;border-radius:6px;" />
+      <span style="font-size:12px;font-weight:700;color:var(--primary);">▶ YouTube</span></a>`;
+  }
   return s.contentType === "IMAGE" && /^(https?:\/\/|\/uploads\/)/.test(s.content || "")
     ? `<img src="${esc(s.content)}" alt="" style="height:56px;max-width:120px;object-fit:cover;border-radius:6px;" />`
     : `<div style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;">${esc(s.content ?? "—")}</div>`;
