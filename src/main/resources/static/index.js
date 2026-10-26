@@ -1799,7 +1799,7 @@ function GamesPage() {
    ============================================================ */
 /* ── Quiz picker: every quiz from published lessons, with the student's own status ── */
 function QuizPickerPage() {
-  return `<div class="page" style="max-width:900px;margin:0 auto;">
+  return `<div class="page" style="max-width:1120px;margin:0 auto;">
     <div class="mb-24">
       <h1 style="font-size:26px;margin-bottom:4px;">Quizzes 📝</h1>
       <p style="color:var(--text-400);font-size:14px;">Pick a quiz to test what you've learned.</p>
@@ -1872,48 +1872,35 @@ function renderQuizPicker() {
     return;
   }
 
-  // group by subject, keeping server order (subject → lesson → quiz)
-  const groups = [];
-  for (const q of shown) {
-    let g = groups.find((x) => x.subject === q.subjectName);
-    if (!g) groups.push((g = { subject: q.subjectName, items: [] }));
-    g.items.push(q);
-  }
-
-  list.innerHTML = groups
-    .map((g) => {
-      const st = getSubjectStyle(g.subject);
-      return `<div style="margin-bottom:24px;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-          <span style="font-size:18px;">${st.icon}</span>
-          <span style="font-weight:800;color:${st.color};">${escapeHtml(g.subject)}</span>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;">
-          ${g.items
-            .map((q) => {
-              const status = quizStatus(q);
-              return `<div class="card card-interactive" style="padding:18px;display:flex;flex-direction:column;gap:10px;"
-                  role="button" tabindex="0" onclick="startQuiz(${q.id})" onkeydown="if(event.key==='Enter')startQuiz(${q.id})">
-                <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;">
-                  <h3 style="font-size:16px;line-height:1.3;">${escapeHtml(q.title)}</h3>
-                  <span class="badge ${status.cls}" style="white-space:nowrap;">${status.label}</span>
-                </div>
-                <p style="font-size:12px;color:var(--text-400);">📘 ${escapeHtml(q.lessonTitle)}</p>
-                <div style="display:flex;gap:14px;font-size:12px;color:var(--text-500);font-weight:600;">
-                  <span>❓ ${q.questionCount} question${q.questionCount === 1 ? "" : "s"}</span>
-                  <span>🎯 Pass: ${q.passingScore}%</span>
-                  <span>⏱ ${q.questionCount} min</span>
-                </div>
-                <button class="btn btn-primary btn-sm" style="margin-top:auto;" tabindex="-1">${
-                  q.attempts ? "Try again →" : "Start quiz →"
-                }</button>
-              </div>`;
-            })
-            .join("")}
-        </div>
-      </div>`;
-    })
-    .join("");
+  // One grid for everything (server order: subject → lesson → quiz) so rows fill
+  // even when a subject has a single quiz; the subject is shown on each card.
+  list.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;">
+    ${shown
+      .map((q) => {
+        const status = quizStatus(q);
+        const st = getSubjectStyle(q.subjectName);
+        return `<div class="card card-interactive" style="padding:20px;display:flex;flex-direction:column;gap:10px;"
+            role="button" tabindex="0" onclick="startQuiz(${q.id})" onkeydown="if(event.key==='Enter')startQuiz(${q.id})">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:${st.color};background:${st.pale};padding:4px 10px;border-radius:99px;">
+              ${st.icon} ${escapeHtml(q.subjectName)}
+            </span>
+            <span class="badge ${status.cls}" style="white-space:nowrap;">${status.label}</span>
+          </div>
+          <h3 style="font-size:17px;line-height:1.35;">${escapeHtml(q.title)}</h3>
+          <p style="font-size:12px;color:var(--text-400);">📘 ${escapeHtml(q.lessonTitle)}</p>
+          <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--text-500);font-weight:600;">
+            <span>❓ ${q.questionCount} question${q.questionCount === 1 ? "" : "s"}</span>
+            <span>🎯 Pass: ${q.passingScore}%</span>
+            <span>⏱ ${q.questionCount} min</span>
+          </div>
+          <button class="btn btn-primary btn-sm" style="margin-top:auto;" tabindex="-1">${
+            q.attempts ? "Try again →" : "Start quiz →"
+          }</button>
+        </div>`;
+      })
+      .join("")}
+  </div>`;
 }
 
 function startQuiz(quizId) {
