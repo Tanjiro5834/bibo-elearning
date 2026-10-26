@@ -240,6 +240,7 @@ function clearAuth() {
   localStorage.removeItem("bibo_token");
   localStorage.removeItem("bibo_user");
   _stats = null; // never show the previous account's numbers
+  state.chatHistory = [];
 }
 
 // ── Router ─────────────────────────────────────────────────
@@ -2044,6 +2045,79 @@ function renderQuizQuestion() {
 /* ============================================================
       PAGE: AI TUTOR CHAT
       ============================================================ */
+/* Render an AI reply safely: escape everything first, then allow **bold**,
+   "- " / "1. " lists and paragraphs. No raw HTML from the model ever reaches the page. */
+function renderAiText(text) {
+  const inline = (t) => escapeHtml(t).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  const out = [];
+  let list = null; // { tag, items }
+  const flush = () => {
+    if (list) out.push(`<${list.tag} style="margin:6px 0 6px 20px;">${list.items.map((i) => `<li style="margin:3px 0;">${i}</li>`).join("")}</${list.tag}>`);
+    list = null;
+  };
+  for (const raw of String(text || "").split(/\r?\n/)) {
+    const line = raw.trim();
+    const bullet = line.match(/^[-*•]\s+(.*)$/);
+    const numbered = line.match(/^\d+[.)]\s+(.*)$/);
+    if (bullet || numbered) {
+      const tag = bullet ? "ul" : "ol";
+      if (!list || list.tag !== tag) {
+        flush();
+        list = { tag, items: [] };
+      }
+      list.items.push(inline((bullet || numbered)[1]));
+    } else if (!line) {
+      flush();
+    } else {
+      flush();
+      out.push(`<p style="margin:0 0 8px;">${inline(line)}</p>`);
+    }
+  }
+  flush();
+  return out.join("");
+}
+
+const CHAT_SUGGESTIONS = [
+  { label: "🧮 Explain fractions", prompt: "Can you explain fractions with an easy example?" },
+  { label: "✏️ Check my grammar", prompt: "Can you check the grammar of my sentence? Here it is: " },
+  { label: "🌍 Science trivia", prompt: "Tell me a fun science fact and explain why it is true." },
+  { label: "🇵🇭 Tagalog translation", prompt: "Paano sabihin sa Tagalog ang: " },
+];
+
+function aiAvatar() {
+  return `<div style="width:36px;height:36px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:white;font-size:16px;flex-shrink:0;">✦</div>`;
+}
+
+function aiBubble(html, time = "") {
+  return `<div style="display:flex;gap:12px;align-items:flex-start;">
+    ${aiAvatar()}
+    <div class="chat-bubble-ai" style="padding:14px 18px;max-width:72%;">
+      <div style="font-size:14px;color:var(--text-700);line-height:1.6;">${html}</div>
+      ${time ? `<p style="font-size:11px;color:var(--text-400);margin-top:6px;">${time}</p>` : ""}
+    </div>
+  </div>`;
+}
+
+const nowTime = () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+function chatGreetingHtml() {
+  const userName = state.user?.name || state.user?.firstName || state.user?.username || "there";
+  const firstName = escapeHtml(userName.split(" ")[0]);
+  return aiBubble(
+    `<p>Hello ${firstName}! 👋 I'm Bibo, your AI study buddy. Ask me about Math, Science, English, Filipino, or anything you're curious about. Pwede rin tayong mag-Tagalog!</p>`,
+    nowTime(),
+  );
+}
+
+function newChat() {
+  state.chatHistory = [];
+  const msgs = document.getElementById("chat-messages");
+  if (msgs) msgs.innerHTML = chatGreetingHtml();
+  const sugg = document.getElementById("chat-suggestions");
+  if (sugg) sugg.style.display = "flex";
+  document.getElementById("chat-input")?.focus();
+}
+
 function AIChatPage() {
   const userName =
     state.user?.name ||
@@ -2064,42 +2138,35 @@ function AIChatPage() {
           </div>
         </div>
       </div>
-      <button style="width:34px;height:34px;border-radius:50%;background:var(--bg);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-400);">${icons.history}</button>
+      <button class="btn btn-ghost btn-sm" onclick="newChat()" title="Start a new conversation">＋ New chat</button>
     </div>
 
     <!-- Messages -->
     <div id="chat-messages" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:16px;padding:4px 0 16px;">
-      <div style="display:flex;gap:12px;align-items:flex-start;">
-        <div style="width:36px;height:36px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:white;font-size:16px;flex-shrink:0;">✦</div>
-        <div class="chat-bubble-ai" style="padding:14px 18px;max-width:72%;">
-          <p style="font-size:14px;color:var(--text-700);line-height:1.6;">Hello ${firstName}! I'm Bibo, your AI study buddy. What are we learning today? I can help with Math, Science, or English!</p>
-          <p style="font-size:11px;color:var(--text-400);margin-top:6px;">10:00 AM</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Suggestions -->
-    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;flex-shrink:0;" id="chat-suggestions">
-      ${[
-        "🧮 Explain Fractions",
-        "✏️ Check my Grammar",
-        "🌍 Science Trivia",
-        "🇵🇭 Tagalog Translation",
-      ]
-        .map(
-          (q) =>
-            `<button class="btn btn-ghost btn-sm" style="border-radius:99px;font-size:12px;" onclick="sendSuggestion(this,'${q}')">${q}</button>`,
+      ${chatGreetingHtml()}
+      ${state.chatHistory
+        .map((t) =>
+          t.role === "user"
+            ? `<div style="display:flex;justify-content:flex-end;"><div class="chat-bubble-user" style="padding:12px 16px;max-width:72%;"><p style="font-size:14px;line-height:1.5;white-space:pre-wrap;">${escapeHtml(t.content)}</p></div></div>`
+            : aiBubble(renderAiText(t.content)),
         )
         .join("")}
     </div>
 
+    <!-- Suggestions -->
+    <div style="display:${state.chatHistory.length ? "none" : "flex"};flex-wrap:wrap;gap:8px;margin-bottom:12px;flex-shrink:0;" id="chat-suggestions">
+      ${CHAT_SUGGESTIONS.map(
+        (q, i) =>
+          `<button class="btn btn-ghost btn-sm" style="border-radius:99px;font-size:12px;" onclick="sendSuggestion(${i})">${q.label}</button>`,
+      ).join("")}
+    </div>
+
     <!-- Input -->
     <div style="display:flex;gap:10px;align-items:flex-end;flex-shrink:0;" class="card" style="padding:12px 16px;">
-      <textarea id="chat-input" placeholder="Ask Bibo anything..." rows="1"
+      <textarea id="chat-input" placeholder="Ask Bibo anything..." rows="1" maxlength="800"
         class="bibo-input" style="flex:1;resize:none;overflow:hidden;min-height:44px;max-height:120px;border-radius:99px;padding:10px 16px;line-height:1.5;"
         oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"
         onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}"></textarea>
-      <button style="color:var(--text-400);background:none;border:none;cursor:pointer;width:40px;height:40px;display:flex;align-items:center;justify-content:center;">${icons.mic}</button>
       <button id="chat-send" onclick="sendChat()" class="btn btn-primary btn-icon" style="width:44px;height:44px;border-radius:50%;padding:0;">${icons.send}</button>
     </div>
     <p style="font-size:11px;color:var(--text-400);text-align:center;margin-top:8px;flex-shrink:0;">⚠ Bibo can make mistakes. Always check with your teacher!</p>
@@ -2108,74 +2175,74 @@ function AIChatPage() {
 
 function bindAIChat() {}
 
-function sendSuggestion(btn, text) {
-  const suggestionsDiv = document.getElementById("chat-suggestions");
-  if (suggestionsDiv) suggestionsDiv.style.display = "none";
-  const cleanText = text.replace(/^[^\w]+/, "").replace(/^\S+\s/, "");
-  document.getElementById("chat-input").value = cleanText;
+function sendSuggestion(i) {
+  const { prompt } = CHAT_SUGGESTIONS[i];
+  const input = document.getElementById("chat-input");
+  input.value = prompt;
+  if (prompt.endsWith(": ")) {
+    // needs the student's own text (sentence to check / phrase to translate)
+    input.focus();
+    input.setSelectionRange(prompt.length, prompt.length);
+    return;
+  }
   sendChat();
 }
 
 async function sendChat() {
   const input = document.getElementById("chat-input");
+  const sendBtn = document.getElementById("chat-send");
   const msg = input.value.trim();
-  if (!msg) return;
+  if (!msg || sendBtn.disabled) return;
   input.value = "";
   input.style.height = "auto";
 
-  const msgs = document.getElementById("chat-messages");
-  const now = new Date().toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const sugg = document.getElementById("chat-suggestions");
+  if (sugg) sugg.style.display = "none";
 
-  msgs.innerHTML += `<div style="display:flex;justify-content:flex-end;">
-    <div class="chat-bubble-user" style="padding:12px 16px;max-width:72%;">
-      <p style="font-size:14px;line-height:1.5;">${escapeHtml(msg)}</p>
-    </div>
-  </div>`;
+  const msgs = document.getElementById("chat-messages");
+  msgs.insertAdjacentHTML(
+    "beforeend",
+    `<div style="display:flex;justify-content:flex-end;">
+      <div class="chat-bubble-user" style="padding:12px 16px;max-width:72%;">
+        <p style="font-size:14px;line-height:1.5;white-space:pre-wrap;">${escapeHtml(msg)}</p>
+      </div>
+    </div>`,
+  );
 
   const typingId = "typing-" + Date.now();
-  msgs.innerHTML += `<div style="display:flex;gap:12px;align-items:flex-start;" id="${typingId}">
-    <div style="width:36px;height:36px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:white;font-size:16px;flex-shrink:0;">✦</div>
-    <div class="chat-bubble-ai" style="padding:14px 18px;">
-      <div style="display:flex;gap:5px;align-items:center;">
-        <div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
+  msgs.insertAdjacentHTML(
+    "beforeend",
+    `<div style="display:flex;gap:12px;align-items:flex-start;" id="${typingId}">
+      ${aiAvatar()}
+      <div class="chat-bubble-ai" style="padding:14px 18px;">
+        <div style="display:flex;gap:5px;align-items:center;">
+          <div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
+        </div>
       </div>
-    </div>
-  </div>`;
+    </div>`,
+  );
   msgs.scrollTop = msgs.scrollHeight;
-  document.getElementById("chat-send").disabled = true;
+  sendBtn.disabled = true;
 
-  state.chatHistory.push({ role: "user", content: msg });
-
+  // Earlier turns only; the new message travels in "message"
+  const history = state.chatHistory.slice(-10);
   try {
-    const res = await api.aiChat({
-      message: msg,
-      history: state.chatHistory,
-    });
-    const reply =
-      res.reply || res.message || res.response || "I got your message!";
-    state.chatHistory.push({ role: "assistant", content: reply });
-    document.getElementById(typingId).outerHTML =
-      `<div style="display:flex;gap:12px;align-items:flex-start;">
-      <div style="width:36px;height:36px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:white;font-size:16px;flex-shrink:0;">✦</div>
-      <div class="chat-bubble-ai" style="padding:14px 18px;max-width:72%;">
-        <p style="font-size:14px;color:var(--text-700);line-height:1.6;">${escapeHtml(reply)}</p>
-        <p style="font-size:11px;color:var(--text-400);margin-top:6px;">${now}</p>
-      </div>
-    </div>`;
+    const res = await api.aiChat({ message: msg, history, mode: "chat" });
+    const reply = res.reply || "Hmm, I'm not sure. Can you ask in a different way?";
+    state.chatHistory.push({ role: "user", content: msg }, { role: "assistant", content: reply });
+    document.getElementById(typingId)?.remove();
+    msgs.insertAdjacentHTML("beforeend", aiBubble(renderAiText(reply), nowTime()));
   } catch (e) {
-    document.getElementById(typingId).outerHTML =
-      `<div style="display:flex;gap:12px;align-items:flex-start;">
-      <div style="width:36px;height:36px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:white;font-size:16px;flex-shrink:0;">✦</div>
-      <div class="chat-bubble-ai" style="padding:14px 18px;max-width:72%;">
-        <p style="font-size:14px;color:var(--accent-red);">Sorry, I couldn't connect. Please try again! 😅</p>
-      </div>
-    </div>`;
+    document.getElementById(typingId)?.remove();
+    msgs.insertAdjacentHTML(
+      "beforeend",
+      aiBubble(`<p style="color:var(--accent-red);">${escapeHtml(e.message || "Sorry, I couldn't connect. Please try again! 😅")}</p>`),
+    );
+    if (!input.value) input.value = msg; // let them resend without retyping
   }
-  document.getElementById("chat-send").disabled = false;
+  sendBtn.disabled = false;
   msgs.scrollTop = msgs.scrollHeight;
+  input.focus();
 }
 
 /* ============================================================
@@ -2186,7 +2253,8 @@ function ResearchPage() {
     {
       icon: icons.location,
       title: "Bacoor History",
-      desc: "Discover the 'City of Strike' and the history of Zapote Bridge.",
+      desc: "Discover the history of our city and the famous Zapote Bridge.",
+      query: "What is the history of Bacoor, Cavite?",
       color: "#F59E0B",
       pale: "#FEF3C7",
     },
@@ -2194,6 +2262,7 @@ function ResearchPage() {
       icon: icons.globe,
       title: "Space & Stars",
       desc: "How far is the moon? Learn about our amazing solar system.",
+      query: "How far is the moon, and what is in our solar system?",
       color: "#3B3FC4",
       pale: "#EEF0FF",
     },
@@ -2201,6 +2270,7 @@ function ResearchPage() {
       icon: icons.beaker,
       title: "Ocean Life",
       desc: "Meet the creatures living in the deep blue sea.",
+      query: "What animals live in the deep sea in the Philippines?",
       color: "#10B981",
       pale: "#D1FAE5",
     },
@@ -2208,6 +2278,7 @@ function ResearchPage() {
       icon: icons.book,
       title: "Ancient Giants",
       desc: "Explore the era of Dinosaurs and how they lived.",
+      query: "How did dinosaurs live, and why did they disappear?",
       color: "#8B5CF6",
       pale: "#EDE9FE",
     },
@@ -2220,7 +2291,7 @@ function ResearchPage() {
         <span style="position:absolute;left:18px;top:50%;transform:translateY(-50%);color:var(--text-400);">${icons.research}</span>
         <input type="text" id="research-input" placeholder="Search for history, science, or local facts..." 
           class="bibo-input" style="padding:16px 20px 16px 50px;border-radius:var(--radius-xl);font-size:15px;box-shadow:var(--shadow-md);"
-          onkeydown="if(event.key==='Enter')doResearch()" />
+          maxlength="300" onkeydown="if(event.key==='Enter')doResearch()" />
       </div>
       <div id="research-results" style="max-width:640px;margin:16px auto 0;"></div> 
     </div>
@@ -2236,7 +2307,8 @@ function ResearchPage() {
       ${topics
         .map(
           (t) => `
-        <div class="card card-interactive" style="padding:22px;">
+        <div class="card card-interactive" style="padding:22px;" role="button" tabindex="0"
+          data-q="${escapeHtml(t.query)}" onclick="researchTopic(this.dataset.q)" onkeydown="if(event.key==='Enter')researchTopic(this.dataset.q)">
           <div style="width:44px;height:44px;border-radius:12px;background:${t.pale};display:flex;align-items:center;justify-content:center;color:${t.color};margin-bottom:14px;">${t.icon}</div>
           <h3 style="font-size:16px;margin-bottom:8px;">${t.title}</h3>
           <p style="font-size:13px;color:var(--text-400);line-height:1.5;margin-bottom:14px;">${t.desc}</p>
@@ -2252,8 +2324,8 @@ function ResearchPage() {
       <div class="card" style="padding:28px;">
         <span style="display:inline-block;background:#FEF3C7;color:#92400E;font-size:11px;font-weight:700;letter-spacing:0.5px;padding:4px 12px;border-radius:99px;margin-bottom:12px;">Local Spotlight: Bacoor</span>
         <h2 style="font-size:20px;margin-bottom:8px;">The Battle of Zapote Bridge</h2>
-        <p style="font-size:13px;color:var(--text-400);line-height:1.6;margin-bottom:16px;">Learn about the pivotal battle that took place right here in Bacoor during the Philippine-American War in 1897.</p>
-        <button class="btn btn-primary btn-sm">Read More →</button>
+        <p style="font-size:13px;color:var(--text-400);line-height:1.6;margin-bottom:16px;">Zapote Bridge, between Bacoor and Las Piñas, saw major battles in 1897 during the Philippine Revolution against Spain, and again in 1899 during the Philippine–American War.</p>
+        <button class="btn btn-primary btn-sm" onclick="researchTopic('What happened at the battles of Zapote Bridge in Bacoor?')">Read More →</button>
       </div>
     </div>
 
@@ -4992,6 +5064,14 @@ function SettingsPageWrapper() {
   document.getElementById("page-container").innerHTML = SettingsPage();
 }
 
+function researchTopic(query) {
+  const input = document.getElementById("research-input");
+  if (!input) return;
+  input.value = query;
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  doResearch();
+}
+
 async function doResearch() {
   const input = document.getElementById("research-input");
   const query = input?.value.trim();
@@ -5004,19 +5084,16 @@ async function doResearch() {
         </div>`;
 
   try {
-    const res = await api.aiChat({
-      message: `Answer this research question clearly and simply for a young Filipino student aged 7-12: "${query}"`,
-      history: [],
-    });
-    const reply =
-      res.reply || res.message || res.response || "No answer found.";
+    const res = await api.aiChat({ message: query, history: [], mode: "research" });
+    const reply = res.reply || "No answer found.";
     results.innerHTML = `
             <div style="background:var(--card-bg);border-radius:var(--radius-lg);border:1px solid var(--border);padding:24px;box-shadow:var(--shadow-sm);">
               <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
                 <div style="width:28px;height:28px;border-radius:8px;background:var(--primary);display:flex;align-items:center;justify-content:center;color:white;font-size:14px;">✦</div>
                 <span style="font-size:13px;font-weight:700;color:var(--primary);">BIBO AI Answer</span>
               </div>
-              <p style="font-size:14px;color:var(--text-700);line-height:1.8;">${escapeHtml(reply)}</p>
+              <p style="font-size:12px;font-weight:700;color:var(--text-400);margin-bottom:8px;">${escapeHtml(query)}</p>
+              <div style="font-size:14px;color:var(--text-700);line-height:1.8;text-align:left;">${renderAiText(reply)}</div>
               <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
                 <span style="font-size:11px;color:var(--text-400);">⚠ Always verify with your teacher</span>
                 <button onclick="document.getElementById('research-results').innerHTML='';document.getElementById('research-input').value='';" 
@@ -5024,7 +5101,7 @@ async function doResearch() {
               </div>
             </div>`;
   } catch (e) {
-    results.innerHTML = `<div style="background:#FEE2E2;border-radius:var(--radius-lg);padding:16px;font-size:13px;color:#991B1B;">⚠️ ${e.message}</div>`;
+    results.innerHTML = `<div style="background:#FEE2E2;border-radius:var(--radius-lg);padding:16px;font-size:13px;color:#991B1B;">⚠️ ${escapeHtml(e.message)}</div>`;
   }
 }
 

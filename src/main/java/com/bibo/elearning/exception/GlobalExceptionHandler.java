@@ -7,6 +7,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import com.bibo.elearning.ai.exception.AiException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -29,6 +30,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<Map<String, String>> handleTooLarge(MaxUploadSizeExceededException ex) {
         return body(HttpStatus.valueOf(413), "Image is too large (max 5 MB)");
+    }
+
+    @ExceptionHandler(AiException.class)
+    public ResponseEntity<Map<String, String>> handleAi(AiException ex) {
+        return body(ex.getStatus(), ex.getMessage());
     }
 
     @ExceptionHandler(IllegalStateException.class)
