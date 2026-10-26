@@ -86,6 +86,8 @@ const api = {
 
   aiChat: (data) => api.request("POST", "/ai/chat", data, state.token),
 
+  getAvailableQuizzes: () => api.request("GET", "/quiz/available", null, state.token),
+  getQuizToTake: (quizId) => api.request("GET", `/quiz/${quizId}/take`, null, state.token),
   getQuizzesByLesson: (lessonId) =>
     api.request("GET", `/quiz/lesson/${lessonId}`, null, state.token),
 
@@ -1795,6 +1797,129 @@ function GamesPage() {
 /* ============================================================
    PAGE: QUIZ
    ============================================================ */
+/* ── Quiz picker: every quiz from published lessons, with the student's own status ── */
+function QuizPickerPage() {
+  return `<div class="page" style="max-width:900px;margin:0 auto;">
+    <div class="mb-24">
+      <h1 style="font-size:26px;margin-bottom:4px;">Quizzes 📝</h1>
+      <p style="color:var(--text-400);font-size:14px;">Pick a quiz to test what you've learned.</p>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;" id="quiz-filters"></div>
+    <div id="quiz-picker">${Loading("Loading quizzes...")}</div>
+  </div>`;
+}
+
+let _availableQuizzes = [];
+let _quizFilter = "all";
+
+async function bindQuizPicker() {
+  try {
+    _availableQuizzes = await api.getAvailableQuizzes();
+    renderQuizPicker();
+  } catch (e) {
+    const el = document.getElementById("quiz-picker");
+    if (el) el.innerHTML = ErrorState(e.message);
+  }
+}
+
+function setQuizFilter(f) {
+  _quizFilter = f;
+  renderQuizPicker();
+}
+
+function quizStatus(q) {
+  if (q.bestScore === null || q.bestScore === undefined) return { label: "New", cls: "badge-blue" };
+  if (q.passed) return { label: `✓ Passed · best ${q.bestScore}%`, cls: "badge-green" };
+  return { label: `Best ${q.bestScore}% · try again`, cls: "badge-orange" };
+}
+
+function renderQuizPicker() {
+  const list = document.getElementById("quiz-picker");
+  const filters = document.getElementById("quiz-filters");
+  if (!list) return;
+
+  if (!_availableQuizzes.length) {
+    filters.innerHTML = "";
+    list.innerHTML = EmptyState("📭", "No quizzes yet", "Your teacher hasn't published any quizzes. Check back soon!");
+    return;
+  }
+
+  const counts = {
+    all: _availableQuizzes.length,
+    todo: _availableQuizzes.filter((q) => !q.passed).length,
+    passed: _availableQuizzes.filter((q) => q.passed).length,
+  };
+  filters.innerHTML = [
+    ["all", "All"],
+    ["todo", "To do"],
+    ["passed", "Passed"],
+  ]
+    .map(
+      ([key, label]) =>
+        `<button class="btn btn-sm ${_quizFilter === key ? "btn-primary" : "btn-ghost"}" style="border-radius:99px;" onclick="setQuizFilter('${key}')">${label} (${counts[key]})</button>`,
+    )
+    .join("");
+
+  const shown = _availableQuizzes.filter((q) =>
+    _quizFilter === "todo" ? !q.passed : _quizFilter === "passed" ? q.passed : true,
+  );
+  if (!shown.length) {
+    list.innerHTML = EmptyState(
+      _quizFilter === "passed" ? "🎯" : "🎉",
+      _quizFilter === "passed" ? "No passed quizzes yet" : "All quizzes passed!",
+      _quizFilter === "passed" ? "Pass a quiz and it will show up here." : "Great job! Try one again to beat your best score.",
+    );
+    return;
+  }
+
+  // group by subject, keeping server order (subject → lesson → quiz)
+  const groups = [];
+  for (const q of shown) {
+    let g = groups.find((x) => x.subject === q.subjectName);
+    if (!g) groups.push((g = { subject: q.subjectName, items: [] }));
+    g.items.push(q);
+  }
+
+  list.innerHTML = groups
+    .map((g) => {
+      const st = getSubjectStyle(g.subject);
+      return `<div style="margin-bottom:24px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <span style="font-size:18px;">${st.icon}</span>
+          <span style="font-weight:800;color:${st.color};">${escapeHtml(g.subject)}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;">
+          ${g.items
+            .map((q) => {
+              const status = quizStatus(q);
+              return `<div class="card card-interactive" style="padding:18px;display:flex;flex-direction:column;gap:10px;"
+                  role="button" tabindex="0" onclick="startQuiz(${q.id})" onkeydown="if(event.key==='Enter')startQuiz(${q.id})">
+                <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;">
+                  <h3 style="font-size:16px;line-height:1.3;">${escapeHtml(q.title)}</h3>
+                  <span class="badge ${status.cls}" style="white-space:nowrap;">${status.label}</span>
+                </div>
+                <p style="font-size:12px;color:var(--text-400);">📘 ${escapeHtml(q.lessonTitle)}</p>
+                <div style="display:flex;gap:14px;font-size:12px;color:var(--text-500);font-weight:600;">
+                  <span>❓ ${q.questionCount} question${q.questionCount === 1 ? "" : "s"}</span>
+                  <span>🎯 Pass: ${q.passingScore}%</span>
+                  <span>⏱ ${q.questionCount} min</span>
+                </div>
+                <button class="btn btn-primary btn-sm" style="margin-top:auto;" tabindex="-1">${
+                  q.attempts ? "Try again →" : "Start quiz →"
+                }</button>
+              </div>`;
+            })
+            .join("")}
+        </div>
+      </div>`;
+    })
+    .join("");
+}
+
+function startQuiz(quizId) {
+  navigate("quiz", { selectedQuizId: quizId });
+}
+
 function QuizPage() {
   window._quizState = {
     quiz: null,
@@ -1815,6 +1940,7 @@ function QuizPage() {
       <!-- Header -->
       <div class="flex-between mb-16">
         <div style="display:flex;align-items:center;gap:12px;">
+          <button class="btn btn-ghost btn-sm" onclick="navigate('quiz')" title="Back to all quizzes">← Quizzes</button>
           <span style="font-size:13px;font-weight:700;color:var(--text-900);padding:6px 14px;background:var(--card-bg);border:1px solid var(--border);border-radius:99px;" id="quiz-title">QUIZ</span>
           <span style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--text-500);" id="quiz-timer">⏱ 5:00</span>
         </div>
@@ -1887,24 +2013,22 @@ function quizNext() {
   renderQuizQuestion();
 }
 
-async function bindQuiz() {
+async function bindQuiz(quizId) {
   const qs = window._quizState;
-  const lessonId = state.currentLessonId || 1;
 
   try {
-    const quizzes = await api.getQuizzesByLesson(lessonId);
-
-    if (!quizzes || quizzes.length === 0) {
+    const quiz = await api.getQuizToTake(quizId);
+    if (!document.getElementById("quiz-loading")) return; // navigated away
+    if (!quiz.questions?.length) {
       document.getElementById("quiz-loading").innerHTML = `
         <div style="text-align:center;padding:48px 0;">
           <div style="font-size:48px;margin-bottom:12px;">📭</div>
-          <h3 style="margin-bottom:8px;">No quiz yet</h3>
-          <p style="color:var(--text-400);">This lesson doesn't have a quiz attached.</p>
+          <h3 style="margin-bottom:8px;">This quiz has no questions yet</h3>
+          <button class="btn btn-ghost" style="margin-top:16px;" onclick="navigate('quiz')">← All quizzes</button>
         </div>`;
       return;
     }
 
-    const quiz = quizzes[0];
     qs.quiz = quiz;
     qs.questions = quiz.questions;
     qs.selectedChoiceIds = new Array(quiz.questions.length).fill(null);
@@ -1922,8 +2046,8 @@ async function bindQuiz() {
       <div style="text-align:center;padding:48px 0;">
         <div style="font-size:48px;margin-bottom:12px;">⚠️</div>
         <p style="font-weight:700;color:var(--accent-red);">Failed to load quiz</p>
-        <p style="font-size:13px;color:var(--text-400);margin-top:6px;">${e.message}</p>
-        <button class="btn btn-ghost" style="margin-top:16px;" onclick="navigate('dashboard')">Go to Dashboard</button>
+        <p style="font-size:13px;color:var(--text-400);margin-top:6px;">${escapeHtml(e.message)}</p>
+        <button class="btn btn-ghost" style="margin-top:16px;" onclick="navigate('quiz')">← All quizzes</button>
       </div>`;
   }
 }
@@ -1992,8 +2116,8 @@ async function quizSubmit() {
         </div>
 
         <div style="display:flex;gap:12px;justify-content:center;">
-          <button class="btn btn-primary" onclick="navigate('quiz', { currentLessonId: ${state.currentLessonId || 1} })">Try Again</button>
-          <button class="btn btn-ghost" onclick="navigate('dashboard')">Dashboard</button>
+          <button class="btn btn-primary" onclick="startQuiz(${qs.quiz.id})">Try Again</button>
+          <button class="btn btn-ghost" onclick="navigate('quiz')">All Quizzes</button>
         </div>
       </div>`;
   } catch (e) {
@@ -2002,7 +2126,7 @@ async function quizSubmit() {
         <div style="font-size:48px;margin-bottom:12px;">⚠️</div>
         <p style="font-weight:700;color:var(--accent-red);">Submission failed</p>
         <p style="font-size:13px;color:var(--text-400);margin-top:6px;">${e.message}</p>
-        <button class="btn btn-ghost" style="margin-top:16px;" onclick="navigate('quiz')">Try Again</button>
+        <button class="btn btn-ghost" style="margin-top:16px;" onclick="startQuiz(${qs.quiz.id})">Try Again</button>
       </div>`;
   }
 }
@@ -2027,7 +2151,7 @@ function renderQuizQuestion() {
       (c, i) => `
     <div class="quiz-option" id="opt-${i}" onclick="quizSelect(${i}, ${c.id})">
       <div class="quiz-option-key" id="opt-key-${i}">${keys[i]}</div>
-      <span>${c.choiceText}</span>
+      <span>${escapeHtml(c.choiceText)}</span>
     </div>`,
     )
     .join("");
@@ -5050,8 +5174,15 @@ function QuizPageWrapper() {
   if (window._quizState?.timerInterval) {
     clearInterval(window._quizState.timerInterval);
   }
-  document.getElementById("page-container").innerHTML = QuizPage();
-  bindQuiz();
+  const quizId = state.selectedQuizId;
+  state.selectedQuizId = null;
+  if (quizId) {
+    document.getElementById("page-container").innerHTML = QuizPage();
+    bindQuiz(quizId);
+  } else {
+    document.getElementById("page-container").innerHTML = QuizPickerPage();
+    bindQuizPicker();
+  }
 }
 function ResearchPageWrapper() {
   document.getElementById("page-container").innerHTML = ResearchPage();

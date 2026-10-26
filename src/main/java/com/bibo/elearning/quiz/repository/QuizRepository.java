@@ -11,5 +11,15 @@ public interface QuizRepository extends JpaRepository<Quiz, Long> {
     
     @Query("SELECT q FROM Quiz q LEFT JOIN FETCH q.questions WHERE q.lesson.id = :lessonId")
     List<Quiz> findByLessonIdWithQuestions(@Param("lessonId") Long lessonId);
+
+    /** Quizzes students may take: lesson published and subject active. */
+    @Query("""
+        SELECT q FROM Quiz q
+        JOIN FETCH q.lesson l
+        JOIN FETCH l.subject s
+        WHERE l.published = true AND s.active = true
+        ORDER BY s.name, l.id, q.id
+        """)
+    List<Quiz> findAvailableForStudents();
 }
 

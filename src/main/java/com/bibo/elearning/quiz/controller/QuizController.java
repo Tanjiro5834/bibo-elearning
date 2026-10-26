@@ -6,6 +6,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import com.bibo.elearning.quiz.dto.response.QuizEditResponse;
+import com.bibo.elearning.quiz.dto.response.AvailableQuizResponse;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -56,6 +57,18 @@ public class QuizController {
     @GetMapping("/lesson/{lessonId}")
     public ResponseEntity<List<QuizResponse>> getByLesson(@PathVariable Long lessonId) {
         return ResponseEntity.ok(quizService.getQuizzesByLesson(lessonId));
+    }
+
+    @GetMapping("/available")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<List<AvailableQuizResponse>> available(@AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(quizService.getAvailableQuizzes(userDetails.getUsername()));
+    }
+
+    @GetMapping("/{quizId}/take")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<QuizResponse> take(@PathVariable Long quizId) {
+        return ResponseEntity.ok(quizService.getQuizForStudent(quizId));
     }
 
     @GetMapping("/{quizId}/edit")

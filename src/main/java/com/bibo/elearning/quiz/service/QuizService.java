@@ -11,6 +11,7 @@ import com.bibo.elearning.quiz.dto.request.CreateQuizRequest;
 import com.bibo.elearning.quiz.dto.request.SubmitQuizRequest;
 import com.bibo.elearning.quiz.dto.response.QuizResponse;
 import com.bibo.elearning.quiz.dto.response.QuizEditResponse;
+import com.bibo.elearning.quiz.dto.response.AvailableQuizResponse;
 import com.bibo.elearning.quiz.dto.request.CreateQuestionRequest;
 import com.bibo.elearning.quiz.dto.request.CreateChoiceRequest;
 import java.util.ArrayList;
@@ -222,5 +223,45 @@ public class QuizService {
             questions.add(question);
         }
         return questions;
+    }
+
+    // ── Student quiz picker ──
+
+    /** Every quiz the student can take, with their own attempt count, best score, and pass status. */
+    @Transactional(readOnly = true)
+    public List<AvailableQuizResponse> getAvailableQuizzes(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        StudentProfile student = studentProfileRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new IllegalStateException("Student profile not found"));
+
+        java.util.Map<Long, List<QuizAttempt>> attemptsByQuiz = quizAttemptRepository.findByStudentId(student.getId())
+                .stream()
+                .filter(a -> a.getQuiz() != null)
+                .collect(java.util.stream.Collectors.groupingBy(a -> a.getQuiz().getId()));
+
+        return quizRepository.findAvailableForStudents().stream()
+                .filter(q -> q.getQuestions() != null && !q.getQuestions().isEmpty())
+                .map(q -> {
+                    List<QuizAttempt> mine = attemptsByQuiz.getOrDefault(q.getId(), List.of());
+                    Integer best = mine.stream().map(QuizAttempt::getScore).max(Integer::compare).orElse(null);
+                    boolean passed = mine.stream().anyMatch(QuizAttempt::isPassed);
+                    return new AvailableQuizResponse(q.getId(), q.getTitle(), q.getDescription(),
+                            q.getLesson().getId(), q.getLesson().getTitle(), q.getLesson().getSubject().getName(),
+                            q.getQuestions().size(), q.getPassingScore(), mine.size(), best, passed);
+                })
+                .toList();
+    }
+
+    /** A single quiz for a student to take (choices without answers); hidden if its lesson isn't published. */
+    @Transactional(readOnly = true)
+    public QuizResponse getQuizForStudent(Long quizId) {
+        Quiz quiz = findQuiz(quizId);
+        Lesson lesson = quiz.getLesson();
+        if (lesson == null || !Boolean.TRUE.equals(lesson.getPublished())
+                || lesson.getSubject() == null || !lesson.getSubject().isActive()) {
+            throw new IllegalArgumentException("Quiz not available");
+        }
+        return quizMapper.toResponse(quiz);
     }
 }
