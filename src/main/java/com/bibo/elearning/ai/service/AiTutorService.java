@@ -76,7 +76,7 @@ public class AiTutorService {
 
     public AiTutorService(
             @Value("${groq.api.key:}") String apiKey,
-            @Value("${groq.model:llama-3.3-70b-versatile}") String model) {
+            @Value("${groq.model:openai/gpt-oss-120b}") String model) {
         this.apiKey = apiKey;
         this.model = model;
         // Own client with timeouts: a slow AI call must never hang a request thread forever.
@@ -97,12 +97,17 @@ public class AiTutorService {
         }
 
         boolean research = "research".equalsIgnoreCase(request.mode());
-        Map<String, Object> body = Map.of(
+        Map<String, Object> body = new java.util.HashMap<>(Map.of(
                 "model", model,
                 "messages", buildMessages(research ? RESEARCH_PROMPT : TUTOR_PROMPT,
                         research ? List.of() : request.history(), message),
                 "temperature", research ? 0.4 : 0.6,
-                "max_tokens", research ? 700 : 500);
+                // Reasoning models spend part of this budget "thinking" before answering,
+                // so it must be well above the visible answer length.
+                "max_tokens", research ? 1600 : 1200));
+        if (isReasoningModel(model)) {
+            body.put("reasoning_effort", "low"); // kids' Q&A doesn't need deep reasoning; faster + cheaper
+        }
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -114,7 +119,14 @@ public class AiTutorService {
             return extractReply(response);
         } catch (RestClientResponseException e) {
             int status = e.getStatusCode().value();
-            log.warn("Groq API error {}: {}", status, e.getResponseBodyAsString());
+            String detail = e.getResponseBodyAsString();
+            log.warn("Groq API error {} (model={}): {}", status, model, detail);
+            if (detail != null && (detail.contains("model_decommissioned") || detail.contains("model_not_found"))) {
+                log.error("Groq model '{}' is unavailable. Set GROQ_MODEL to a current model "
+                        + "(see https://console.groq.com/docs/models).", model);
+                throw new AiException(HttpStatus.SERVICE_UNAVAILABLE,
+                        "Bibo AI needs an update. Please tell your teacher. 🛠️");
+            }
             if (status == 429) {
                 throw new AiException(HttpStatus.TOO_MANY_REQUESTS,
                         "Bibo is very busy right now. 🐢 Please try again in a minute.");
@@ -129,6 +141,10 @@ public class AiTutorService {
             throw new AiException(HttpStatus.GATEWAY_TIMEOUT,
                     "Bibo is taking too long to answer. Check your internet and try again. 📶");
         }
+    }
+
+    static boolean isReasoningModel(String model) {
+        return model != null && model.startsWith("openai/gpt-oss");
     }
 
     /** System prompt + trimmed history (user/assistant only) + the new message. */
@@ -159,6 +175,7 @@ public class AiTutorService {
             Map msg = (Map) ((Map) choices.get(0)).get("message");
             String content = (String) msg.get("content");
             if (content != null && !content.isBlank()) return content.trim();
+            log.warn("Groq returned no answer text (finish_reason={})", ((Map) choices.get(0)).get("finish_reason"));
         } catch (RuntimeException ignored) {
             // fall through to a friendly error
         }

@@ -57,9 +57,16 @@ class AiTutorServiceTest {
 
     @Test
     void chat_withoutKey_is503WithFriendlyMessage() {
-        var service = new AiTutorService("", "llama-3.3-70b-versatile");
+        var service = new AiTutorService("", "openai/gpt-oss-120b");
         assertThatThrownBy(() -> service.chat(new ChatRequest("hi", List.of(), "chat")))
                 .isInstanceOf(AiException.class)
                 .satisfies(e -> assertThat(((AiException) e).getStatus()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE));
+    }
+
+    @Test
+    void reasoningModelsAreDetected() {
+        assertThat(AiTutorService.isReasoningModel("openai/gpt-oss-120b")).isTrue();
+        assertThat(AiTutorService.isReasoningModel("openai/gpt-oss-20b")).isTrue();
+        assertThat(AiTutorService.isReasoningModel("qwen/qwen3.8-27b")).isFalse();
     }
 }
