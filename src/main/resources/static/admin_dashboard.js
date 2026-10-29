@@ -104,6 +104,12 @@ const TEACHER_NAV = [
     section: "Users",
   },
   {
+    id: "game-access",
+    label: "Game Access",
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="4"/><path d="M6 12h4m-2-2v4"/><circle cx="16" cy="11" r="1"/><circle cx="18" cy="13" r="1"/></svg>',
+    section: "Users",
+  },
+  {
     id: "teacher-review-requests",
     label: "Review Requests",
     icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
@@ -167,6 +173,7 @@ async function apiFetch(method, path, body = null) {
 const PAGE_MAP = {
   // Admin pages
   "admin-dashboard": adminDashboard,
+  "game-access": gameAccess,
   "manage-accounts": manageAccounts,
   reports: reports,
   analytics: analytics,
@@ -1283,6 +1290,71 @@ async function updateTeacherReviewStatus(id, status) {
     await teacherReviewRequests();
   } catch (e) {
     showToast(e.message, "⚠️");
+  }
+}
+
+// ── GAME ACCESS ───────────────────────────────────────────────
+const GAMES = [
+  { id: "word", label: "Word Scramble" },
+  { id: "math", label: "Math Ninja" },
+  { id: "logic", label: "Logic Puzzles" },
+  { id: "eco", label: "Eco-Sorter" },
+  { id: "memory", label: "Memory Match" },
+];
+
+async function gameAccess() {
+  document.getElementById("page-container").innerHTML = `
+    <div class="page">
+      ${PageHeader("Game Access", "Choose which games each student can play", "", "")}
+      <div id="game-access-list">${Loading()}</div>
+    </div>`;
+
+  try {
+    const [students, perms] = await Promise.all([
+      apiFetch("GET", "/teacher/students"),
+      apiFetch("GET", "/teacher/games/permissions"),
+    ]);
+    const el = document.getElementById("game-access-list");
+    if (!students?.length) {
+      el.innerHTML = Empty("🎮", "No students yet", "Students will appear here.");
+      return;
+    }
+
+    el.innerHTML = `
+      <div class="card" style="overflow-x:auto;">
+        <table class="data-table">
+          <thead><tr><th>Student</th>${GAMES.map((g) => `<th style="text-align:center;">${g.label}</th>`).join("")}</tr></thead>
+          <tbody>
+            ${students.map((s) => {
+              const allowed = perms?.[s.id] || [];
+              const name = [s.firstName, s.lastName].filter(Boolean).join(" ") || "@" + s.username;
+              return `<tr>
+                <td style="font-weight:600;">${name}</td>
+                ${GAMES.map((g) => `<td style="text-align:center;">
+                  <input type="checkbox" ${allowed.includes(g.id) ? "checked" : ""}
+                         onchange="toggleGameAccess(${s.id}, '${g.id}', this)">
+                </td>`).join("")}
+              </tr>`;
+            }).join("")}
+          </tbody>
+        </table>
+      </div>`;
+  } catch (e) {
+    document.getElementById("game-access-list").innerHTML =
+      `<div style="color:var(--accent-red);padding:20px;">⚠️ ${e.message}</div>`;
+  }
+}
+
+async function toggleGameAccess(studentId, gameKey, checkbox) {
+  checkbox.disabled = true;
+  try {
+    await apiFetch("PUT", `/teacher/students/${studentId}/games/${gameKey}`, { allowed: checkbox.checked });
+    showToast(checkbox.checked ? "Game unlocked" : "Game locked", checkbox.checked ? "🔓" : "🔒");
+  } catch (e) {
+    checkbox.checked = !checkbox.checked;   // ibalik kapag nag-fail ang request
+    showToast(e.message, "⚠️");
+  } finally {
+    checkbox.disabled = false;
   }
 }
 

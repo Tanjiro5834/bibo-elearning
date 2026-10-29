@@ -1,10 +1,4 @@
-/* ============================================================
-   BIBO SPA — Redesigned UI (backend contract unchanged)
-   ============================================================ */
-
-// ── API Layer (unchanged) ──────────────────────────────────
 const API_BASE = "/api";
-//const API_BASE = "";
 
 const api = {
   async request(method, path, body = null, token = null) {
@@ -120,6 +114,8 @@ const api = {
       null,
       state.token,
     ),
+
+    getMyGames: () => api.request("GET", "/student/games", null, state.token),
 };
 
 // ── Theme (light / dark) ───────────────────────────────────
@@ -262,7 +258,7 @@ function render() {
   const app = document.getElementById("app");
 
   if (!state.token) {
-    app.innerHTML = `<div id="app-auth">${LoginPage()}</div>`;
+    app.innerHTML = `<div id="app-auth">${LoginSlideshow()}${LoginPage()}</div>`;
     bindLogin();
     return;
   }
@@ -543,9 +539,14 @@ function SidebarHtml() {
   </nav>`;
 }
 
-/* ============================================================
-   PAGE: LOGIN
-   ============================================================ */
+function LoginSlideshow() {
+  return `<div class="login-bg" aria-hidden="true">
+    <div class="slide" style="background-image:url('images/login1.jpg')"></div>
+    <div class="slide" style="background-image:url('images/login2.jpg')"></div>
+    <div class="slide" style="background-image:url('images/login3.jpg')"></div>
+  </div>`;
+}
+
 function LoginPage() {
   return `<div class="auth-card page" id="login-card">
     <!-- Logo -->
@@ -1753,7 +1754,7 @@ function GamesPage() {
     </div>
 
     <!-- Featured hero -->
-    <div style="background:linear-gradient(135deg,#3730A3 0%,#4F46E5 50%,#6366F1 100%);border-radius:var(--radius-xl);padding:36px;margin-bottom:28px;position:relative;overflow:hidden;cursor:pointer;" onclick="launchGame('memory')">
+    <div class="${allowedGames.has("memory") ? "" : "game-locked"}" style="background:linear-gradient(135deg,#3730A3 0%,#4F46E5 50%,#6366F1 100%);border-radius:var(--radius-xl);padding:36px;margin-bottom:28px;position:relative;overflow:hidden;cursor:pointer;" onclick="launchGame('memory')">
       <div style="position:absolute;right:-10px;top:50%;transform:translateY(-50%);opacity:0.15;">
         <svg viewBox="0 0 200 200" width="220" height="220" fill="none" stroke="white" stroke-width="6">
           <rect x="20" y="60" width="160" height="100" rx="30"/>
@@ -1775,7 +1776,7 @@ function GamesPage() {
       ${games
         .map(
           (g) => `
-        <div class="card card-interactive" style="padding:20px;display:flex;flex-direction:column;" onclick="launchGame('${g.id}')">
+        <div class="card card-interactive ${allowedGames.has(g.id) ? "" : "game-locked"}" style="padding:20px;display:flex;flex-direction:column;" onclick="launchGame('${g.id}')">
           <div style="width:48px;height:48px;border-radius:12px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:14px;">${g.icon}</div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
             <span style="font-size:10px;font-weight:700;color:var(--text-400);text-transform:uppercase;letter-spacing:0.5px;">${g.subj}</span>
@@ -3387,14 +3388,20 @@ const ENCOURAGEMENTS = [
   "🎉 I'm proud of you!",
 ];
 
-/* ============================================================
-   PLACEHOLDER PAGES (navigated from sidebar)
-   ============================================================ */
-function GamesPageWrapper() {
+let allowedGames = new Set();
+
+async function GamesPageWrapper() {
+  try { allowedGames = new Set(await api.getMyGames()); }
+  catch { allowedGames = new Set(); } 
   document.getElementById("page-container").innerHTML = GamesPage();
 }
 
 function launchGame(id) {
+  if (!allowedGames.has(id)) {
+    showToast("Ask your teacher to unlock this game!", "🔒");
+    return;
+  }
+
   if (id === "word") {
     document.getElementById("page-container").innerHTML = WordScramblePage();
     bindWordScramble();
@@ -3414,9 +3421,6 @@ function launchGame(id) {
   }
 }
 
-/* ============================================================
-        GAME: WORD SCRAMBLE
-        ============================================================ */
 const WORD_SCRAMBLE_WORDS = [
   { word: "BAHAY", hint: "Where you live", category: "Filipino" },
   {
@@ -5232,7 +5236,7 @@ function render() {
 
   if (!state.token) {
     app.innerHTML = "";
-    app.innerHTML = `<div id="app-auth">${LoginPage()}</div>`;
+    app.innerHTML = `<div id="app-auth">${LoginSlideshow()}${LoginPage()}</div>`;
     bindLogin();
     return;
   }

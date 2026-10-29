@@ -1,5 +1,6 @@
 package com.bibo.elearning.teacher.controller;
 
+import com.bibo.elearning.game.service.GamePermissionService;
 import com.bibo.elearning.teacher.dto.response.ReviewRequestResponse;
 import com.bibo.elearning.teacher.dto.response.StudentSummaryResponse;
 import com.bibo.elearning.teacher.dto.response.TeacherProfileResponse;
@@ -13,6 +14,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/teacher")
@@ -21,6 +23,7 @@ import java.util.List;
 public class TeacherController {
 
     private final TeacherService teacherService;
+    private final GamePermissionService gamePermissionService;
 
     @GetMapping("/me")
     public ResponseEntity<TeacherProfileResponse> getProfile(
@@ -43,6 +46,15 @@ public class TeacherController {
         return ResponseEntity.ok(requests);
     }
 
+    @PutMapping("/students/{studentId}/games/{gameKey}")
+    public ResponseEntity<Void> setGameAccess(@AuthenticationPrincipal UserDetails userDetails,
+                                            @PathVariable Long studentId, @PathVariable String gameKey,
+                                            @RequestBody Map<String, Boolean> body) {
+        gamePermissionService.setAccess(userDetails.getUsername(), studentId, gameKey,
+                                        body.getOrDefault("allowed", false));
+        return ResponseEntity.noContent().build();
+    }
+
     @PatchMapping("/review-requests/{id}/status")
     public ResponseEntity<?> updateReviewStatus(
             @AuthenticationPrincipal UserDetails userDetails,
@@ -50,5 +62,10 @@ public class TeacherController {
             @RequestParam @NotBlank String status) {
         teacherService.updateReviewStatus(userDetails.getUsername(), id, status);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/games/permissions")
+    public ResponseEntity<Map<Long, List<String>>> gamePermissions() {
+        return ResponseEntity.ok(gamePermissionService.allAllowed());
     }
 }
