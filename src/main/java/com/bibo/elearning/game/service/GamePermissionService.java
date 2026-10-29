@@ -17,6 +17,8 @@ import com.bibo.elearning.game.repository.GamePermissionRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.security.access.AccessDeniedException;
+
 @Service
 @RequiredArgsConstructor 
 public class GamePermissionService {
@@ -54,5 +56,10 @@ public class GamePermissionService {
         return repo.findByAllowedTrue().stream()
                 .collect(Collectors.groupingBy(GamePermission::getStudentId,
                         Collectors.mapping(GamePermission::getGameKey, Collectors.toList())));
+    }
+
+    public void assertCanPlay(Long studentId, String gameKey) {
+        if (!repo.existsByStudentIdAndGameKeyAndAllowedTrue(studentId, gameKey))
+            throw new AccessDeniedException("This game is locked by your teacher");
     }
 }

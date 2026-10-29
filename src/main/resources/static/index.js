@@ -107,6 +107,9 @@ const api = {
 
   getStats: () => api.request("GET", "/student/stats", null, state.token),
 
+  saveGameScore: (gameKey, score) =>
+    api.request("POST", `/student/games/${gameKey}/score`, { score }, state.token),
+
   getLeaderboard: (limit = 5) =>
     api.request(
       "GET",
@@ -2467,6 +2470,7 @@ function AchievementsPage() {
       <div class="card" style="padding:16px 24px;text-align:center;">
         <div style="display:flex;gap:32px;">
           <div><p style="font-size:10px;font-weight:700;color:var(--text-400);text-transform:uppercase;margin-bottom:2px;">Total XP</p><p id="ach-xp" style="font-family:var(--font-display);font-size:22px;font-weight:900;color:var(--primary);">—</p></div>
+          <div><p style="font-size:10px;font-weight:700;color:var(--text-400);text-transform:uppercase;margin-bottom:2px;">Game Points</p><p id="ach-gp" style="font-family:var(--font-display);font-size:22px;font-weight:900;color:var(--accent-green);">—</p></div>
           <div><p style="font-size:10px;font-weight:700;color:var(--text-400);text-transform:uppercase;margin-bottom:2px;">Rank</p><p id="ach-rank" style="font-family:var(--font-display);font-size:22px;font-weight:900;color:var(--accent-orange);">—</p></div>
         </div>
       </div>
@@ -2488,6 +2492,14 @@ function AchievementsPage() {
           </div>
         </div>
         <div id="ach-badges" class="grid-2">${Loading()}</div>
+
+        <div class="section-header" style="margin-top:28px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:20px;">🏆</span>
+            <span class="section-title">Game Trophies</span>
+          </div>
+        </div>
+        <div id="ach-trophies" class="grid-2">${Loading()}</div>
       </div>
 
       <div class="card" style="padding:20px;">
@@ -2508,25 +2520,8 @@ function AchievementsPage() {
 
 let _showFullRankings = false;
 
-async function bindAchievements() {
-  const $ = (id) => document.getElementById(id);
-  _showFullRankings = false;
-
-  try {
-    const [st, lb] = await Promise.all([loadStats(), api.getLeaderboard(5)]);
-    if (!$("ach-xp")) return; // navigated away
-
-    $("ach-xp").textContent = st.xp.toLocaleString();
-    $("ach-rank").textContent = lb.myRank ? `#${lb.myRank}` : "—";
-    $("ach-streak").textContent =
-      `${st.streak} ${st.streak === 1 ? "Day" : "Days"}`;
-    $("ach-lessons").textContent = st.lessonsCompleted;
-    $("ach-perfect").textContent = st.perfectQuizzes;
-    $("ach-passed").textContent = st.quizzesPassed;
-
-    $("ach-badges").innerHTML = st.badges
-      .map(
-        (b) => `
+function BadgeCard(b) {
+  return `
       <div class="card" style="padding:20px;${b.earned ? "" : "opacity:0.45;"}">
         <div style="width:44px;height:44px;border-radius:12px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:12px;">${b.earned ? b.icon : "🔒"}</div>
         <h3 style="font-size:14px;margin-bottom:4px;">${escapeHtml(b.title)}</h3>
@@ -2536,15 +2531,35 @@ async function bindAchievements() {
             ? `<p style="font-size:11px;font-weight:700;color:var(--accent-green);text-transform:uppercase;letter-spacing:0.5px;">Earned ${fmtShortDate(b.earnedAt)}</p>`
             : `<p style="font-size:11px;color:var(--text-400);">🔒 Locked</p>`
         }
-      </div>`,
-      )
-      .join("");
+      </div>`;
+}
+
+async function bindAchievements() {
+  const $ = (id) => document.getElementById(id);
+  _showFullRankings = false;
+
+  try {
+    const [st, lb] = await Promise.all([loadStats(), api.getLeaderboard(5)]);
+    if (!$("ach-xp")) return; // navigated away
+
+    $("ach-xp").textContent = st.xp.toLocaleString();
+    $("ach-gp").textContent = (st.gamePoints || 0).toLocaleString();
+    $("ach-rank").textContent = lb.myRank ? `#${lb.myRank}` : "—";
+    $("ach-streak").textContent =
+      `${st.streak} ${st.streak === 1 ? "Day" : "Days"}`;
+    $("ach-lessons").textContent = st.lessonsCompleted;
+    $("ach-perfect").textContent = st.perfectQuizzes;
+    $("ach-passed").textContent = st.quizzesPassed;
+
+    $("ach-badges").innerHTML = st.badges.map(BadgeCard).join("");
+    $("ach-trophies").innerHTML = (st.trophies || []).map(BadgeCard).join("");
 
     renderLeaderboard(lb);
   } catch (e) {
     if (!state.token) return;
     if ($("ach-badges"))
       $("ach-badges").innerHTML = ErrorState("Could not load achievements");
+    if ($("ach-trophies")) $("ach-trophies").innerHTML = "";
     if ($("ach-leaderboard")) $("ach-leaderboard").innerHTML = "";
   }
 }
@@ -3955,6 +3970,9 @@ function mnTimeUp() {
 
 function mnGameOver() {
   clearInterval(_mn.interval);
+  if (_mn.over) return;
+  _mn.over = true;
+  submitGameScore("math", _mn.score);
   const grade =
     _mn.score >= 500
       ? { e: "🥷", t: "Math Ninja Master!", c: "var(--accent-green)" }
@@ -4008,6 +4026,15 @@ function GameStat(label, id, value, color) {
     <div class="game-stat-label">${label}</div>
     <div class="game-stat-val" id="${id}" style="color:${color};">${value}</div>
   </div>`;
+}
+
+// Sends the final score to the backend; it counts toward XP and game trophies
+function submitGameScore(gameKey, score) {
+  const pts = Math.max(0, Math.round(Number(score) || 0));
+  api
+    .saveGameScore(gameKey, pts)
+    .then(() => showToast(`+${pts} points added to your trophies!`, "🏆"))
+    .catch((e) => showToast(e.message || "Score not saved", "⚠️"));
 }
 
 function GameOverScreen({ emoji, title, color, sub, score, detail, replay }) {

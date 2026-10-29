@@ -18,12 +18,17 @@ import com.bibo.elearning.student.service.StudentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+import java.util.Map;
+import org.springframework.web.bind.annotation.PathVariable;
+import com.bibo.elearning.game.service.GameScoreService;
+
 @RestController
 @RequestMapping("/api/student")
 @RequiredArgsConstructor
 public class StudentController {
     private final StudentService studentService;
     private final GamePermissionService gamePermissionService;
+    private final GameScoreService gameScoreService;
 
     @PostMapping("/profile")
     @PreAuthorize("hasRole('STUDENT')")
@@ -49,5 +54,15 @@ public class StudentController {
     @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<List<String>> myGames(@AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(gamePermissionService.allowedGames(userDetails.getUsername()));
+    }
+
+    @PostMapping("/games/{gameKey}/score")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<Map<String, Object>> saveGameScore(@AuthenticationPrincipal UserDetails userDetails,
+                                                             @PathVariable String gameKey,
+                                                             @RequestBody Map<String, Integer> body) {
+        int score = body.getOrDefault("score", 0);
+        gameScoreService.record(userDetails.getUsername(), gameKey, score);
+        return ResponseEntity.ok(Map.of("saved", true, "score", score));
     }
 }

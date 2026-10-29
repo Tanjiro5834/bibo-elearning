@@ -25,6 +25,8 @@ import com.bibo.elearning.stats.dto.response.StudentStatsResponse.NextLesson;
 import com.bibo.elearning.student.model.StudentProfile;
 import com.bibo.elearning.student.repository.StudentProfileRepository;
 import lombok.RequiredArgsConstructor;
+import com.bibo.elearning.game.entity.GameScore;
+import com.bibo.elearning.game.repository.GameScoreRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -38,12 +40,18 @@ public class StudentStatsService {
     static final int QUIZ_WHIZ_TARGET = 5;
     static final int EARLY_BIRD_HOUR = 8;
 
+    static final Map<String, Integer> GAME_XP = Map.of("word", 50, "math", 100, "logic", 150, "eco", 80, "memory", 100);
+    static final int TROPHY_BRONZE = 500;
+    static final int TROPHY_SILVER = 2_000;
+    static final int TROPHY_GOLD = 5_000;
+
     private final UserRepository userRepository;
     private final StudentProfileRepository studentProfileRepository;
     private final LessonRepository lessonRepository;
     private final LessonProgressRepository lessonProgressRepository;
     private final QuizAttemptRepository quizAttemptRepository;
     private final DailyGoalRepository dailyGoalRepository;
+    private final GameScoreRepository gameScoreRepository;
 
     record QuizBest(int bestScore, boolean passed) {}
 
@@ -72,10 +80,14 @@ public class StudentStatsService {
                 .filter(p -> p.getCompletedAt() != null && p.getCompletedAt().toLocalDate().equals(today))
                 .count();
 
+        List<GameScore> plays = gameScoreRepository.findByStudentIdOrderByPlayedAtAsc(profile.getUser().getId());
+        Set<String> gamesPlayed = plays.stream().map(GameScore::getGameKey).collect(Collectors.toSet());
+        int gamePoints = plays.stream().mapToInt(GameScore::getScore).sum();
+
         Optional<DailyGoal> goal = dailyGoalRepository.findFirstByChildIdOrderByUpdatedAtDesc(profile.getUser().getId());
 
         return new StudentStatsResponse(
-                xp(completed.size(), bestPerQuiz.values()),
+                xp(completed.size(), bestPerQuiz.values()) + gameXp(gamesPlayed),
                 currentStreak(activeDays, today),
                 longestStreak(activeDays),
                 completed.size(), inProgress.size(), totalLessons, completionRate,
@@ -85,7 +97,9 @@ public class StudentStatsService {
                 goal.map(DailyGoal::getGoal).orElse(DEFAULT_DAILY_GOAL),
                 goal.isPresent(),
                 nextLesson(progress, inProgress),
-                badges(completed, attempts, activeDays));
+                badges(completed, attempts, activeDays),
+                gamePoints,
+                trophies(plays));
     }
 
     public LeaderboardResponse getLeaderboard(String username, int limit) {
@@ -102,23 +116,38 @@ public class StudentStatsService {
                     .add(new QuizBest(((Number) row[2]).intValue(), ((Number) row[3]).intValue() == 1));
         }
 
+        Map<Long, Set<String>> gamesPerUser = new HashMap<>();
+        for (Object[] row : gameScoreRepository.findPlayedGamesPerStudent()) {
+            gamesPerUser.computeIfAbsent((Long) row[0], k -> new HashSet<>()).add((String) row[1]);
+        }
+
         record Scored(StudentProfile profile, int xp) {}
         List<Scored> ranked = studentProfileRepository.findAll().stream()
                 .filter(p -> p.getUser() != null && p.getUser().isEnabled())
                 .map(p -> new Scored(p, xp(completedPerStudent.getOrDefault(p.getId(), 0L),
-                        quizzesPerStudent.getOrDefault(p.getId(), List.of()))))
+                        quizzesPerStudent.getOrDefault(p.getId(), List.of()))
+                        + gameXp(gamesPerUser.getOrDefault(p.getUser().getId(), Set.of()))))
                 .sorted(Comparator.comparingInt(Scored::xp).reversed()
                         .thenComparing(s -> displayName(s.profile())))
                 .toList();
 
         List<LeaderboardResponse.Entry> entries = new ArrayList<>();
         Integer myRank = null;
+
         int myXp = 0, rank = 0;
         for (int i = 0; i < ranked.size(); i++) {
             Scored s = ranked.get(i);
-            if (i == 0 || s.xp() != ranked.get(i - 1).xp()) rank = i + 1;
+
+            if (i == 0 || s.xp() != ranked.get(i - 1).xp()){
+                rank = i + 1;
+            }
+
             boolean me = s.profile().getId().equals(myProfileId);
-            if (me) { myRank = rank; myXp = s.xp(); }
+            if(me){
+                myRank = rank; 
+                myXp = s.xp(); 
+            }
+
             if (i < limit) {
                 String name = displayName(s.profile());
                 entries.add(new LeaderboardResponse.Entry(rank, name, initials(name), s.xp(), me));
@@ -133,6 +162,38 @@ public class StudentStatsService {
                 .mapToInt(q -> (q.passed() ? XP_QUIZ_PASSED : 0) + (q.bestScore() >= 100 ? XP_QUIZ_PERFECT_BONUS : 0))
                 .sum();
         return (int) lessonsCompleted * XP_PER_LESSON + quizXp;
+    }
+
+    static int gameXp(Set<String> gamesPlayed) {
+        return gamesPlayed.stream().mapToInt(k -> GAME_XP.getOrDefault(k, 0)).sum();
+    }
+
+    private List<Badge> trophies(List<GameScore> plays){
+        LocalDate gameOn = null, explorer = null, bronze = null, silver = null, gold = null;
+        Set<String> seen = new HashSet<>();
+        int running = 0;
+
+        for(GameScore g : plays){
+            if(g.getPlayedAt() == null) continue;
+            LocalDate day = g.getPlayedAt().toLocalDate();
+
+            if(gameOn == null) gameOn = day;
+            seen.add(g.getGameKey());
+
+            if(explorer == null && seen.containsAll(GAME_XP.keySet())) explorer = day;
+
+            running += g.getScore();
+            if (bronze == null && running >= TROPHY_BRONZE) bronze = day;
+            if (silver == null && running >= TROPHY_SILVER) silver = day;
+            if (gold == null && running >= TROPHY_GOLD) gold = day;
+        }
+
+        return List.of(
+                badge("GAME_ON", "🎮", "Game On", "Play your first game", gameOn),
+                badge("ARCADE_EXPLORER", "🕹️", "Arcade Explorer", "Play all 5 games", explorer),
+                badge("TROPHY_BRONZE", "🥉", "Bronze Trophy", "Earn 500 game points", bronze),
+                badge("TROPHY_SILVER", "🥈", "Silver Trophy", "Earn 2,000 game points", silver),
+                badge("TROPHY_GOLD", "🥇", "Gold Trophy", "Earn 5,000 game points", gold));
     }
 
     private Map<Long, QuizBest> bestPerQuiz(List<QuizAttempt> attempts) {
