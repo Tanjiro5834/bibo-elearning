@@ -34,6 +34,7 @@ public class SecurityConfig {
                     "/index.js",
                     "/admin_login.css",
                     "/portal_login.js",
+                    "/login_slideshow.js", 
                     "/teacher_login.html",
                     "/parent_login.html",
                     "/admin",

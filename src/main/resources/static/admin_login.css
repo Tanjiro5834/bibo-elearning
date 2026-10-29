@@ -470,3 +470,43 @@ body.portal-parent {
 body.portal-parent .auth-hero {
   background: linear-gradient(135deg, #7c2d12 0%, #ea580c 60%, #f59e0b 100%);
 }
+
+/* ── Background photo slideshow (login pages) ── */
+body.has-slideshow { background: #064e3b; padding-bottom: 80px; }
+body.has-slideshow .auth-shell {
+  position: relative; z-index: 1;
+  background: transparent;           /* para makita ang photo sa likod ng hero */
+}
+body.has-slideshow .auth-hero {
+  background: linear-gradient(135deg, rgba(6,78,59,.85) 0%, rgba(5,150,105,.70) 60%, rgba(52,211,153,.50) 100%);
+}
+
+.bg-slideshow { position: fixed; inset: 0; z-index: 0; overflow: hidden; }
+.bg-slideshow::after {               /* dark tint para readable ang card */
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(180deg, rgba(6,78,59,.30), rgba(6,78,59,.60));
+}
+.bg-slide {
+  position: absolute; inset: 0;
+  background-size: cover; background-position: center;
+  opacity: 0; transform: scale(1.06);
+  transition: opacity 1.2s ease, transform 6s ease;
+}
+.bg-slide.active { opacity: 1; transform: scale(1); }
+
+.bg-controls {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  z-index: 3; display: flex; gap: 2px; padding: 4px;
+  border-radius: 12px; background: rgba(0,0,0,.5); backdrop-filter: blur(6px);
+}
+.bg-controls button {
+  width: 38px; height: 34px; border: 0; border-radius: 8px;
+  background: transparent; color: #fff; cursor: pointer;
+  display: grid; place-items: center;
+}
+.bg-controls button:hover { background: rgba(255,255,255,.15); }
+.bg-controls button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bg-slide { transition: none; transform: none; }
+}
