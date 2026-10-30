@@ -1,9 +1,12 @@
-/* Background photo slideshow for login pages (prev / pause / next). */
 (function () {
   const root = document.querySelector(".bg-slideshow");
   if (!root) return;
 
   const slides = Array.from(root.querySelectorAll(".bg-slide"));
+  if (slides.length < 2) {
+    root.querySelector(".bg-controls")?.remove();
+    return;
+  }
   const prevBtn = root.querySelector("[data-prev]");
   const nextBtn = root.querySelector("[data-next]");
   const pauseBtn = root.querySelector("[data-pause]");
@@ -32,7 +35,6 @@
   nextBtn.addEventListener("click", () => { show(index + 1); start(); });
   pauseBtn.addEventListener("click", () => { paused = !paused; renderPause(); start(); });
 
-  // Stop the timer while the tab is hidden, resume when visible
   document.addEventListener("visibilitychange", () => (document.hidden ? stop() : start()));
 
   renderPause();

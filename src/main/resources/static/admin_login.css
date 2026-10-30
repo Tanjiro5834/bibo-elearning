@@ -478,13 +478,13 @@ body.has-slideshow .auth-shell {
   background: transparent;           /* para makita ang photo sa likod ng hero */
 }
 body.has-slideshow .auth-hero {
-  background: linear-gradient(135deg, rgba(6,78,59,.85) 0%, rgba(5,150,105,.70) 60%, rgba(52,211,153,.50) 100%);
+  background: linear-gradient(135deg, rgba(6,78,59,.80) 0%, rgba(5,150,105,.55) 60%, rgba(52,211,153,.25) 100%);
 }
 
 .bg-slideshow { position: fixed; inset: 0; z-index: 0; overflow: hidden; }
-.bg-slideshow::after {               /* dark tint para readable ang card */
+.bg-slideshow::after {
   content: ""; position: absolute; inset: 0; pointer-events: none;
-  background: linear-gradient(180deg, rgba(6,78,59,.30), rgba(6,78,59,.60));
+  background: rgba(0, 0, 0, 0.12);
 }
 .bg-slide {
   position: absolute; inset: 0;

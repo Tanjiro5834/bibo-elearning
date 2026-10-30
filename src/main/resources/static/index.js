@@ -3687,6 +3687,7 @@ function wsReveal() {
 
 function wsGameOver() {
   clearInterval(_ws.interval);
+  submitGameScore("word", _ws.score);
   const grade =
     _ws.score >= 400
       ? { e: "🏆", t: "Amazing!", c: "var(--accent-green)" }
@@ -4428,6 +4429,7 @@ function lpNext() {
 
 function lpGameOver() {
   const total = _lp.puzzles.length;
+  submitGameScore("logic", _lp.score); 
   const g =
     _lp.correct === total
       ? { e: "🧠", t: "Master Detective!", c: "var(--accent-green)" }
@@ -4801,6 +4803,7 @@ function ecoGameOver() {
   ecoStop();
   if (_eco.over || !document.getElementById("eco-root")) return;
   _eco.over = true;
+  submitGameScore("eco", _eco.score);
   const acc = _eco.sorted ? Math.round((_eco.correct / _eco.sorted) * 100) : 0;
   const g =
     _eco.score >= 250
@@ -5151,7 +5154,7 @@ function mmGameOver(won) {
 
   const timeBonus = won ? _mm.time * 2 : 0;
   _mm.score += timeBonus;
-  // Perfect game = one move per pair; accuracy rewards remembering, not guessing
+  submitGameScore("memory", _mm.score);
   const accuracy = _mm.moves ? Math.round((_mm.matches / _mm.moves) * 100) : 0;
 
   const g = !won
@@ -5254,9 +5257,6 @@ async function doResearch() {
   }
 }
 
-/* ============================================================
-   EXTENDED ROUTER (override to add new pages)
-   ============================================================ */
 const _originalRender = render;
 function render() {
   const app = document.getElementById("app");

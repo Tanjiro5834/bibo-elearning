@@ -1,13 +1,3 @@
-/* ============================================================
-   Shared login for the Admin / Teacher / Parent portals.
-   Each page configures it through data-* attributes on <body>:
-     data-role        ADMIN | TEACHER | PARENT  (only this role may sign in)
-     data-token-key   localStorage key the target app reads the token from
-     data-user-key    localStorage key the target app reads the user from
-     data-redirect    page to open after a successful login
-   The server still enforces roles on every API call; this check only
-   sends people to the right portal with a clear message.
-   ============================================================ */
 const API_BASE = "/api";
 
 const PORTALS = {
@@ -75,7 +65,6 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
     const user = { username: result.username, role };
     localStorage.setItem(cfg.tokenKey, token);
     localStorage.setItem(cfg.userKey, JSON.stringify(user));
-    // Lets the dashboard send this person back to the same login page on logout.
     localStorage.setItem("bibo_login_page", PORTALS[allowedRole].url);
 
     setMessage(msg, "Login successful. Redirecting...", "success");
