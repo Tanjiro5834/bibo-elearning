@@ -1074,14 +1074,11 @@ function DashboardPage() {
       </div>
     </div>
 
-    <div class="hero-banner mb-32">
-      <div style="max-width:600px;position:relative;z-index:1;">
-        <h2 id="dash-hero-title" style="color:white;font-size:28px;font-weight:900;margin-bottom:12px;line-height:1.25;">Loading your progress...</h2>
-        <p id="dash-hero-text" style="color:rgba(255,255,255,0.75);font-size:14px;margin-bottom:24px;line-height:1.6;">&nbsp;</p>
+    <div class="hero-banner hero-banner--cute mb-32">
+      <div class="hero-banner-content">
+        <h2 id="dash-hero-title">Loading your progress...</h2>
+        <p id="dash-hero-text">&nbsp;</p>
         <button class="btn btn-orange" onclick="navigate('subjects')">Continue Learning</button>
-      </div>
-      <div class="hero-banner-icon">
-        <svg viewBox="0 0 120 120" fill="none" width="200" height="200"><path d="M20 20h80v80H20z" stroke="white" stroke-width="3" stroke-dasharray="8 4" rx="12"/><circle cx="60" cy="60" r="30" stroke="white" stroke-width="3"/><path d="M45 60l10 10 20-20" stroke="white" stroke-width="4" stroke-linecap="round"/></svg>
       </div>
     </div>
 
@@ -1166,7 +1163,7 @@ function renderDashboardStats(st) {
 
   const nextBadge = st.badges.find((b) => !b.earned);
   $("dash-hero-text").innerHTML =
-    `You've completed <strong style="color:white;">${st.completionRate}%</strong> of your path ` +
+    `You've completed <strong>${st.completionRate}%</strong> of your path ` +
     `(${st.lessonsCompleted} of ${st.totalLessons} lessons).` +
     (nextBadge
       ? ` Next badge: <span style="color:var(--accent-orange);font-weight:700;">${nextBadge.icon} ${escapeHtml(nextBadge.title)}</span> — ${escapeHtml(nextBadge.description.toLowerCase())}.`
