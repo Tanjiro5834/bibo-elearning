@@ -2365,3 +2365,47 @@ html.theme-ready #sidebar {
   .ach-summary-item { flex: 1; min-width: 0; padding: 12px 8px; }
   .ach-summary-value { font-size: 20px; }
 }
+
+/* ── Background photo slideshow (student login) ── */
+#app-auth { padding-bottom: 80px; }
+.bg-slideshow { position: fixed; inset: 0; z-index: 0; overflow: hidden; }
+.bg-slideshow::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: rgba(0, 0, 0, 0.12);
+}
+.bg-slide {
+  position: absolute; inset: 0;
+  background-size: cover; background-position: center;
+  opacity: 0; transform: scale(1.06);
+  transition: opacity 1.2s ease, transform 6s ease;
+}
+.bg-slide.active { opacity: 1; transform: scale(1); }
+.bg-controls {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  z-index: 3; display: flex; gap: 2px; padding: 4px;
+  border-radius: 12px; background: rgba(0,0,0,.5); backdrop-filter: blur(6px);
+}
+.bg-controls button {
+  width: 38px; height: 34px; border: 0; border-radius: 8px;
+  background: transparent; color: #fff; cursor: pointer;
+  display: grid; place-items: center;
+}
+.bg-controls button:hover { background: rgba(255,255,255,.15); }
+.bg-controls button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .bg-slide { transition: none; transform: none; }
+}
+
+@media (max-width: 640px) {
+  .bg-slide { background-position: 18% center; }
+}
+
+body:has(#app-auth) #mobile-menu-btn { display: none; }
+
+@media (max-width: 640px) {
+  #app-auth .auth-card {
+    background: rgba(26, 31, 51, 0.78);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+}

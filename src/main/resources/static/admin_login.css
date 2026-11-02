@@ -510,3 +510,18 @@ body.has-slideshow .auth-hero {
 @media (prefers-reduced-motion: reduce) {
   .bg-slide { transition: none; transform: none; }
 }
+
+/* ── Per-role slideshow tints ── */
+body.portal-parent.has-slideshow { background: #7c2d12; }
+body.portal-parent.has-slideshow .auth-hero {
+  background: linear-gradient(135deg, rgba(124,45,18,.80) 0%, rgba(234,88,12,.55) 60%, rgba(245,158,11,.25) 100%);
+}
+
+body.portal-admin.has-slideshow { background: #1e2a78; }
+body.portal-admin.has-slideshow .auth-hero {
+  background: linear-gradient(135deg, rgba(30,42,120,.82) 0%, rgba(59,63,196,.58) 60%, rgba(91,96,224,.28) 100%);
+}
+
+@media (max-width: 640px) {
+  .bg-slide { background-position: 18% center; }
+}

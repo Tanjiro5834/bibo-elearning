@@ -263,6 +263,7 @@ function render() {
   if (!state.token) {
     app.innerHTML = `<div id="app-auth">${LoginSlideshow()}${LoginPage()}</div>`;
     bindLogin();
+    window.initBgSlideshow?.();
     return;
   }
 
@@ -543,10 +544,23 @@ function SidebarHtml() {
 }
 
 function LoginSlideshow() {
-  return `<div class="login-bg" aria-hidden="true">
-    <div class="slide" style="background-image:url('images/login1.jpg')"></div>
-    <div class="slide" style="background-image:url('images/login2.jpg')"></div>
-    <div class="slide" style="background-image:url('images/login3.jpg')"></div>
+  const slides = [1, 2, 3, 4, 5]
+    .map(
+      (n, i) =>
+        `<div class="bg-slide${i === 0 ? " active" : ""}" style="background-image:url('images/student (${n}).jpg')"></div>`,
+    )
+    .join("");
+  return `<div class="bg-slideshow">
+    ${slides}
+    <div class="bg-controls">
+      <button type="button" data-prev aria-label="Previous photo">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <button type="button" data-pause aria-label="Pause slideshow"></button>
+      <button type="button" data-next aria-label="Next photo">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+    </div>
   </div>`;
 }
 
