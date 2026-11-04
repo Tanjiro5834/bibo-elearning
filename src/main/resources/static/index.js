@@ -2364,7 +2364,6 @@ async function sendChat() {
       "beforeend",
       aiBubble(`<p style="color:var(--accent-red);">${escapeHtml(e.message || "Sorry, I couldn't connect. Please try again! 😅")}</p>`),
     );
-    if (!input.value) input.value = msg; // let them resend without retyping
   }
   sendBtn.disabled = false;
   msgs.scrollTop = msgs.scrollHeight;

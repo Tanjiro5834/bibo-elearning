@@ -842,3 +842,6 @@ h3 {
   .mq-details, .mq-choices { grid-template-columns: 1fr; }
   .mq-foot .btn { flex: 1; min-width: 0; }
 }
+
+.card:has(> .data-table) { overflow-x: auto !important; }
+.card > .data-table td:last-child { white-space: nowrap; }

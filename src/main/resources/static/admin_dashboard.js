@@ -1803,7 +1803,7 @@ async function openCreateSection() {
     <div id="sec-err" style="display:none;background:#FEE2E2;color:#991B1B;font-size:13px;font-weight:700;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:14px;"></div>
     <div class="field"><label>Lesson</label><select id="sec-lesson" class="bibo-input">${opts}</select></div>
     <div class="field"><label>Section Title</label><input id="sec-title" class="bibo-input" placeholder="e.g. What are Fractions?" /></div>
-    <div class="field-row"><div class="field" style="margin-bottom:0;"><label>Content Type</label><select id="sec-type" class="bibo-input" onchange="onSectionTypeChange(this.value)"><option value="TEXT">Text</option><option value="IMAGE">Image</option><option value="VIDEO">Video</option><option value="ACTIVITY">Activity</option></select></div><div class="field" style="margin-bottom:0;"><label>Order</label><input id="sec-order" class="bibo-input" type="number" placeholder="Auto (last)" min="1" /></div></div>
+    <div class="field-row"><div class="field" style="margin-bottom:0;"><label>Content Type</label><select id="sec-type" class="bibo-input" onchange="onSectionTypeChange(this.value)"><option value="TEXT">Text</option><option value="IMAGE">Image</option><option value="VIDEO">Video</option><option value="ACTIVITY">Activity</option></select></div><div class="field" style="margin-bottom:0;"><label>Section No.</label><input id="sec-order" class="bibo-input" type="number" placeholder="Auto (next number)" min="1" /></div></div>
     <div class="field" id="sec-content-field" style="margin-top:14px;"><label id="sec-content-label">Content</label><textarea id="sec-content" class="bibo-input" placeholder="Write lesson content here..." style="min-height:120px;" oninput="if (document.getElementById('sec-type').value === 'VIDEO') previewSectionVideo()"></textarea><div id="sec-video-preview"></div></div>
     <div class="field" id="sec-image-field" style="display:none;margin-top:14px;">
       <label>Image</label>
@@ -2003,7 +2003,7 @@ function renderSectionsTable() {
   container.innerHTML = `
     <p style="font-size:12px;color:var(--text-400);margin-bottom:10px;">Drag rows by ⠿ or use ↑ ↓ to change the order students see.</p>
     <div class="card" style="overflow:hidden;"><table class="data-table">
-      <thead><tr><th style="width:40px;"></th><th>Order</th><th>Title</th><th>Type</th><th>Content</th><th style="text-align:right;">Actions</th></tr></thead>
+      <thead><tr><th style="width:40px;"></th><th>No.</th><th>Title</th><th>Type</th><th>Content</th><th style="text-align:right;">Actions</th></tr></thead>
       <tbody id="sections-tbody">
       ${_sections
         .map(
