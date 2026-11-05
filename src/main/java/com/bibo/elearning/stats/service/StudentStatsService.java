@@ -156,7 +156,6 @@ public class StudentStatsService {
         return new LeaderboardResponse(entries, myRank, myXp, ranked.size());
     }
 
-    // ── XP + streaks ──
     static int xp(long lessonsCompleted, Collection<QuizBest> quizzes) {
         int quizXp = quizzes.stream()
                 .mapToInt(q -> (q.passed() ? XP_QUIZ_PASSED : 0) + (q.bestScore() >= 100 ? XP_QUIZ_PERFECT_BONUS : 0))
@@ -228,7 +227,6 @@ public class StudentStatsService {
         if (t != null) days.add(t.toLocalDate());
     }
 
-    // ── Next lesson ──
     private NextLesson nextLesson(List<LessonProgress> all, List<LessonProgress> inProgress) {
         Optional<LessonProgress> resume = inProgress.stream()
                 .filter(p -> Boolean.TRUE.equals(p.getLesson().getPublished()))
@@ -248,7 +246,6 @@ public class StudentStatsService {
         return new NextLesson(l.getId(), l.getTitle(), l.getSubject().getId(), l.getSubject().getName(), inProgress);
     }
 
-    // ── Badges ──
     private List<Badge> badges(List<LessonProgress> completed, List<QuizAttempt> attempts, Set<LocalDate> activeDays) {
         List<LocalDateTime> completions = completed.stream()
                 .map(LessonProgress::getCompletedAt).filter(Objects::nonNull).sorted().toList();

@@ -42,7 +42,6 @@ import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.List;
@@ -122,14 +121,12 @@ public class ParentService {
         StudentProfile childProfile = studentProfileRepository.findByUser(child)
                 .orElseThrow(() -> new UserNotFoundException("Student profile not found for child: " + childId));
 
-        // numerator: completed lessons per subject (from the child's progress)
         Map<Long, Long> doneBySubject = lessonProgressRepository.findAllByStudentProfile(childProfile).stream()
                 .filter(lp -> lp.getStatus() == ProgressStatus.COMPLETED)
                 .collect(Collectors.groupingBy(
                         lp -> lp.getLesson().getSubject().getId(),
                         Collectors.counting()));
 
-        // denominator: all lessons per subject (from the catalog)
         List<SubjectProgressDto> subjectProgress = subjectRepository.findAll().stream()
                 .map(s -> {
                     long total = lessonRepository.countBySubjectIdAndPublishedTrue(s.getId());
@@ -222,7 +219,7 @@ public class ParentService {
         .map(a -> {
                 var lesson = a.getQuiz().getLesson();
                 String subject = (lesson != null && lesson.getSubject() != null) ? lesson.getSubject().getName() : null;
-                // QuizAttempt.score is stored as a percentage; derive the raw correct count from it.
+                
                 int percent = a.getScore();
                 int correct = (int) Math.round(percent * a.getTotalItems() / 100.0);
                 return new QuizResultDto(a.getQuiz().getTitle(), subject,
@@ -314,7 +311,6 @@ public class ParentService {
         return out.size() > NOTIFICATION_LIMIT ? out.subList(0, NOTIFICATION_LIMIT) : out;
     }
 
-    /** Lessons completed per day for Mon..Sun of the week containing {@code today}. */
     static List<DayActivity> weeklyActivity(List<LocalDateTime> completions, LocalDate today) {
         LocalDate monday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         Map<LocalDate, Long> perDay = completions.stream()
@@ -333,13 +329,11 @@ public class ParentService {
         return week;
     }
 
-    /** Week 1 = the 7 days starting on the first activity. No activity yet → week 1. */
     static int learningWeek(LocalDate firstActivity, LocalDate today) {
         if (firstActivity == null || firstActivity.isAfter(today)) return 1;
         return (int) (ChronoUnit.DAYS.between(firstActivity, today) / 7) + 1;
     }
 
-    /** Time of today's Nth completion (N = goal), or null if the goal wasn't reached today. */
     static LocalDateTime goalReachedAt(List<LocalDateTime> completions, int goal, LocalDate today) {
         if (goal <= 0) return null;
         List<LocalDateTime> todays = completions.stream()

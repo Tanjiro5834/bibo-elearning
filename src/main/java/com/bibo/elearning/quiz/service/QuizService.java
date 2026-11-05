@@ -117,8 +117,6 @@ public class QuizService {
         .stream().map(quizMapper::toResponse).toList();
     }
 
-    // ── Edit / delete (ADMIN, TEACHER) ──
-
     @Transactional(readOnly = true)
     public QuizEditResponse getQuizForEdit(Long quizId) {
         Quiz quiz = findQuiz(quizId);
@@ -133,10 +131,6 @@ public class QuizService {
                 quizAttemptRepository.countByQuizId(quizId), questions);
     }
 
-    /**
-     * Replaces the quiz details and its whole question set. Past attempts keep their
-     * recorded score (attempts store only score/total, not individual answers).
-     */
     @Transactional
     public QuizResponse updateQuiz(Long quizId, CreateQuizRequest request) {
         validate(request);
@@ -148,17 +142,14 @@ public class QuizService {
         quiz.setDescription(request.getDescription());
         quiz.setPassingScore(request.getPassingScore());
         quiz.setLesson(lesson);
-        // Mutate the managed collection (orphanRemoval deletes the old questions + their choices)
+        
         quiz.getQuestions().clear();
         quiz.getQuestions().addAll(buildQuestions(quiz, request.getQuestions()));
 
-        // quiz is managed: dirty checking + cascade persist the new questions on flush.
-        // (save() would merge and could duplicate the new children.)
         quizRepository.flush();
         return quizMapper.toResponse(quiz);
     }
 
-    /** Refuses (409) when students already took it, unless {@code force} (admin) — which also erases attempts. */
     @Transactional
     public void deleteQuiz(Long quizId, boolean force) {
         Quiz quiz = findQuiz(quizId);
@@ -169,7 +160,7 @@ public class QuizService {
                     quiz.getTitle(), attempts, attempts == 1 ? "" : "s"));
         }
         quizAttemptRepository.deleteByQuizId(quizId);
-        quizRepository.delete(quiz); // cascades questions + choices
+        quizRepository.delete(quiz); 
     }
 
     private Quiz findQuiz(Long quizId) {
@@ -225,9 +216,6 @@ public class QuizService {
         return questions;
     }
 
-    // ── Student quiz picker ──
-
-    /** Every quiz the student can take, with their own attempt count, best score, and pass status. */
     @Transactional(readOnly = true)
     public List<AvailableQuizResponse> getAvailableQuizzes(String username) {
         User user = userRepository.findByUsername(username)
@@ -253,7 +241,6 @@ public class QuizService {
                 .toList();
     }
 
-    /** A single quiz for a student to take (choices without answers); hidden if its lesson isn't published. */
     @Transactional(readOnly = true)
     public QuizResponse getQuizForStudent(Long quizId) {
         Quiz quiz = findQuiz(quizId);

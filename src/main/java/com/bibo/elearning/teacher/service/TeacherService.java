@@ -64,12 +64,9 @@ public class TeacherService {
         if(!isTeacher(teacher)){
             throw new IllegalStateException("User is not a teacher");
         }
-
-        // Requests aren't assigned to a specific teacher, so every teacher sees the shared queue.
         return getAllReviewRequests();
     }
 
-    /** Shared review queue, newest first. Used by teachers and admins. */
     public List<ReviewRequestResponse> getAllReviewRequests() {
         return teacherReviewRequestRepository.findAllByOrderByRequestedAtDesc().stream()
                 .map(teacherMapper::mapToReviewRequestResponse)
@@ -86,8 +83,7 @@ public class TeacherService {
 
         setReviewStatus(requestId, status);
     }
-
-    /** Status change without the teacher-role check (admin path; controller enforces ADMIN). */
+    
     public void setReviewStatus(Long requestId, String status) {
         TeacherReviewRequest request = teacherReviewRequestRepository.findById(requestId)
                 .orElseThrow(() -> new IllegalArgumentException("Review request not found with id: " + requestId));

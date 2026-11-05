@@ -20,7 +20,6 @@ public class UploadController {
 
     private final ImageStorageService imageStorageService;
 
-    /** multipart/form-data with a "file" part → {"url": "/uploads/images/<uuid>.png"} */
     @PostMapping(value = "/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, String>> uploadImage(@RequestParam("file") MultipartFile file) throws IOException {
         return ResponseEntity.ok(Map.of("url", imageStorageService.store(file)));

@@ -2,7 +2,6 @@ package com.bibo.elearning.quiz.dto.response;
 
 import java.util.List;
 
-/** Full quiz incl. correct answers — only for ADMIN/TEACHER editing, never for students. */
 public record QuizEditResponse(
         Long id,
         String title,

@@ -2,8 +2,6 @@ package com.bibo.elearning.student.model;
 import lombok.*;
 import java.time.LocalDateTime;
 import com.bibo.elearning.auth.user.entity.User;
-import com.bibo.elearning.student.enums.GradeLevel;
-import com.bibo.elearning.student.enums.LearningPathStatus;
 import jakarta.persistence.*;
 
 @Entity

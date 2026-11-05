@@ -11,11 +11,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-/**
- * Saves lesson images to {upload-dir}/images with a random name and returns the public URL.
- * The file type is decided from the file's own bytes (magic numbers), never from the
- * client's filename or Content-Type, so a renamed .html/.svg can't be stored as an "image".
- */
 @Service
 public class ImageStorageService {
 
