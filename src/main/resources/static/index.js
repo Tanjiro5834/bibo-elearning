@@ -1405,9 +1405,6 @@ async function bindSubjects() {
   }
 }
 
-/* ============================================================
-   PAGE: LESSONS
-   ============================================================ */
 function LessonsPage() {
   const s =
     state.selectedSubject ||
@@ -1521,9 +1518,6 @@ async function bindLessons() {
   }
 }
 
-/* ============================================================
-   PAGE: LESSON DETAIL
-   ============================================================ */
 let lessonState = {
   sections: [],
   current: 0,
@@ -1596,8 +1590,6 @@ async function bindLessonDetail() {
   }
 }
 
-// IMAGE → content is an image URL (uploaded: /uploads/images/..., or external https);
-// VIDEO → YouTube or direct video URL; anything else → plain text with line breaks.
 function sectionBodyHtml(sec) {
   const raw = (sec.content || "").trim();
   const isUrl = /^(https?:\/\/\S+|\/uploads\/images\/[\w.-]+)$/i.test(raw);
@@ -1619,7 +1611,7 @@ function sectionBodyHtml(sec) {
     if (/\.(mp4|webm|ogg)(\?.*)?$/i.test(raw)) {
       return `<video src="${escapeHtml(raw)}" controls preload="metadata" style="width:100%;border-radius:var(--radius-lg);margin-top:16px;"></video>`;
     }
-    // Not embeddable (e.g. a Facebook/Drive page): give students a link instead of a broken player
+    
     return `<a href="${escapeHtml(raw)}" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="margin-top:16px;display:inline-flex;">▶ Watch video</a>`;
   }
 
@@ -1705,9 +1697,6 @@ async function lessonComplete() {
   }
 }
 
-/* ============================================================
-   PAGE: GAMES (Brain Arcade — UI showcase, navigates to lessons)
-   ============================================================ */
 function GamesPage() {
   const games = [
     {
@@ -1809,10 +1798,6 @@ function GamesPage() {
   </div>`;
 }
 
-/* ============================================================
-   PAGE: QUIZ
-   ============================================================ */
-/* ── Quiz picker: every quiz from published lessons, with the student's own status ── */
 function QuizPickerPage() {
   return `<div class="page" style="max-width:1120px;margin:0 auto;">
     <div class="mb-24">
@@ -1887,8 +1872,6 @@ function renderQuizPicker() {
     return;
   }
 
-  // One grid for everything (server order: subject → lesson → quiz) so rows fill
-  // even when a subject has a single quiz; the subject is shown on each card.
   list.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;">
     ${shown
       .map((q) => {
@@ -1927,7 +1910,7 @@ function QuizPage() {
     quiz: null,
     questions: [],
     current: 0,
-    selectedChoiceIds: [], // parallel array, one slot per question
+    selectedChoiceIds: [],
     answered: false,
     timer: 300,
     timerInterval: null,
@@ -1969,44 +1952,18 @@ function QuizPage() {
   </div>`;
 }
 
-async function quizSelect(idx, choiceId) {
+function quizSelect(idx, choiceId) {
   const qs = window._quizState;
-  if (qs.checked[qs.current]) return; // one answer per question
-  qs.checked[qs.current] = true;
   qs.selectedChoiceIds[qs.current] = choiceId;
 
-  document.querySelectorAll(".quiz-option").forEach((el) => el.classList.add("locked"));
-  const picked = document.getElementById(`opt-${idx}`);
-  picked?.classList.add("selected");
-
-  try {
-    const q = qs.questions[qs.current];
-    const res = await api.checkAnswer({ questionId: q.id, choiceId });
-    picked?.classList.remove("selected");
-
-    if (res.correct) {
-      picked?.classList.add("correct");
-      playSfx("correct");
-    } else {
-      picked?.classList.add("wrong");
-      document
-        .querySelector(`.quiz-option[data-choice-id="${Number(res.correctChoiceId)}"]`)
-        ?.classList.add("correct");
-      playSfx("wrong");
-    }
-  } catch (e) {
-    // Feedback failed, but the answer still counts on submit
-  }
+  document.querySelectorAll(".quiz-option").forEach((el) => el.classList.remove("selected"));
+  document.getElementById(`opt-${idx}`)?.classList.add("selected");
 
   document.getElementById("quiz-next-btn").style.display = "";
 }
 
 function quizNext() {
   const qs = window._quizState;
-  // if (!qs.answered) {
-  //   showToast("Please select an answer first.", "⚠️");
-  //   return;
-  // }
   if (qs.selectedChoiceIds[qs.current] === null) {
     showToast("Please select an answer first.", "⚠️");
     return;
