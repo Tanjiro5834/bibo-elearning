@@ -653,7 +653,6 @@ h3 {
   }
 }
 
-/* PROGRESS BAR */
 .progress-track {
   background: var(--border);
   border-radius: 99px;
@@ -679,7 +678,7 @@ h3 {
   object-fit: cover;
   display: block;
 }
-/* ── Quiz modal: pinned header/footer, scrollable body, accordion questions ── */
+
 .modal.modal-quiz {
   max-width: 880px;
   padding: 0;

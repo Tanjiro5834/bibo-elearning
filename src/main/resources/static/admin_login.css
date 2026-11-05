@@ -511,7 +511,6 @@ body.has-slideshow .auth-hero {
   .bg-slide { transition: none; transform: none; }
 }
 
-/* ── Per-role slideshow tints ── */
 body.portal-parent.has-slideshow { background: #7c2d12; }
 body.portal-parent.has-slideshow .auth-hero {
   background: linear-gradient(135deg, rgba(124,45,18,.80) 0%, rgba(234,88,12,.55) 60%, rgba(245,158,11,.25) 100%);

@@ -2245,7 +2245,7 @@ html.theme-ready #sidebar {
   object-fit: cover;
   display: block;
 }
-/* Links from the student login to the other portals */
+
 .portal-link {
   padding: 5px 11px;
   border-radius: 999px;
@@ -2256,7 +2256,6 @@ html.theme-ready #sidebar {
 }
 .portal-link:hover { filter: brightness(0.95); }
 
-/* ─── Login slideshow ─── */
 .login-bg { position: absolute; inset: 0; z-index: 0; }
 .login-bg::after {
   content: ""; position: absolute; inset: 0;
@@ -2282,14 +2281,12 @@ html.theme-ready #sidebar {
   .login-bg .slide:first-child { opacity: 1; }
 }
 
-/* ─── Locked games ─── */
 .game-locked { position: relative; opacity: .55; filter: grayscale(.6); }
 .game-locked::after { content: "🔒"; position: absolute; top: 12px; right: 12px; font-size: 20px; }
 
 .game-locked { cursor: not-allowed; }
 .game-locked:hover { transform: none; }
 
-/* ─── Cute illustrated dashboard banner ─── */
 .hero-banner--cute {
   background:
     linear-gradient(90deg, rgba(255,250,240,.95) 0%, rgba(255,250,240,.85) 35%, rgba(255,250,240,0) 60%),
@@ -2316,10 +2313,8 @@ html.theme-ready #sidebar {
   }
 }
 
-/* ── Missing spacing utility (used in Achievements + progress track) ── */
 .mb-28 { margin-bottom: 28px; }
 
-/* ── Achievements header summary (Total XP · Game Points · Rank) ── */
 .ach-header {
   display: flex;
   justify-content: space-between;
@@ -2366,7 +2361,6 @@ html.theme-ready #sidebar {
   .ach-summary-value { font-size: 20px; }
 }
 
-/* ── Background photo slideshow (student login) ── */
 #app-auth { padding-bottom: 80px; }
 .bg-slideshow { position: fixed; inset: 0; z-index: 0; overflow: hidden; }
 .bg-slideshow::after {
@@ -2408,4 +2402,15 @@ body:has(#app-auth) #mobile-menu-btn { display: none; }
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
   }
+}
+
+.bg-slide {
+  filter: blur(8px);
+  transform: scale(1.15);
+}
+.bg-slide.active { transform: scale(1.1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .bg-slide,
+  .bg-slide.active { transform: scale(1.1); }
 }

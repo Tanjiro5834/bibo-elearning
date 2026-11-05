@@ -1881,7 +1881,6 @@ function previewSectionImage(input) {
   img.style.display = "";
 }
 
-// Multipart upload: let the browser set the multipart boundary (no Content-Type header).
 async function uploadImage(file) {
   const form = new FormData();
   form.append("file", file);
@@ -1904,7 +1903,7 @@ async function submitSection() {
     title = document.getElementById("sec-title").value.trim(),
     textContent = document.getElementById("sec-content").value.trim(),
     type = document.getElementById("sec-type").value,
-    order = parseInt(document.getElementById("sec-order").value) || null, // blank → server puts it last
+    order = parseInt(document.getElementById("sec-order").value) || null, 
     imageFile = document.getElementById("sec-image")?.files?.[0],
     errEl = document.getElementById("sec-err"),
     btn = document.getElementById("sec-btn");
@@ -1932,7 +1931,7 @@ async function submitSection() {
       if (!id && !isDirectVideo(textContent)) {
         throw new Error("Paste a YouTube link or a direct .mp4 video link.");
       }
-      // store a clean canonical link (drops tracking params / timestamps)
+      
       if (id) content = `https://www.youtube.com/watch?v=${id}`;
     }
     if (type === "IMAGE") {
