@@ -524,3 +524,14 @@ body.portal-admin.has-slideshow .auth-hero {
 @media (max-width: 640px) {
   .bg-slide { background-position: 18% center; }
 }
+
+.bg-slide {
+  filter: blur(8px);
+  transform: scale(1.15);
+}
+.bg-slide.active { transform: scale(1.1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .bg-slide,
+  .bg-slide.active { transform: scale(1.1); }
+}
