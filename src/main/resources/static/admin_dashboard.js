@@ -1885,13 +1885,13 @@ function previewSectionImage(input) {
   img.style.display = "";
 }
 
-const MAX_PDF_BYTES = 20 * 1024 * 1024;
+const MAX_PDF_BYTES = 50 * 1024 * 1024;
 
 function checkSectionPdf(input) {
   const file = input.files?.[0];
   if (!file) return;
   if (file.size > MAX_PDF_BYTES) {
-    showToast("PDF is too large (max 20 MB)", "⚠️");
+    showToast("PDF is too large (max 50 MB)", "⚠️");
     input.value = "";
     return;
   }
