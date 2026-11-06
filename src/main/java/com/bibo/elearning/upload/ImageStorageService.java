@@ -48,7 +48,7 @@ public class ImageStorageService {
 
         String name = UUID.randomUUID() + "." + ext;
         Path target = imageDir.resolve(name).normalize();
-        if (!target.startsWith(imageDir)) { // defensive; name is generated, never user input
+        if (!target.startsWith(imageDir)) { 
             throw new IllegalStateException("Invalid upload path");
         }
         try (InputStream in = file.getInputStream()) {
@@ -57,21 +57,17 @@ public class ImageStorageService {
         return PUBLIC_PREFIX + name;
     }
 
-    /** Deletes a file this service stored (by its public URL). Other URLs are ignored. */
     public void deleteIfStored(String url) {
         if (url == null || !url.startsWith(PUBLIC_PREFIX)) return;
         String name = url.substring(PUBLIC_PREFIX.length());
-        if (!name.matches("[\\w-]+\\.(png|jpg|gif|webp)")) return; // only our own generated names
+        if (!name.matches("[\\w-]+\\.(png|jpg|gif|webp)")) return; 
         Path target = imageDir.resolve(name).normalize();
         if (!target.startsWith(imageDir)) return;
         try {
             Files.deleteIfExists(target);
-        } catch (IOException ignored) {
-            // a leftover file is harmless; never fail the delete because of it
-        }
+        } catch (IOException ignored) {}
     }
 
-    /** Returns png/jpg/gif/webp from the leading bytes, or null if it isn't one of those. */
     static String detectExtension(byte[] b) {
         if (b.length >= 8 && (b[0] & 0xFF) == 0x89 && b[1] == 'P' && b[2] == 'N' && b[3] == 'G') return "png";
         if (b.length >= 3 && (b[0] & 0xFF) == 0xFF && (b[1] & 0xFF) == 0xD8 && (b[2] & 0xFF) == 0xFF) return "jpg";
