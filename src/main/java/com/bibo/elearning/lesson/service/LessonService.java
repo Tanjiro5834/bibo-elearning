@@ -17,6 +17,7 @@ import com.bibo.elearning.auth.common.enums.ContentType;
 import com.bibo.elearning.quiz.repository.QuizAttemptRepository;
 import com.bibo.elearning.quiz.repository.QuizRepository;
 import com.bibo.elearning.upload.ImageStorageService;
+import com.bibo.elearning.upload.PdfStorageService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import java.util.List;
@@ -32,6 +33,7 @@ public class LessonService {
     private final QuizRepository quizRepository;
     private final QuizAttemptRepository quizAttemptRepository;
     private final ImageStorageService imageStorageService;
+    private final PdfStorageService pdfStorageService;
 
    @Transactional
     public LessonDetailResponse createLesson(CreateLessonRequest request) {
@@ -180,6 +182,10 @@ public class LessonService {
                 .filter(s -> s.getContentType() == ContentType.IMAGE)
                 .map(LessonSection::getContent)
                 .toList();
+        List<String> pdfs = lesson.getSections().stream()
+                .filter(s -> s.getContentType() == ContentType.PDF)
+                .map(LessonSection::getContent)
+                .toList();
 
         quizAttemptRepository.deleteByQuizLessonId(lessonId);
         lessonProgressRepository.deleteByLessonId(lessonId);
@@ -188,5 +194,6 @@ public class LessonService {
         lessonRepository.flush(); // surface FK errors before touching files
 
         images.forEach(imageStorageService::deleteIfStored);
+        pdfs.forEach(pdfStorageService::deleteIfStored);
     }
 }

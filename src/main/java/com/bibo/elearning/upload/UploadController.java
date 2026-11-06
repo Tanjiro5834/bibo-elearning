@@ -19,9 +19,15 @@ import lombok.RequiredArgsConstructor;
 public class UploadController {
 
     private final ImageStorageService imageStorageService;
+    private final PdfStorageService pdfStorageService;
 
     @PostMapping(value = "/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, String>> uploadImage(@RequestParam("file") MultipartFile file) throws IOException {
         return ResponseEntity.ok(Map.of("url", imageStorageService.store(file)));
+    }
+
+    @PostMapping(value = "/pdfs", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, String>> uploadPdf(@RequestParam("file") MultipartFile file) throws IOException {
+        return ResponseEntity.ok(Map.of("url", pdfStorageService.store(file)));
     }
 }

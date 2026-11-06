@@ -1599,6 +1599,15 @@ function sectionBodyHtml(sec) {
       style="width:100%;border-radius:var(--radius-lg);margin-top:16px;max-height:420px;object-fit:contain;background:var(--bg);" />`;
   }
 
+  if (sec.contentType === "PDF" && /^\/uploads\/pdfs\/[\w-]+\.pdf$/i.test(raw)) {
+    const url = escapeHtml(raw);
+    return `<div style="margin-top:16px;">
+      <iframe src="${url}#view=FitH" title="${escapeHtml(sec.title || "PDF")}" loading="lazy"
+        style="width:100%;height:70vh;min-height:420px;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--bg);"></iframe>
+      <a href="${url}" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm" style="margin-top:10px;display:inline-flex;">📕 Open PDF in new tab</a>
+    </div>`;
+  }
+
   if (sec.contentType === "VIDEO" && isUrl) {
     const yt = raw.match(/(?:youtube(?:-nocookie)?\.com\/(?:[^#]*[?&]v=|shorts\/|embed\/|live\/|v\/)|youtu\.be\/)([\w-]{11})/);
     if (yt) {

@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 import org.springframework.transaction.annotation.Transactional;
 import com.bibo.elearning.auth.common.enums.ContentType;
 import com.bibo.elearning.upload.ImageStorageService;
+import com.bibo.elearning.upload.PdfStorageService;
 import lombok.RequiredArgsConstructor;
 import java.util.List;
 @Service
@@ -22,6 +23,7 @@ public class LessonSectionService {
     private final LessonSectionRepository lessonSectionRepository;
     private final LessonRepository lessonRepository;
     private final ImageStorageService imageStorageService;
+    private final PdfStorageService pdfStorageService;
 
     public LessonSectionResponse createSection(Long lessonId, CreateLessonSectionRequest request) {
         Lesson lesson = lessonRepository.findById(lessonId)
@@ -30,6 +32,9 @@ public class LessonSectionService {
         if (request.getContentType() == ContentType.VIDEO
                 && (request.getContent() == null || !request.getContent().trim().matches("(?i)https?://\\S+"))) {
             throw new IllegalArgumentException("Video sections need a valid video link (http/https)");
+        }
+        if (request.getContentType() == ContentType.PDF && !pdfStorageService.isStoredUrl(request.getContent())) {
+            throw new IllegalArgumentException("PDF sections need an uploaded PDF file");
         }
 
         // No order given → append after the current last section
@@ -100,6 +105,7 @@ public class LessonSectionService {
                 .orElseThrow(() -> new IllegalArgumentException("Section not found"));
         Long lessonId = section.getLesson().getId();
         String imageUrl = section.getContentType() == ContentType.IMAGE ? section.getContent() : null;
+        String pdfUrl = section.getContentType() == ContentType.PDF ? section.getContent() : null;
 
         section.getLesson().getSections().remove(section); // keep the lesson's collection in sync
         lessonSectionRepository.delete(section);
@@ -112,6 +118,7 @@ public class LessonSectionService {
         lessonSectionRepository.saveAll(rest);
 
         imageStorageService.deleteIfStored(imageUrl);
+        pdfStorageService.deleteIfStored(pdfUrl);
     }
 
     private LessonSectionResponse mapToResponse(LessonSection saved) {

@@ -1,5 +1,5 @@
 package com.bibo.elearning.auth.common.enums;
 
 public enum ContentType {
-    TEXT, IMAGE, VIDEO, ACTIVITY
+    TEXT, IMAGE, VIDEO, ACTIVITY, PDF
 }

@@ -1782,28 +1782,12 @@ async function sections() {
   }
 }
 
-async function openCreateSection() {
-  let opts = '<option value="">Select lesson...</option>';
-  try {
-    const subs = await apiFetch("GET", "/subjects");
-    for (const s of subs || []) {
-      try {
-        const ls = await apiFetch("GET", `/lessons/subject/${s.id}`);
-        if (ls?.length) {
-          opts += `<optgroup label="${s.name}">`;
-          opts += ls
-            .map((l) => `<option value="${l.id}">${l.title}</option>`)
-            .join("");
-          opts += `</optgroup>`;
-        }
-      } catch (e) {}
-    }
-  } catch (e) {}
+function openCreateSection() {
   openModal(`<div class="modal-header"><div class="modal-title">📄 New Section</div><button class="modal-close" onclick="closeModal()">✕</button></div>
     <div id="sec-err" style="display:none;background:#FEE2E2;color:#991B1B;font-size:13px;font-weight:700;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:14px;"></div>
-    <div class="field"><label>Lesson</label><select id="sec-lesson" class="bibo-input">${opts}</select></div>
+    <div class="field"><label>Lesson</label><select id="sec-lesson" class="bibo-input">${LOADING_LESSONS_OPT}</select></div>
     <div class="field"><label>Section Title</label><input id="sec-title" class="bibo-input" placeholder="e.g. What are Fractions?" /></div>
-    <div class="field-row"><div class="field" style="margin-bottom:0;"><label>Content Type</label><select id="sec-type" class="bibo-input" onchange="onSectionTypeChange(this.value)"><option value="TEXT">Text</option><option value="IMAGE">Image</option><option value="VIDEO">Video</option><option value="ACTIVITY">Activity</option></select></div><div class="field" style="margin-bottom:0;"><label>Section No.</label><input id="sec-order" class="bibo-input" type="number" placeholder="Auto (next number)" min="1" /></div></div>
+    <div class="field-row"><div class="field" style="margin-bottom:0;"><label>Content Type</label><select id="sec-type" class="bibo-input" onchange="onSectionTypeChange(this.value)"><option value="TEXT">Text</option><option value="IMAGE">Image</option><option value="VIDEO">Video</option><option value="ACTIVITY">Activity</option><option value="PDF">PDF</option></select></div><div class="field" style="margin-bottom:0;"><label>Section No.</label><input id="sec-order" class="bibo-input" type="number" placeholder="Auto (next number)" min="1" /></div></div>
     <div class="field" id="sec-content-field" style="margin-top:14px;"><label id="sec-content-label">Content</label><textarea id="sec-content" class="bibo-input" placeholder="Write lesson content here..." style="min-height:120px;" oninput="if (document.getElementById('sec-type').value === 'VIDEO') previewSectionVideo()"></textarea><div id="sec-video-preview"></div></div>
     <div class="field" id="sec-image-field" style="display:none;margin-top:14px;">
       <label>Image</label>
@@ -1811,7 +1795,13 @@ async function openCreateSection() {
       <p style="font-size:12px;color:var(--text-400);margin-top:6px;">PNG, JPG, GIF, or WEBP · max 5 MB</p>
       <img id="sec-image-preview" alt="" style="display:none;width:100%;max-height:220px;object-fit:contain;margin-top:10px;border-radius:var(--radius-sm);background:var(--bg);" />
     </div>
+    <div class="field" id="sec-pdf-field" style="display:none;margin-top:14px;">
+      <label>PDF File</label>
+      <input id="sec-pdf" class="bibo-input" type="file" accept="application/pdf,.pdf" onchange="checkSectionPdf(this)" />
+      <p style="font-size:12px;color:var(--text-400);margin-top:6px;">PDF only · max 20 MB · students read it inside the lesson</p>
+    </div>
     <div style="display:flex;gap:10px;margin-top:18px;"><button class="btn btn-ghost" style="flex:1;" onclick="closeModal()">Cancel</button><button class="btn btn-primary" style="flex:1;" id="sec-btn" onclick="submitSection()">Add Section</button></div>`);
+  fillLessonSelect("sec-lesson");
 }
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -1850,8 +1840,10 @@ function previewSectionVideo() {
 
 function onSectionTypeChange(type) {
   const isImage = type === "IMAGE";
+  const isPdf = type === "PDF";
   document.getElementById("sec-image-field").style.display = isImage ? "" : "none";
-  document.getElementById("sec-content-field").style.display = isImage ? "none" : "";
+  document.getElementById("sec-pdf-field").style.display = isPdf ? "" : "none";
+  document.getElementById("sec-content-field").style.display = isImage || isPdf ? "none" : "";
   document.getElementById("sec-content-label").textContent = type === "VIDEO" ? "Video URL" : "Content";
   document.getElementById("sec-content").style.minHeight = type === "VIDEO" ? "48px" : "120px";
   if (type === "VIDEO") previewSectionVideo();
@@ -1881,10 +1873,27 @@ function previewSectionImage(input) {
   img.style.display = "";
 }
 
-async function uploadImage(file) {
+const MAX_PDF_BYTES = 20 * 1024 * 1024;
+
+function checkSectionPdf(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  if (file.size > MAX_PDF_BYTES) {
+    showToast("PDF is too large (max 20 MB)", "⚠️");
+    input.value = "";
+    return;
+  }
+  // Pre-fill the title from the file name if the teacher hasn't typed one
+  const title = document.getElementById("sec-title");
+  if (title && !title.value.trim()) title.value = file.name.replace(/\.pdf$/i, "");
+}
+
+const uploadPdf = (file) => uploadImage(file, "pdfs");
+
+async function uploadImage(file, kind = "images") {
   const form = new FormData();
   form.append("file", file);
-  const res = await fetch(`${API}/uploads/images`, {
+  const res = await fetch(`${API}/uploads/${kind}`, {
     method: "POST",
     headers: { Authorization: "Bearer " + token },
     body: form,
@@ -1905,6 +1914,7 @@ async function submitSection() {
     type = document.getElementById("sec-type").value,
     order = parseInt(document.getElementById("sec-order").value) || null, 
     imageFile = document.getElementById("sec-image")?.files?.[0],
+    pdfFile = document.getElementById("sec-pdf")?.files?.[0],
     errEl = document.getElementById("sec-err"),
     btn = document.getElementById("sec-btn");
   errEl.style.display = "none";
@@ -1923,6 +1933,11 @@ async function submitSection() {
     errEl.style.display = "";
     return;
   }
+  if (type === "PDF" && !pdfFile) {
+    errEl.textContent = "Choose a PDF to upload.";
+    errEl.style.display = "";
+    return;
+  }
   btn.disabled = true;
   try {
     let content = textContent;
@@ -1937,6 +1952,10 @@ async function submitSection() {
     if (type === "IMAGE") {
       btn.textContent = "Uploading image...";
       content = await uploadImage(imageFile);
+    }
+    if (type === "PDF") {
+      btn.textContent = "Uploading PDF...";
+      content = await uploadPdf(pdfFile);
     }
     btn.textContent = "Adding...";
     await apiFetch("POST", "/lesson-sections", {
@@ -1981,6 +2000,9 @@ function sectionContentCell(s) {
     return `<a href="${esc(s.content)}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:10px;text-decoration:none;color:inherit;">
       <img src="https://img.youtube.com/vi/${vid}/mqdefault.jpg" alt="" style="height:56px;width:100px;object-fit:cover;border-radius:6px;" />
       <span style="font-size:12px;font-weight:700;color:var(--primary);">▶ YouTube</span></a>`;
+  }
+  if (s.contentType === "PDF" && /^\/uploads\/pdfs\//.test(s.content || "")) {
+    return `<a href="${esc(s.content)}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--primary);text-decoration:none;">📕 Open PDF</a>`;
   }
   return s.contentType === "IMAGE" && /^(https?:\/\/|\/uploads\/)/.test(s.content || "")
     ? `<img src="${esc(s.content)}" alt="" style="height:56px;max-width:120px;object-fit:cover;border-radius:6px;" />`
@@ -2151,21 +2173,31 @@ let _editingQuizId = null;
 async function lessonOptionsHtml(selectedId = null) {
   let opts = '<option value="">Select lesson...</option>';
   try {
-    const subs = await apiFetch("GET", "/subjects");
-    for (const s of subs || []) {
-      try {
-        const ls = await apiFetch("GET", `/lessons/subject/${s.id}`);
-        if (ls?.length) {
-          opts += `<optgroup label="${esc(s.name)}">`;
-          opts += ls
-            .map((l) => `<option value="${l.id}" ${l.id === selectedId ? "selected" : ""}>${esc(l.title)}</option>`)
-            .join("");
-          opts += `</optgroup>`;
-        }
-      } catch (e) {}
-    }
+    const subs = (await apiFetch("GET", "/subjects")) || [];
+    // Fetch every subject's lessons at the same time instead of one after another
+    const lessonLists = await Promise.all(
+      subs.map((s) => apiFetch("GET", `/lessons/subject/${s.id}`).catch(() => [])),
+    );
+    subs.forEach((s, i) => {
+      const ls = lessonLists[i];
+      if (!ls?.length) return;
+      opts += `<optgroup label="${esc(s.name)}">`;
+      opts += ls
+        .map((l) => `<option value="${l.id}" ${l.id === selectedId ? "selected" : ""}>${esc(l.title)}</option>`)
+        .join("");
+      opts += `</optgroup>`;
+    });
   } catch (e) {}
   return opts;
+}
+
+// Open the modal right away, then fill the lesson dropdown when the data arrives
+const LOADING_LESSONS_OPT = '<option value="">Loading lessons...</option>';
+function fillLessonSelect(selectId, selectedId = null) {
+  lessonOptionsHtml(selectedId).then((opts) => {
+    const el = document.getElementById(selectId);
+    if (el) el.innerHTML = opts;
+  });
 }
 
 async function openCreateQuiz() {
@@ -2185,7 +2217,6 @@ async function openQuizForm(quiz) {
   _qCount = 0;
   _editingQuizId = quiz?.id ?? null;
   const editing = !!quiz;
-  const opts = await lessonOptionsHtml(quiz?.lessonId ?? null);
   const takenNote =
     editing && quiz.attemptCount > 0
       ? `<div style="background:#FEF3C7;color:#92400E;font-size:12px;font-weight:600;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:14px;">
@@ -2203,7 +2234,7 @@ async function openQuizForm(quiz) {
       <div id="qz-err" class="mq-err" style="display:none;"></div>
 
       <div class="mq-details">
-        <div class="field"><label>Lesson</label><select id="qz-lesson" class="bibo-input">${opts}</select></div>
+        <div class="field"><label>Lesson</label><select id="qz-lesson" class="bibo-input">${LOADING_LESSONS_OPT}</select></div>
         <div class="field"><label>Quiz Title</label><input id="qz-title" class="bibo-input" placeholder="e.g. Fractions Quiz" /></div>
         <div class="field"><label>Description</label><input id="qz-desc" class="bibo-input" placeholder="Optional" /></div>
         <div class="field"><label>Passing Score (%)</label><input id="qz-passing" class="bibo-input" type="number" value="75" min="0" max="100" /></div>
@@ -2226,6 +2257,7 @@ async function openQuizForm(quiz) {
     </div>`,
     "modal-quiz",
   );
+  fillLessonSelect("qz-lesson", quiz?.lessonId ?? null);
 
   if (editing) {
     // .value assignment (not HTML interpolation) so quotes/HTML in saved text are safe
